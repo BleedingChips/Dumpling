@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Visual Studio File
+.vs
+
+# Project Template File
+/Demo/*/*/Debug
+/Demo/*/*/Release
+/Demo/*/*/x64
+
