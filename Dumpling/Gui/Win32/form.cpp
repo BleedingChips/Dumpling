@@ -3,7 +3,6 @@
 
 constexpr auto UD_REQUEST_QUIT = (WM_USER + 1);
 
-template<typename Type> using intrusive_ptr = Potato::Tool::intrusive_ptr<Type>;
 using namespace Potato;
 using namespace Dumpling::Win32;
 

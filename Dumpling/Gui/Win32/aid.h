@@ -9,14 +9,12 @@ namespace Dumpling::Win32
 	{
 		template<typename T> static void add_ref(T* com) { com->AddRef(); }
 		template<typename T> static void sub_ref(T* com) { com->Release(); }
+
 		template<typename SourceType>
-		static SourceType** overwrite_static_cast(SourceType*& source, Potato::Tmp::type_placeholder<SourceType**>) {
-			if (source != nullptr)
-			{
-				sub_ref(source);
-				source = nullptr;
-			}
-			return &source;
+		SourceType** operator ()(Potato::Tool::intrusive_ptr<SourceType, ComWrapper>& pi)
+		{
+			pi.reset();
+			return &pi.m_ptr;
 		}
 	};
 
