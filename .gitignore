@@ -33,9 +33,14 @@
 
 # Visual Studio File
 .vs
+.pdb
 
 # Project Template File
+/Demo/*/Debug
+/Demo/*/Release
+/Demo/*/x64/Debug
+/Demo/*/x64/Release
 /Demo/*/*/Debug
 /Demo/*/*/Release
-/Demo/*/*/x64
-
+/Demo/*/*/x64/Debug
+/Demo/*/*/x64/Release

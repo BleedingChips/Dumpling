@@ -11,10 +11,14 @@ namespace Dumpling::Win32
 		template<typename T> static void sub_ref(T* com) { com->Release(); }
 
 		template<typename SourceType>
-		SourceType** operator ()(Potato::Tool::intrusive_ptr<SourceType, ComWrapper>& pi)
+		SourceType** operator ()(SourceType*& pi)
 		{
-			pi.reset();
-			return &pi.m_ptr;
+			if (pi != nullptr)
+			{
+				sub_ref(pi);
+				pi = nullptr;
+			}
+			return &pi;
 		}
 	};
 

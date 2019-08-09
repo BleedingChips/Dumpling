@@ -45,13 +45,7 @@
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Potato\document.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Potato\lexical.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Potato\syntax.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Potato\tool.cpp">
@@ -71,16 +65,10 @@
     <ClInclude Include="..\..\..\Potato\character_encoding.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Potato\document.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Potato\lexical.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Potato\smart_pointer.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\syntax.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Potato\tmp.h">

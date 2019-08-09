@@ -22,9 +22,7 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx11\context.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
-    <ClCompile Include="..\..\..\Potato\document.cpp" />
     <ClCompile Include="..\..\..\Potato\lexical.cpp" />
-    <ClCompile Include="..\..\..\Potato\syntax.cpp" />
     <ClCompile Include="..\..\..\Potato\tool.cpp" />
     <ClCompile Include="dx11demo.cpp" />
   </ItemGroup>
@@ -34,10 +32,8 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
     <ClInclude Include="..\..\..\Potato\character_encoding.h" />
-    <ClInclude Include="..\..\..\Potato\document.h" />
     <ClInclude Include="..\..\..\Potato\lexical.h" />
     <ClInclude Include="..\..\..\Potato\smart_pointer.h" />
-    <ClInclude Include="..\..\..\Potato\syntax.h" />
     <ClInclude Include="..\..\..\Potato\tmp.h" />
     <ClInclude Include="..\..\..\Potato\tmpcall.h" />
     <ClInclude Include="..\..\..\Potato\tool.h" />
