@@ -8,6 +8,8 @@
 #include "aid.h"
 namespace Dumpling::Win32
 {
+	
+	using Potato::Tool::intrusive_ptr;
 
 	enum class Style
 	{

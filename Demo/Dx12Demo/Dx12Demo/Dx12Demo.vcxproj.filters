@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Potato">
+      <UniqueIdentifier>{c53e4969-1d15-4a76-9d56-c50ba583bc83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dumpling">
+      <UniqueIdentifier>{9d448933-997c-4cdf-b8bf-70e768a3a636}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dumpling\Gui">
+      <UniqueIdentifier>{a8b48bf7-878b-43bb-a320-6f0b2f4e7141}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dumpling\Gui\Win32">
+      <UniqueIdentifier>{67e79849-18af-4e0e-aca5-2afb09095612}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dumpling\Gui\Dx12">
+      <UniqueIdentifier>{c9c7e05b-7165-40ea-a7f3-3a52d5fb0d90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Dumpling\Gui\Dxgi">
+      <UniqueIdentifier>{bfc85326-6dfc-49e4-b157-451a2878fce9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="demo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp">
+      <Filter>Dumpling\Gui\Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\lexical.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\tool.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp">
+      <Filter>Dumpling\Gui\Dxgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h">
+      <Filter>Dumpling\Gui\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h">
+      <Filter>Dumpling\Gui\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\auto_adapter.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\character_encoding.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\lexical.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\smart_pointer.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\tmp.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\tmpcall.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\tool.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h">
+      <Filter>Dumpling\Gui\Dxgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
