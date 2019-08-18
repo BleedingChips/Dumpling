@@ -8,6 +8,9 @@ namespace Dumpling::Dx12
 	using Dxgi::ComPtr;
 	using Dxgi::void_t;
 
+	void InitDebugLayout();
+
+
 	using Device = ID3D12Device;
 	using DevicePtr = ComPtr<Device>;
 
@@ -98,6 +101,6 @@ namespace Dumpling::Dx12
 	
 	using ResourceBarrier = D3D12_RESOURCE_BARRIER;
 	ResourceBarrier CreateResourceBarrierTransition(Device* device, Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-	void SwapCreateResourceBarrierTransitionState(size_t index, ResourceBarrier* output);
+	void SwapResourceBarrierTransitionState(size_t index, ResourceBarrier* output);
 
 }

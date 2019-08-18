@@ -2,16 +2,18 @@
 #include <assert.h>
 namespace Dumpling::Dx12
 {
+
+	void InitDebugLayout()
+	{
+		ComPtr<ID3D12Debug>	debugController;
+		HRESULT re = D3D12GetDebugInterface(__uuidof(ID3D12Debug), debugController(void_t{}));
+		assert(SUCCEEDED(re));
+		debugController->EnableDebugLayer();
+	}
+
 	std::tuple<DevicePtr, HRESULT> CreateDevice(Dxgi::Adapter* adapter, D3D_FEATURE_LEVEL level)
 	{
-#ifdef _DEBUG
-		{
-			ComPtr<ID3D12Debug>	debugController;
-			HRESULT re = D3D12GetDebugInterface(__uuidof(ID3D12Debug), debugController(void_t{}));
-			assert(SUCCEEDED(re));
-			debugController->EnableDebugLayer();
-		}
-#endif
+		//Device* tem;
 		DevicePtr tem;
 		HRESULT re = D3D12CreateDevice(adapter, level, __uuidof(Device), tem(void_t{}));
 		return {std::move(tem), re};
@@ -148,7 +150,7 @@ namespace Dumpling::Dx12
 		return { D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE ,  D3D12_RESOURCE_TRANSITION_BARRIER {resource, subresource, before, after} };
 	}
 
-	void SwapCreateResourceBarrierTransitionState(size_t index, ResourceBarrier* output)
+	void SwapResourceBarrierTransitionState(size_t index, ResourceBarrier* output)
 	{
 		for (size_t i = 0; i < index; ++i)
 		{

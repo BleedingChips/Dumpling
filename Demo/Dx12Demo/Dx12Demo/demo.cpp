@@ -9,13 +9,19 @@ using namespace Dumpling;
 using Dxgi::PixFormat;
 int main()
 {
-	auto [Device, re_d] = Dx12::CreateDevice();
-	auto [Queue, re_c] = Dx12::CreateCommmandQueue(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
-	Queue->SetName(L"FFF");
-	auto [Allocator, re_a] = Dx12::CreateCommandAllocator(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
-	Win32::Form form = Win32::Form::create();
+#ifdef _DEBUG
+	Dx12::InitDebugLayout();
+#endif
 
 	auto [Factory, re_f] = Dxgi::CreateFactory();
+	auto AllAdapters = Dxgi::EnumAdapter(Factory);
+
+
+	auto [Device, re_d] = Dx12::CreateDevice(AllAdapters[0], D3D_FEATURE_LEVEL_12_0);
+	auto [Queue, re_c] = Dx12::CreateCommmandQueue(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
+	Queue->SetName(L"WTF");
+	auto [Allocator, re_a] = Dx12::CreateCommandAllocator(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
+	Win32::Form form = Win32::Form::create();
 
 	auto swap_chain_desc = Dxgi::CreateDefaultSwapChainDesc(cast(Dxgi::PixFormat::RGBA16_Float), 1024, 768);
 	auto [SwapChain, re_s] = Dx12::CreateSwapChain(Factory, Queue, form, swap_chain_desc);
@@ -38,6 +44,7 @@ int main()
 	{
 
 		auto [BBResource, re1] = Dx12::GetBuffer(SwapChain, current_buffer);
+		BBResource->SetName(L"sdadasd");
 		Dx12::CreateRenderTargetView2D(Device, BBResource, DescriptorSize.offset_RTV(RTDescHead, 0));
 		
 		auto [CommandList, re_l] = Dx12::CreateGraphicCommandList(Device, Allocator, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -48,18 +55,20 @@ int main()
 		FLOAT Color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 		
 		Dx12::ResourceBarrier tem[2] = {
-			Dx12::CreateResourceBarrierTransition(Device, BBResource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET),
-			 Dx12::CreateResourceBarrierTransition(Device, DTResource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE)
+			Dx12::CreateResourceBarrierTransition(Device, BBResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET),
+			Dx12::CreateResourceBarrierTransition(Device, DTResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_DEPTH_WRITE)
 		};
 
 		CommandList->ResourceBarrier(1, tem);
 		CommandList->ClearRenderTargetView(RTDescHead->GetCPUDescriptorHandleForHeapStart(), Color, 0, nullptr);
+		CommandList->ClearDepthStencilView(DTDescHead->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 		CommandList->OMSetRenderTargets(1, &RTHandle, false, &DTHandle);
-		Dx12::SwapCreateResourceBarrierTransitionState(2, tem);
+		Dx12::SwapResourceBarrierTransitionState(2, tem);
 		CommandList->ResourceBarrier(1, tem);
 		CommandList->Close();
 		Dx12::CommandList* const CommandlListArray = CommandList;
 		Queue->ExecuteCommandLists(1, &CommandlListArray);
+		SwapChain->Present(1, 0);
 		Queue->Signal(Fence, 1);
 
 		while (Fence->GetCompletedValue() != 1)
@@ -68,13 +77,15 @@ int main()
 			std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
 		}
 			
-		SwapChain->Present(1, 0);
+		
 		current_buffer += 1;
 		current_buffer = current_buffer % 2;
 		Allocator->Reset();
+		CommandList->Reset(Allocator, nullptr);
 		Fence->Signal(0);
 		std::cout << "down" << std::endl;
 		MSG msg;
+		break;
 		while (form.pook_event(msg))
 		{
 			if (msg.message == WM_CLOSE)
