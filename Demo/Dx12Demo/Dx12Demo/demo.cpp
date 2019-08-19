@@ -6,7 +6,10 @@
 #include <chrono>
 #include <thread>
 using namespace Dumpling;
-using Dxgi::PixFormat;
+using Dxgi::FormatPixel;
+
+using namespace Dxgi::DataType;
+
 int main()
 {
 #ifdef _DEBUG
@@ -23,7 +26,7 @@ int main()
 	auto [Allocator, re_a] = Dx12::CreateCommandAllocator(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
 	Win32::Form form = Win32::Form::create();
 
-	auto swap_chain_desc = Dxgi::CreateDefaultSwapChainDesc(cast(Dxgi::PixFormat::RGBA16_Float), 1024, 768);
+	auto swap_chain_desc = Dxgi::CreateDefaultSwapChainDesc(cast(Dxgi::FormatPixel::RGBA16_Float), 1024, 768);
 	auto [SwapChain, re_s] = Dx12::CreateSwapChain(Factory, Queue, form, swap_chain_desc);
 	auto [RTDescHead, re_rt1] = Dx12::CreateDescriptorHeap(Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
 	auto [DTDescHead, re_rt2] = Dx12::CreateDescriptorHeap(Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
@@ -31,7 +34,7 @@ int main()
 	auto DescriptorSize = Dx12::GetDescriptorHandleIncrementSize(Device);
 
 	
-	auto [DTResource, red] = Dx12::CreateDepthStencil2D(Device, cast(PixFormat::D24S8_Unorn_Uint), 1024, 768, 0);
+	auto [DTResource, red] = Dx12::CreateDepthStencil2D(Device, cast(Dxgi::FormatPixel::D24S8_Unorn_Uint), 1024, 768, 0);
 	Dx12::CreateDepthStencilView2D(Device, DTResource, DescriptorSize.offset_DSV(DTDescHead, 0));
 
 	auto viewport = Dx12::CreateFullScreenViewport(1024, 768);
@@ -39,7 +42,34 @@ int main()
 	auto [Fence, ref] = Dx12::CreateFence(Device, 0);
 
 	bool exit = false;
-	size_t current_buffer = 0;
+	uint32_t current_buffer = 0;
+
+	struct Point
+	{
+		float3 Position;
+		float2 UV;
+	};
+
+	struct Instance
+	{
+		float2 Shift;
+	};
+
+	auto AllInputElement = std::tuple{
+		Dx12::ElementVertex{&Point::Position, "Position", 0},
+		Dx12::ElementVertex{&Point::UV, "UV", 0},
+	};
+
+	auto InstanceElement = std::tuple{
+		Dx12::ElementInstance{&Instance::Shift, "Shift", 0, 3}
+	};
+
+	Point Rec[] = {
+		{float3{0.0, 0.2, 0.0}, float2{0.5, 0.0}},
+		{float3{0.2, 0.0, 0.0},float2{0.5, 0.0} },
+		{float3{-0.2, 0.0, 0.0}, float2{ 0.5, 0.0 }},
+	};
+
 	while (!exit)
 	{
 
@@ -85,7 +115,6 @@ int main()
 		Fence->Signal(0);
 		std::cout << "down" << std::endl;
 		MSG msg;
-		break;
 		while (form.pook_event(msg))
 		{
 			if (msg.message == WM_CLOSE)

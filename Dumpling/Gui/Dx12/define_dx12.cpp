@@ -110,6 +110,22 @@ namespace Dumpling::Dx12
 		return {std::move(tem), re};
 	}
 
+	std::tuple<ResourcePtr, HRESULT> CreateUploadBuffer(Device* device, uint32_t width, uint32_t node_mask, uint32_t available_node_mask)
+	{
+		assert(width >= 1);
+		D3D12_RESOURCE_DESC desc{ 
+			D3D12_RESOURCE_DIMENSION_BUFFER,
+			D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
+			width, 1, 1, 1, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE
+		};
+		D3D12_HEAP_PROPERTIES heap{
+			D3D12_HEAP_TYPE_UPLOAD,
+			D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE,
+			D3D12_MEMORY_POOL_L0,
+			node_mask, available_node_mask
+		};
+	}
+
 	void CreateRenderTargetView2D(Device* device, Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE handle, uint32_t mipmap, DXGI_FORMAT format, uint32_t plane_slice)
 	{
 		assert(device != nullptr);
@@ -158,4 +174,6 @@ namespace Dumpling::Dx12
 			std::swap(output_ref.Transition.StateBefore, output_ref.Transition.StateAfter);
 		}
 	}
+
+	
 }

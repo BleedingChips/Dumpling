@@ -5,6 +5,7 @@
 #pragma comment(lib, "d3d12.lib")
 namespace Dumpling::Dx12
 {
+
 	using Dxgi::ComPtr;
 	using Dxgi::void_t;
 
@@ -91,16 +92,46 @@ namespace Dumpling::Dx12
 	using Resource = ID3D12Resource;
 	using ResourcePtr = ComPtr<Resource>;
 
-
-
 	std::tuple<ResourcePtr, HRESULT> GetBuffer(Dxgi::SwapChain* swap_chain, uint32_t count);
 
 	std::tuple<ResourcePtr, HRESULT> CreateDepthStencil2D(Device* device, DXGI_FORMAT format, uint32_t width, uint32_t height, uint16_t mipmap = 0, float Depth_value = 1.0, uint8_t stencil_value = 0, uint32_t node_mask = 0, uint32_t visible_node_mask = 0);
 	void CreateRenderTargetView2D(Device* device, Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE handle, uint32_t mipmap = 0, DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN, uint32_t plane_slice = 0);
 	void CreateDepthStencilView2D(Device* device, Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE handle, uint32_t mipmap = 0, DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN, D3D12_DSV_FLAGS flag = D3D12_DSV_FLAG_NONE);
-	
+	std::tuple<ResourcePtr, HRESULT> CreateUploadBuffer(Device* device, uint32_t buffer_count);
+
+
 	using ResourceBarrier = D3D12_RESOURCE_BARRIER;
 	ResourceBarrier CreateResourceBarrierTransition(Device* device, Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 	void SwapResourceBarrierTransitionState(size_t index, ResourceBarrier* output);
+
+	template<typename SourceType, typename ParameterType>
+	struct ElementVertex
+	{
+		static constexpr size_t type_size = sizeof(ParameterType);
+		ParameterType SourceType::* member_shift;
+		const char* semantic;
+		uint32_t semantic_index ;
+	};
+
+	template<typename SourceType, typename ParameterType>
+	ElementVertex(ParameterType SourceType::*, const char*, uint32_t)
+		->ElementVertex<SourceType, ParameterType>;
+
+	template<typename SourceType, typename ParameterType>
+	struct ElementInstance
+	{
+		static constexpr size_t type_size = sizeof(ParameterType);
+		ParameterType SourceType::* member_shift;
+		const char* semantic;
+		uint32_t semantic_index;
+		uint32_t instance_repeat_count;
+	};
+
+	template<typename SourceType, typename ParameterType>
+	ElementInstance(ParameterType SourceType::*, const char*, uint32_t, uint32_t)
+		->ElementInstance<SourceType, ParameterType>;
+
+	
+
 
 }
