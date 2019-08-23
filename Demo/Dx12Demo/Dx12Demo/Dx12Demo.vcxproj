@@ -132,7 +132,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dx\complier_dx.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
     <ClCompile Include="..\..\..\Potato\lexical.cpp" />
@@ -141,7 +143,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\enum_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pre_define_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\enum_dxgi.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\pre_define_dxgi.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx\complier_dx.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
@@ -151,6 +159,28 @@
     <ClInclude Include="..\..\..\Potato\tmp.h" />
     <ClInclude Include="..\..\..\Potato\tmpcall.h" />
     <ClInclude Include="..\..\..\Potato\tool.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="VertexShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

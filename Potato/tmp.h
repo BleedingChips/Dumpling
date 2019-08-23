@@ -632,6 +632,8 @@ namespace Potato::Tmp
 	template<template<typename...> class Condition, typename Target> struct member_exist<Condition, Target, std::void_t<Condition<Target>>> : std::true_type {};
 
 	template<typename Type>
-	struct type_placeholder {};
+	struct type_placeholder {
+		using type = Type;
+	};
 
 }

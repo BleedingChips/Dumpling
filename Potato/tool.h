@@ -6,6 +6,7 @@
 #include <typeindex>
 #include <optional>
 #include <type_traits>
+#include <array>
 namespace Potato::Tool
 {
 	namespace Implement
@@ -433,4 +434,5 @@ namespace Potato::Tool
 	{
 		Implement::sequence_call_implement<0, std::tuple_size_v<std::remove_reference_t<Tuple>>>{}(std::forward<Function>(f), std::forward<Tuple>(type));
 	}
+
 }

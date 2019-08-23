@@ -31,6 +31,9 @@
     <Filter Include="Dumpling\Gui\Dxgi">
       <UniqueIdentifier>{bfc85326-6dfc-49e4-b157-451a2878fce9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Dumpling\Gui\Dx">
+      <UniqueIdentifier>{cd2cc10d-bfcb-4b62-a0c0-2bdfc1b78a18}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="demo.cpp">
@@ -53,6 +56,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp">
       <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.cpp">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dx\complier_dx.cpp">
+      <Filter>Dumpling\Gui\Dx</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -89,5 +98,31 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\enum_dx12.h">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\enum_dxgi.h">
+      <Filter>Dumpling\Gui\Dxgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\pre_define_dxgi.h">
+      <Filter>Dumpling\Gui\Dxgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.h">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx\complier_dx.h">
+      <Filter>Dumpling\Gui\Dx</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pre_define_dx12.h">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="VertexShader.hlsl">
+      <Filter>源文件</Filter>
+    </FxCompile>
+    <FxCompile Include="PixelShader.hlsl">
+      <Filter>源文件</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

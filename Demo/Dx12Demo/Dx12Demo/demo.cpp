@@ -1,45 +1,87 @@
-#include "..//..//..//Dumpling/Gui/Dxgi/define_dxgi.h"
 #include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
 #include "..//../..//Dumpling/Gui/Win32/form.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <filesystem>
+#include <fstream>
 using namespace Dumpling;
 using Dxgi::FormatPixel;
 
 using namespace Dxgi::DataType;
+using namespace Dx12::Enum;
+
+namespace fs = std::filesystem;
 
 int main()
 {
+
+
 #ifdef _DEBUG
 	Dx12::InitDebugLayout();
 #endif
+
+	fs::path resource_path;
+
+#ifdef _DEBUG
+#ifdef _WIN64
+	resource_path = u"..\\x64\\debug\\";
+#else
+	resource_path = U"..\\debug\\";
+#endif
+#else
+#ifdef _WIN64
+	resource_path = U"..\\x64\\Release\\";
+#else
+	resource_path = U"..\\Release\\";
+#endif
+#endif
+
+	auto p = fs::current_path();
+
+	auto load_file = [&](const char32_t* input_path) {
+		auto path = resource_path;
+		path.append(input_path);
+		auto total_path = fs::absolute(path);
+		std::ifstream input(path, std::ios::binary);
+		assert(input.is_open());
+		size_t file_size = fs::file_size(path);
+		std::vector<std::byte> all_buffer;
+		all_buffer.resize(file_size);
+		input.read(reinterpret_cast<char*>(all_buffer.data()), all_buffer.size());
+		return std::move(all_buffer);
+	};
+
+	std::vector<std::byte> vs_shader = load_file(U"VertexShader.cso");
+	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
 
 	auto [Factory, re_f] = Dxgi::CreateFactory();
 	auto AllAdapters = Dxgi::EnumAdapter(Factory);
 
 
 	auto [Device, re_d] = Dx12::CreateDevice(AllAdapters[0], D3D_FEATURE_LEVEL_12_0);
-	auto [Queue, re_c] = Dx12::CreateCommmandQueue(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+
+
+	auto [Queue, re_c] = Device++.CreateCommmandQueue(*CommandListType::Direct);
 	Queue->SetName(L"WTF");
-	auto [Allocator, re_a] = Dx12::CreateCommandAllocator(Device, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto [Allocator, re_a] = Device++.CreateCommandAllocator(*CommandListType::Direct);
 	Win32::Form form = Win32::Form::create();
 
-	auto swap_chain_desc = Dxgi::CreateDefaultSwapChainDesc(cast(Dxgi::FormatPixel::RGBA16_Float), 1024, 768);
+	auto swap_chain_desc = Dxgi::CreateDefaultSwapChainDesc(*Dxgi::FormatPixel::RGBA16_Float, 1024, 768);
 	auto [SwapChain, re_s] = Dx12::CreateSwapChain(Factory, Queue, form, swap_chain_desc);
-	auto [RTDescHead, re_rt1] = Dx12::CreateDescriptorHeap(Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
-	auto [DTDescHead, re_rt2] = Dx12::CreateDescriptorHeap(Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+	auto [RTDescHead, re_rt1] = Device++.CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+	auto [DTDescHead, re_rt2] = Device++.CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
 
-	auto DescriptorSize = Dx12::GetDescriptorHandleIncrementSize(Device);
-
+	auto DescriptorSize = Device++.GetDescriptorHandleIncrementSize();
 	
-	auto [DTResource, red] = Dx12::CreateDepthStencil2D(Device, cast(Dxgi::FormatPixel::D24S8_Unorn_Uint), 1024, 768, 0);
-	Dx12::CreateDepthStencilView2D(Device, DTResource, DescriptorSize.offset_DSV(DTDescHead, 0));
+	auto [DTResource, red] = Device++.CreateDepthStencil2DCommitted(*Dxgi::FormatPixel::D24S8_Unorn_Uint, 1024, 768, 0);
+	Device++.CreateDepthStencilView2D(DTResource, DescriptorSize.DSVOffset(DTDescHead, 0));
 
 	auto viewport = Dx12::CreateFullScreenViewport(1024, 768);
 
-	auto [Fence, ref] = Dx12::CreateFence(Device, 0);
+	auto [Fence, ref] = Device++.CreateFence(0);
 
 	bool exit = false;
 	uint32_t current_buffer = 0;
@@ -65,19 +107,38 @@ int main()
 	};
 
 	Point Rec[] = {
-		{float3{0.0, 0.2, 0.0}, float2{0.5, 0.0}},
-		{float3{0.2, 0.0, 0.0},float2{0.5, 0.0} },
-		{float3{-0.2, 0.0, 0.0}, float2{ 0.5, 0.0 }},
+		{float3{0.0, 0.2f, 0.0}, float2{0.5f, 0.0}},
+		{float3{0.2f, 0.0, 0.0},float2{0.5f, 0.0} },
+		{float3{-0.2f, 0.0, 0.0}, float2{ 0.5f, 0.0 }},
 	};
+
+	auto [UploadBuffer, RrUB] = Device++.CreateBufferUploadCommitted(sizeof(Point) * 3);
+
+	HRESULT MappingResult = Dx12::MappingBufferArray(UploadBuffer, [&](Point* input) {
+		for (size_t i = 0; i < 3; ++i)
+			input[i] = Rec[i];
+	}, 0, 3);
+
+	auto [VertexBuffer, re_VB] = Device++.CreateBufferVertexCommitted(sizeof(Point) * 3, 0, 0);
+
+	auto [UpdateCommandList, re_UC] = Device++.CreateGraphicCommandList(Allocator, *CommandListType::Direct);
+
+	UpdateCommandList->CopyResource(VertexBuffer, UploadBuffer);
+
+	UpdateCommandList->Close();
+
+	Dx12::CommandList* const CL[] = { UpdateCommandList };
+
+	Queue->ExecuteCommandLists(0, CL);
 
 	while (!exit)
 	{
 
 		auto [BBResource, re1] = Dx12::GetBuffer(SwapChain, current_buffer);
 		BBResource->SetName(L"sdadasd");
-		Dx12::CreateRenderTargetView2D(Device, BBResource, DescriptorSize.offset_RTV(RTDescHead, 0));
+		Device++.CreateRenderTargetView2D(BBResource, DescriptorSize.RTVOffset(RTDescHead, 0));
 		
-		auto [CommandList, re_l] = Dx12::CreateGraphicCommandList(Device, Allocator, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT);
+		auto [CommandList, re_l] = Device++.CreateGraphicCommandList(Allocator, *CommandListType::Direct);
 
 		auto RTHandle = RTDescHead->GetCPUDescriptorHandleForHeapStart();
 		auto DTHandle = DTDescHead->GetCPUDescriptorHandleForHeapStart();
@@ -85,16 +146,16 @@ int main()
 		FLOAT Color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 		
 		Dx12::ResourceBarrier tem[2] = {
-			Dx12::CreateResourceBarrierTransition(Device, BBResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET),
-			Dx12::CreateResourceBarrierTransition(Device, DTResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_DEPTH_WRITE)
+			Dx12::TransitionState(BBResource, *ResourceState::Present, *ResourceState::RenderTarget),
+			Dx12::TransitionState(DTResource, *ResourceState::Common, *ResourceState::DepthWrite)
 		};
 
-		CommandList->ResourceBarrier(1, tem);
+		CommandList->ResourceBarrier(2, tem);
 		CommandList->ClearRenderTargetView(RTDescHead->GetCPUDescriptorHandleForHeapStart(), Color, 0, nullptr);
 		CommandList->ClearDepthStencilView(DTDescHead->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 		CommandList->OMSetRenderTargets(1, &RTHandle, false, &DTHandle);
-		Dx12::SwapResourceBarrierTransitionState(2, tem);
-		CommandList->ResourceBarrier(1, tem);
+		Dx12::SwapTransitionState(2, tem);
+		CommandList->ResourceBarrier(2, tem);
 		CommandList->Close();
 		Dx12::CommandList* const CommandlListArray = CommandList;
 		Queue->ExecuteCommandLists(1, &CommandlListArray);
@@ -106,7 +167,6 @@ int main()
 			std::cout << Fence->GetCompletedValue() << std::endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
 		}
-			
 		
 		current_buffer += 1;
 		current_buffer = current_buffer % 2;
