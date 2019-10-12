@@ -80,7 +80,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -93,7 +93,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -110,7 +110,7 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -127,14 +127,12 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx\complier_dx.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
     <ClCompile Include="..\..\..\Potato\lexical.cpp" />
@@ -145,11 +143,7 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\enum_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pre_define_dx12.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\enum_dxgi.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\pre_define_dxgi.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx\complier_dx.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
@@ -159,6 +153,7 @@
     <ClInclude Include="..\..\..\Potato\tmp.h" />
     <ClInclude Include="..\..\..\Potato\tmpcall.h" />
     <ClInclude Include="..\..\..\Potato\tool.h" />
+    <ClInclude Include="Testing.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">

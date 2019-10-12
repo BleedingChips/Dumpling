@@ -1,11 +1,11 @@
 #pragma once
-#include "..//Dxgi/pre_define_dxgi.h"
 #include <d3d12.h>
+#include <d3d12shader.h>
 #include <assert.h>
 namespace Dumpling::Dx12
 {
 	using Dxgi::ComPtr;
-	using Dxgi::void_t;
+	using Dxgi::VoidT;
 
 	using Device = ID3D12Device;
 	using DevicePtr = ComPtr<Device>;
@@ -40,6 +40,12 @@ namespace Dumpling::Dx12
 
 	using PipelineState = ID3D12PipelineState;
 	using PipelineStatePtr = ID3D12PipelineState;
+
+	using Blob = ID3DBlob;
+	using BlobPtr = ComPtr<Blob>;
+
+	using Reflection = ID3D12ShaderReflection;
+	using ReflectionPtr = ComPtr<Reflection>;
 
 	struct DescriptorHandleIncrementSize
 	{

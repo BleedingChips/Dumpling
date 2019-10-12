@@ -57,12 +57,6 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.cpp">
-      <Filter>Dumpling\Gui\Dx12</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx\complier_dx.cpp">
-      <Filter>Dumpling\Gui\Dx</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h">
@@ -101,20 +95,11 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\enum_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\enum_dxgi.h">
-      <Filter>Dumpling\Gui\Dxgi</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\pre_define_dxgi.h">
-      <Filter>Dumpling\Gui\Dxgi</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\shader_reflection_dx12.h">
-      <Filter>Dumpling\Gui\Dx12</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx\complier_dx.h">
-      <Filter>Dumpling\Gui\Dx</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pre_define_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="Testing.h">
+      <Filter>源文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

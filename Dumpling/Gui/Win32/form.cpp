@@ -1,22 +1,233 @@
 #include "form.h"
-#include <vector>
-
-constexpr auto UD_REQUEST_QUIT = (WM_USER + 1);
-
+#include <optional>
 using namespace Potato;
 using namespace Dumpling::Win32;
 
-namespace
+namespace Dumpling::Win32
 {
-	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	const FormStyle& DefaultStyle() noexcept { static FormStyle Default;  return Default; }
 	const char16_t static_class_name[] = u"po_frame_default_win32_class";
-	const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , WndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, (const wchar_t*)static_class_name, NULL };
+	const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , Form::WndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, (const wchar_t*)static_class_name, NULL };
 	const struct StaticClassInitStruct
 	{
 		StaticClassInitStruct() { HRESULT res = RegisterClassExW(&static_class); assert(SUCCEEDED(res)); }
 		~StaticClassInitStruct() { UnregisterClassW((const wchar_t*)static_class_name, GetModuleHandleW(0)); }
-	}init;
+	};
 
+	struct GobalManager
+	{
+		~GobalManager();
+		HWND CreateForm(const FormSetting& Setting, const FormStyle& Style, Form* Form);
+		GobalManager();
+
+		uint32_t FormCount = 0;
+
+	private:
+
+		struct Request {
+			std::promise<HWND> Promise;
+			const FormSetting& Setting;
+			const FormStyle& Style;
+			Form* Form;
+		};
+
+		void ExectionFunction();
+		
+		std::mutex m_RequestsMutex;
+		bool m_ThreadRunning;
+		std::optional<Request> m_Requests;
+		std::thread m_ExecuteThread;
+	}GobalManagerInstance;
+
+	struct FormImplement;
+
+	GobalManager::GobalManager()
+		: m_ThreadRunning(false) {}
+
+	HWND GobalManager::CreateForm(const FormSetting& Setting, const FormStyle& Style, Form* Form)
+	{
+		std::promise<HWND> pro;
+		auto fur = pro.get_future();
+		while (true)
+		{
+			if (m_RequestsMutex.try_lock())
+			{
+				std::lock_guard lg(m_RequestsMutex, std::adopt_lock);
+				if (!m_Requests.has_value())
+				{
+					m_Requests.emplace(Request{ std::move(pro), Setting, Style, Form });
+					if (!m_ThreadRunning)
+					{
+						if (m_ExecuteThread.joinable()) m_ExecuteThread.join();
+						m_ExecuteThread = std::thread([this]() {ExectionFunction(); });
+						m_ThreadRunning = true;
+					}
+					break;
+				}
+			}
+			std::this_thread::yield();
+		}
+		return fur.get();
+	}
+
+	GobalManager::~GobalManager()
+	{
+		volatile int i2 = 0;
+		if (m_ExecuteThread.joinable())
+			m_ExecuteThread.join();
+		volatile int i = 0;
+	}
+
+	void GobalManager::ExectionFunction()
+	{
+		static StaticClassInitStruct static_class;
+		while (true)
+		{
+			MSG msg;
+			while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				TranslateMessage(&msg);
+				DispatchMessageW(&msg);
+				
+			}
+			
+			{
+				std::lock_guard lg(m_RequestsMutex);
+				if (m_Requests.has_value())
+				{
+					auto& Ref = *m_Requests;
+					HWND handle = CreateWindowExW(
+						0,
+						(wchar_t*)(static_class_name),
+						(Ref.Setting.Title),
+						WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+						Ref.Setting.ShiftX, Ref.Setting.ShiftY, Ref.Setting.Width, Ref.Setting.Height,
+						NULL,
+						NULL,
+						GetModuleHandle(0),
+						NULL
+					);
+					if (handle != nullptr)
+					{
+						SetWindowLongPtr(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(Ref.Form));
+						++FormCount;
+						Ref.Promise.set_value(handle);
+					}
+					else {
+						DWORD ErrorCode = GetLastError();
+						Ref.Promise.set_exception(std::make_exception_ptr(Dumpling::Win32::Error::FaultToCreate{ "unable_to_create Fault" }));
+					}
+					m_Requests = std::nullopt;
+				}
+				else if (FormCount == 0)
+				{
+					m_ThreadRunning = false;
+					break;
+				}
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+		}
+	}
+
+	Form::~Form()
+	{
+		SendMessage(GetHWnd(), WM_USER + 1, 0, 0);
+		volatile int index = 0;
+	}
+
+	Form::Form(const FormSetting& Setting, const FormStyle& Style)
+		//: m_available(true)
+	{
+		m_Hwnd = GobalManagerInstance.CreateForm(Setting, Style, this);
+	}
+
+	std::optional<LRESULT> Form::RespondEventInEventLoop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept
+	{
+		{
+			std::lock_guard lg(m_EventFunctionMutex);
+			if (m_EventFunction)
+				return m_EventFunction(hWnd, msg, wParam, lParam);
+		}
+		return {};
+	}
+
+	void Form::OverwriteEventFunction(EventFunctionT event_function) noexcept
+	{
+		std::lock_guard lg(m_EventFunctionMutex);
+		m_EventFunction = std::move(event_function);
+	}
+
+	LRESULT CALLBACK Form::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		assert(hWnd != nullptr);
+		switch (msg)
+		{
+		case WM_USER + 1:
+		{
+			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+			Form* ptr = reinterpret_cast<Form*>(data);
+			if (ptr != nullptr)
+				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+			DestroyWindow(hWnd);
+			break;
+		}
+		case WM_DESTROY:
+		{
+			/*
+			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+			Form* ptr = reinterpret_cast<Form*>(data);
+			if (ptr != nullptr)
+			{
+				//ptr->m_available = false;
+				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+			}
+			*/
+			GobalManagerInstance.FormCount -= 1;
+			break;
+		}
+		default:
+		{
+			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+			Form* ptr = reinterpret_cast<Form*>(data);
+			std::optional<LRESULT> Result = std::nullopt;
+			if (ptr != nullptr)
+				Result = ptr->RespondEventInEventLoop(hWnd, msg, wParam, lParam);
+			if (Result.has_value())
+				return *Result;
+			else if(msg != WM_CLOSE)
+				return DefWindowProcW(hWnd, msg, wParam, lParam);
+			return 0;
+		}
+		}
+		return DefWindowProcW(hWnd, msg, wParam, lParam);
+	}
+	
+	FormPtr Form::Create(const FormSetting & Setting, const FormStyle& Style)
+	{
+		return new Form{ Setting,  Style };
+	}
+
+
+	
+
+	/*
+	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		switch (msg)
+		{
+		default:
+		{
+			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+			FormImplement* ptr = reinterpret_cast<FormImplement*>(data);
+			if (ptr != nullptr)
+				return ptr->RespondEventInEventLoop(hWnd, msg, wParam, lParam);
+			return DefWindowProcW(hWnd, msg, wParam, lParam);
+		}
+		}
+	}
+	*/
+
+	/*
 	std::tuple<DWORD, DWORD> translate_style(Dumpling::Win32::Style style)
 	{
 		switch (style)
@@ -27,55 +238,11 @@ namespace
 			return { 0, 0 };
 		}
 	}
+	*/
+	
 
-	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		switch (msg)
-		{
-		case UD_REQUEST_QUIT:
-		{
-			DestroyWindow(hWnd);
-			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Dumpling::Win32::Implement::Control* ptr = reinterpret_cast<Dumpling::Win32::Implement::Control*>(data);
-			delete ptr;
-			SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
-			return 0;
-		}
-		default:
-		{
-			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Dumpling::Win32::Implement::Control* ptr = reinterpret_cast<Dumpling::Win32::Implement::Control*>(data);
-			if (ptr != nullptr)
-			{
-				std::lock_guard lg(ptr->m_mutex);
-				ptr->m_msages.push_back(MSG{ hWnd, msg, wParam, lParam });
-			}
-			if (msg == WM_CLOSE)
-				return 0;
-			return DefWindowProcW(hWnd, msg, wParam, lParam);
-		}
-		}
-	}
-
-	struct GobalManager
-	{
-		Potato::Tool::intrusive_ptr<Dumpling::Win32::Implement::Control> create_control(const Dumpling::Win32::FormProperty& pro);
-		~GobalManager();
-	private:
-		static void execute_function(GobalManager* ins);
-		std::mutex state_lock;
-		bool read_to_exit = true;
-		size_t count = 0;
-		std::vector<std::tuple<std::promise<void>&, const Dumpling::Win32::FormProperty&, Dumpling::Win32::Implement::Control*>> requests;
-		std::thread execute_thread;
-	};
-
-	GobalManager::~GobalManager()
-	{
-		if (execute_thread.joinable())
-			execute_thread.join();
-	}
-
+	
+	/*
 	void GobalManager::execute_function(GobalManager* ins)
 	{
 		bool available = true;
@@ -153,16 +320,26 @@ namespace
 	}
 
 	GobalManager gobal;
+	*/
 }
 
 
 
 namespace Dumpling::Win32
 {
+	/*
+	FormPtr CreateForm(const wchar_t* title, uint32_t width, uint32_t height, const FormSetting & Setting)
+	{
+		return new FormImplement{ title, width, height, Setting };
+	}
+	*/
+	/*
 	namespace Error
 	{
 		const char* CreateWindowFauit::what() const noexcept { return "unable to create windows"; }
 	}
+
+	
 
 	namespace Implement
 	{
@@ -195,4 +372,5 @@ namespace Dumpling::Win32
 		result.m_ref = gobal.create_control(pro);
 		return std::move(result);
 	}
+	*/
 }

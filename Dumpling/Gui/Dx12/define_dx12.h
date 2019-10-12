@@ -6,24 +6,93 @@
 #include <array>
 #include <assert.h>
 #include <optional>
-#pragma comment(lib, "d3d12.lib")
-
+#include "..//Win32/form.h"
+#include "../Dxgi/define_dxgi.h"
 namespace Dumpling::Dx12
 {
-
-
 	void InitDebugLayout();
-	std::tuple<DevicePtr, HRESULT> CreateDevice(Dxgi::Adapter* adapter = nullptr, D3D_FEATURE_LEVEL level = D3D_FEATURE_LEVEL_12_0);
-	inline std::tuple<Dxgi::SwapChainPtr, HRESULT> CreateSwapChain(Dxgi::Factory* factory, CommandQueue* device, HWND hwnd, const Dxgi::SwapChainDesc& desc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* fullscreen_desc = nullptr, IDXGIOutput* output = nullptr)
-	{
-		return Dxgi::CreateSwapChain(factory, device, hwnd, desc, fullscreen_desc, output);
-	}
 
-	std::tuple<ResourcePtr, HRESULT> GetBuffer(Dxgi::SwapChain* swap_chain, uint32_t count);
+	struct DescHead {
+		DescriptorHeapType Type() const noexcept { return m_Type; }
+		D3D12_CPU_DESCRIPTOR_HANDLE operator[](size_t) const noexcept { return D3D12_CPU_DESCRIPTOR_HANDLE{ GetCPUHandleStart().ptr + m_Offset }; }
+		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandleStart() const noexcept{ return m_Heap->GetCPUDescriptorHandleForHeapStart(); }
+		D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandleStart() const noexcept { return m_Heap->GetGPUDescriptorHandleForHeapStart(); }
+
+		DescriptorHeapType m_Type;
+		DescriptorHeapPtr m_Heap;
+		size_t m_Offset;
+		size_t m_Count;
+	};
+
+	struct Context;
+	using ContextPtr = ComPtr<Context>;
+
+	struct Context 
+	{
+		
+		void AddRef() const noexcept;
+		void Release() const noexcept;
+
+		std::tuple<FencePtr, HRESULT> CreateFence(uint32_t value = 0, D3D12_FENCE_FLAGS flag = D3D12_FENCE_FLAG_NONE);
+		std::tuple<CommandQueuePtr, HRESULT> CreateCommandQueue(CommandListType Type = CommandListType::Direct, CommandQueuePriority Priority = CommandQueuePriority::Normal, CommandQueueFlag Flags = CommandQueueFlag::Non);
+		std::tuple<CommandAllocatorPtr, HRESULT> CreateCommandAllocator(CommandListType Type);
+		std::tuple<GraphicCommandListPtr, HRESULT> CreateGraphicCommandList(CommandAllocator* allocator, CommandListType Type);
+		DescHead CreateDescriptorHeap(DescriptorHeapType Type, uint32_t Count = 1, DescriptorHeapFlag Flag = DescriptorHeapFlag::None);
+		void SetRTV2D(DescHead& Heap, uint32_t Solts, Resource& Resource, uint32_t mipmap = 0, DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN, uint32_t plane_slice = 0);
+
+		static std::tuple<ContextPtr, HRESULT> Create(uint8_t AdapterIndex = 0, D3D_FEATURE_LEVEL Level = D3D_FEATURE_LEVEL_12_1);
+	
+	private:
+
+		friend struct Form;
+		Context(uint8_t AdapterIndex, D3D_FEATURE_LEVEL Level);
+		mutable Potato::Tool::atomic_reference_count m_Ref;
+		DevicePtr m_Device;
+		uint8_t m_AdapterIndex;
+		uint32_t m_NodeMask;
+		
+	};
+
+	struct FormStyle
+	{
+		Win32::FormStyle Win32Style;
+	};
+
+	const FormStyle& Default() noexcept;
+
+	struct FormSetting {
+		Win32::FormSetting Win32Setting;
+		Dxgi::FormatPixel Pixel = Dxgi::FormatPixel::RGBA16_Float;
+	};
+
+	struct Form;
+	using FormPtr = ComPtr<Form>;
+
+	struct Form : Win32::Form
+	{
+		static FormPtr Create(CommandQueue& Queue, const FormSetting& Setting = FormSetting{}, const FormStyle& Style = Default());
+		ResourcePtr CurrentBackBuffer() const noexcept { return m_BackBuffer; }
+		void PresentAndSwap(GraphicCommandList&) noexcept;
+		uint8_t CurrentBackBufferIndex() const noexcept { return m_BackBufferIndex; }
+		std::tuple<ResourcePtr, HRESULT> GetBackBuffer(uint8_t index) noexcept;
+	private:
+		Form(CommandQueue& Queue, const FormSetting&, const FormStyle&);
+		Dxgi::SwapChainPtr m_SwapChain;
+		ResourcePtr m_BackBuffer;
+		uint8_t m_BackBufferIndex;
+		uint8_t m_MaxBufferCount;
+	};
+
+	
+
+
+	//std::tuple<DevicePtr, HRESULT> CreateDevice(Dxgi::Adapter* adapter = nullptr, D3D_FEATURE_LEVEL level = D3D_FEATURE_LEVEL_12_0);
+	//std::tuple<ResourcePtr, HRESULT> GetBuffer(Dxgi::SwapChain* swap_chain, uint32_t count);
 }
 
-namespace Dumpling::Dxgi
+namespace Dumpling::Win32
 {
+	/*
 	using namespace Dx12;
 	template<> struct Wrapper<Device>
 	{
@@ -48,16 +117,17 @@ namespace Dumpling::Dxgi
 	private:
 		Device* m_device;
 	};
+	*/
 }
 
 namespace Dumpling::Dx12
 {
 	
-	D3D12_VIEWPORT CreateFullScreenViewport(float width, float height) noexcept;
+	//D3D12_VIEWPORT CreateFullScreenViewport(float width, float height) noexcept;
 
 	
 
-	
+	/*
 	template<typename Func> HRESULT MappingBufferByte(Resource* resource, Func&& f, uint32_t byte_start, uint32_t byte_count)
 	{
 		assert(resource != nullptr);
@@ -134,5 +204,8 @@ namespace Dumpling::Dx12
 	
 
 	//std::tuple<PipelineStatePtr, HRESULT> CreateGraphicPipelineState(Device* dev);
+
+	std::tuple<ReflectionPtr, HRESULT> Reflect(std::byte* code, size_t code_length);
+	*/
 
 }

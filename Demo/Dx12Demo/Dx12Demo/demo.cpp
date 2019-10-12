@@ -11,6 +11,7 @@ using Dxgi::FormatPixel;
 
 using namespace Dxgi::DataType;
 using namespace Dx12::Enum;
+using Win32::ThrowIfFault;
 
 namespace fs = std::filesystem;
 
@@ -56,13 +57,27 @@ int main()
 	std::vector<std::byte> vs_shader = load_file(U"VertexShader.cso");
 	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
 
-	auto [Factory, re_f] = Dxgi::CreateFactory();
-	auto AllAdapters = Dxgi::EnumAdapter(Factory);
+	auto Context = ThrowIfFault(Dx12::Context::Create(0));
 
+	auto CommandQueue = ThrowIfFault(Context->CreateCommandQueue(CommandListType::Direct));
+	auto CommandAllocator = ThrowIfFault(Context->CreateCommandAllocator(CommandListType::Direct));
+	auto Form = Dx12::Form::Create(*CommandQueue);
+
+	auto DescHeap = Context->CreateDescriptorHeap(DescriptorHeapType::RT);
+
+	std::this_thread::sleep_for(std::chrono::milliseconds{ 5000 });
+	std::cout << "Down" << std::endl;
+
+	/*
+
+	auto [Reflect, ReR] = Dx12::Reflect(ps_shader.data(), ps_shader.size());
+
+	auto [Factory, re_f] = Dxgi::CreateFactory();b
+	auto AllAdapters = Dxgi::EnumAdapter(Factory);
+	DXGI_ADAPTER_DESC desc;
+	AllAdapters[0]->GetDesc(&desc);
 
 	auto [Device, re_d] = Dx12::CreateDevice(AllAdapters[0], D3D_FEATURE_LEVEL_12_0);
-
-
 
 	auto [Queue, re_c] = Device++.CreateCommmandQueue(*CommandListType::Direct);
 	Queue->SetName(L"WTF");
@@ -135,7 +150,6 @@ int main()
 	{
 
 		auto [BBResource, re1] = Dx12::GetBuffer(SwapChain, current_buffer);
-		BBResource->SetName(L"sdadasd");
 		Device++.CreateRenderTargetView2D(BBResource, DescriptorSize.RTVOffset(RTDescHead, 0));
 		
 		auto [CommandList, re_l] = Device++.CreateGraphicCommandList(Allocator, *CommandListType::Direct);
@@ -162,6 +176,37 @@ int main()
 		SwapChain->Present(1, 0);
 		Queue->Signal(Fence, 1);
 
+		D3D12_DESCRIPTOR_RANGE range{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0,  D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND };
+
+		D3D12_ROOT_PARAMETER tempara;
+		tempara.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		tempara.Descriptor = D3D12_ROOT_DESCRIPTOR{ 0, 0 };
+		tempara.ShaderVisibility = D3D12_SHADER_VISIBILITY::D3D12_SHADER_VISIBILITY_PIXEL;
+
+		D3D12_ROOT_PARAMETER RootParameter[] = {
+			tempara
+		};
+
+		D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc;
+		RootSignatureDesc.NumParameters = 1;
+		RootSignatureDesc.pParameters = RootParameter;
+		RootSignatureDesc.NumStaticSamplers = 0;
+		RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+		Dx12::BlobPtr Data, Error;
+
+		HRESULT re = D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Data(), Error());
+
+		if (Error)
+		{
+			const char* buffer = (const char*)Error->GetBufferPointer();
+			__debugbreak();
+		}
+
+		//CommandList->SetGraphicsRootDescriptorTable();
+
+		//Device
+
 		while (Fence->GetCompletedValue() != 1)
 		{
 			std::cout << Fence->GetCompletedValue() << std::endl;
@@ -184,5 +229,6 @@ int main()
 			}
 		}
 	}
+	*/
 	return 0;
 }

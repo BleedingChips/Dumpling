@@ -1,5 +1,7 @@
 #include "define_dx12.h"
 #include <assert.h>
+#include <d3dcompiler.h>
+#include "..//Dxgi/define_dxgi.h"
 #undef max
 namespace Dumpling::Dx12
 {
@@ -7,16 +9,140 @@ namespace Dumpling::Dx12
 	void InitDebugLayout()
 	{
 		ComPtr<ID3D12Debug>	debugController;
-		HRESULT re = D3D12GetDebugInterface(__uuidof(ID3D12Debug), debugController(void_t{}));
+		HRESULT re = D3D12GetDebugInterface(__uuidof(ID3D12Debug), debugController(VoidT{}));
 		assert(SUCCEEDED(re));
 		debugController->EnableDebugLayer();
 	}
+	
+	Context::Context(uint8_t AdapterIndex, D3D_FEATURE_LEVEL Level) : m_AdapterIndex(AdapterIndex)
+	{
+		auto adapter = Dxgi::HardwareRenderers::Instance().GetAdapter(AdapterIndex);
+		HRESULT re = D3D12CreateDevice(adapter, Level, __uuidof(Device), m_Device(VoidT{}));
+		if (SUCCEEDED(re))
+		{
+			m_NodeMask = (1 << AdapterIndex);
+		}
+		else
+			throw re;
+	}
+
+	void Context::Release() const noexcept { if (m_Ref.sub_ref()) delete this; }
+	void Context::AddRef() const noexcept { m_Ref.add_ref(); }
+
+	std::tuple<FencePtr, HRESULT> Context::CreateFence(uint32_t value, D3D12_FENCE_FLAGS flag)
+	{
+		FencePtr tem;
+		HRESULT re = m_Device->CreateFence(value, flag, __uuidof(Fence), tem(VoidT{}));
+		return { std::move(tem), re };
+	}
+	std::tuple<CommandQueuePtr, HRESULT> Context::CreateCommandQueue(CommandListType Type, CommandQueuePriority Priority, CommandQueueFlag Flags)
+	{
+		CommandQueuePtr result;
+		D3D12_COMMAND_QUEUE_DESC desc{ *Type, *Priority, *Flags, m_NodeMask };
+		HRESULT re = m_Device->CreateCommandQueue(&desc, __uuidof(CommandQueue), result(VoidT{}));
+		return { std::move(result), re };
+	}
+	std::tuple<CommandAllocatorPtr, HRESULT> Context::CreateCommandAllocator(CommandListType Type)
+	{
+		CommandAllocatorPtr tem;
+		HRESULT re = m_Device->CreateCommandAllocator(*Type, __uuidof(CommandAllocator), tem(VoidT{}));
+		return { std::move(tem), re };
+	}
+	std::tuple<GraphicCommandListPtr, HRESULT> Context::CreateGraphicCommandList(CommandAllocator* allocator, CommandListType Type)
+	{
+		assert(allocator != nullptr);
+		GraphicCommandListPtr tem;
+		HRESULT re = m_Device->CreateCommandList(m_NodeMask, *Type, allocator, nullptr, __uuidof(GraphicCommandList), tem(VoidT{}));
+		return {std::move(tem), re};
+	}
+
+	std::tuple<ContextPtr, HRESULT> Context::Create(uint8_t AdapterIndex, D3D_FEATURE_LEVEL Level)
+	{
+		try {
+			ContextPtr ptr = new Context(AdapterIndex, Level);
+			return { ptr, S_OK };
+		}
+		catch (HRESULT re)
+		{
+			return { ContextPtr{}, re };
+		}
+	}
+
+	DescHead Context::CreateDescriptorHeap(DescriptorHeapType Type, uint32_t Count, DescriptorHeapFlag Flag)
+	{
+		DescriptorHeapPtr Result;
+		D3D12_DESCRIPTOR_HEAP_DESC Desc{ *Type, Count, *Flag, m_NodeMask };
+		HRESULT re = m_Device->CreateDescriptorHeap(&Desc, __uuidof(DescriptorHeap), Result(VoidT{}));
+		assert(SUCCEEDED(re));
+		return DescHead{
+			Type, std::move(Result), m_Device->GetDescriptorHandleIncrementSize(*Type), Count
+		};
+	}
+
+	void Context::SetRTV2D(DescHead& Heap, uint32_t Solts, Resource& Resource, uint32_t mipmap, DXGI_FORMAT format, uint32_t plane_slice)
+	{
+		assert(Heap.m_Type == DescriptorHeapType::RT);
+		D3D12_RENDER_TARGET_VIEW_DESC desc;
+		if (format == DXGI_FORMAT_UNKNOWN)
+		{
+			auto res_desc = Resource.GetDesc();
+			desc.Format = res_desc.Format;
+		}
+		else
+			desc.Format = format;
+		desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		desc.Texture2D = { mipmap , plane_slice };
+		m_Device->CreateRenderTargetView(&Resource, &desc, Heap[Solts]);
+	}
+
+	const FormStyle& Default() noexcept {
+		static FormStyle Tem;
+		return Tem;
+	}
+
+	Form::Form(CommandQueue& Queue, const FormSetting& Setting, const FormStyle& Style)
+		: Win32::Form(Setting.Win32Setting, Style.Win32Style), m_BackBufferIndex(0)
+	{
+		auto& WS = Setting.Win32Setting;
+		Dxgi::SwapChainDesc ChainDest{
+			WS.Width, WS.Height, *Setting.Pixel, false, DXGI_SAMPLE_DESC{1, 0}, DXGI_USAGE_RENDER_TARGET_OUTPUT, 2,
+			DXGI_SCALING_STRETCH, DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_ALPHA_MODE_UNSPECIFIED, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		};
+		m_SwapChain = Win32::ThrowIfFault(Dxgi::HardwareRenderers::Instance().CreateSwapChain(&Queue, GetHWnd(), ChainDest));
+		HRESULT re;
+		std::tie(m_BackBuffer, re) = GetBackBuffer(m_BackBufferIndex);
+		assert(SUCCEEDED(re));
+		m_MaxBufferCount = 2;
+	}
+
+	std::tuple<ResourcePtr, HRESULT> Form::GetBackBuffer(uint8_t index) noexcept
+	{
+		ResourcePtr res;
+		HRESULT re = m_SwapChain->GetBuffer(0, __uuidof(Resource), res(VoidT{}));
+		return {std::move(res), re};
+	}
+
+	void Form::PresentAndSwap(GraphicCommandList& List) noexcept {
+		m_SwapChain->Present(1, 0);
+		++m_BackBufferIndex;
+		m_BackBufferIndex = m_BackBufferIndex & m_MaxBufferCount;
+		HRESULT re;
+		std::tie(m_BackBuffer, re) = GetBackBuffer(m_BackBufferIndex);
+		assert(SUCCEEDED(re));
+	}
+
+	FormPtr Form::Create(CommandQueue& Queue, const FormSetting& Setting, const FormStyle& Style)
+	{
+		return new Form{ Queue, Setting, Style };
+	}
+
+	/*
 
 	std::tuple<DevicePtr, HRESULT> CreateDevice(Dxgi::Adapter* adapter, D3D_FEATURE_LEVEL level)
 	{
 		//Device* tem;
 		DevicePtr tem;
-		HRESULT re = D3D12CreateDevice(adapter, level, __uuidof(Device), tem(void_t{}));
+		HRESULT re = D3D12CreateDevice(adapter, level, __uuidof(Device), tem(VoidT{}));
 		return {std::move(tem), re};
 	}
 
@@ -29,7 +155,7 @@ namespace Dumpling::Dx12
 	{
 		assert(swap_chain != nullptr);
 		ResourcePtr tem;
-		HRESULT re = swap_chain->GetBuffer(count, __uuidof(Resource), tem(void_t{}));
+		HRESULT re = swap_chain->GetBuffer(count, __uuidof(Resource), tem(VoidT{}));
 		return {std::move(tem), re};
 	}
 
@@ -66,10 +192,15 @@ namespace Dumpling::Dx12
 		}
 	}
 
-	
+	std::tuple<ReflectionPtr, HRESULT> Reflect(std::byte* code, size_t code_length)
+	{
+		ReflectionPtr tem;
+		HRESULT re = D3DReflect(code, code_length, __uuidof(Reflection), tem(void_t{}));
+		return { std::move(tem), re };
+	}
 }
 
-namespace Dumpling::Dxgi
+namespace Dumpling::Win32
 {
 	Wrapper<Device>::Wrapper(Device* device) noexcept : m_device(device) {
 		assert(m_device != nullptr);
@@ -219,5 +350,5 @@ namespace Dumpling::Dxgi
 		desc.Texture2D = { mipmap };
 		m_device->CreateDepthStencilView(resource, &desc, handle);
 	}
-
+	*/
 }

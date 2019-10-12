@@ -1,21 +1,39 @@
 #pragma once
-#include "enum_dxgi.h"
 #include "..//..//..//Potato/smart_pointer.h"
 #include <tuple>
 #include <vector>
 #include <DirectXMath.h>
-#pragma comment(lib, "dxgi.lib")
+#include "..//Win32//aid.h"
+#include <dxgi1_4.h>
 namespace Dumpling::Dxgi
 {
+	// Enum redefine **********************************************************************
+	enum class FormatPixel
+	{
+		RGBA32_Float = DXGI_FORMAT_R32G32B32A32_FLOAT,
+		RGB32_Float = DXGI_FORMAT_R32G32B32_FLOAT,
+		RG32_Float = DXGI_FORMAT_R32G32_FLOAT,
+		R32_Float = DXGI_FORMAT_R32_FLOAT,
+		RGBA16_Float = DXGI_FORMAT_R16G16B16A16_FLOAT,
+		RGBA16_Unorn = DXGI_FORMAT_R16G16B16A16_UNORM,
+		RGBA8_Unorn = DXGI_FORMAT_R8G8B8A8_UNORM,
+		R24G8_Typeless = DXGI_FORMAT_R24G8_TYPELESS,
+		R24G8_Unorn_Typeless = DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+		D24S8_Unorn_Uint = DXGI_FORMAT_D24_UNORM_S8_UINT,
+		Unknown = DXGI_FORMAT_UNKNOWN,
+	};
 
+	inline constexpr DXGI_FORMAT operator*(Dumpling::Dxgi::FormatPixel format) noexcept
+	{
+		return static_cast<DXGI_FORMAT>(format);
+	}
 
-	std::tuple<FactoryPtr, HRESULT> CreateFactory();
-	std::vector<AdapterPtr> EnumAdapter(Factory*);
-	std::vector<OutputPtr> EnumOutput(Adapter*);
+	inline constexpr Dumpling::Dxgi::FormatPixel operator*(DXGI_FORMAT format) noexcept
+	{
+		return static_cast<Dumpling::Dxgi::FormatPixel>(format);
+	}
 
-	SwapChainDesc CreateDefaultSwapChainDesc(DXGI_FORMAT pixel_format, uint32_t width, uint32_t height, uint32_t buffer_count = 2);
-
-	std::tuple<SwapChainPtr, HRESULT> CreateSwapChain(Factory* factory, IUnknown* device, HWND hwnd, const SwapChainDesc& desc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* = nullptr, IDXGIOutput* output = nullptr);
+	// Type Define **********************************************************************
 
 	namespace DataType {
 		using float2 = DirectX::XMFLOAT2;
@@ -28,6 +46,8 @@ namespace Dumpling::Dxgi
 		using uint32_2 = DirectX::XMUINT2;
 		using uint32_3 = DirectX::XMUINT3;
 		using uint32_4 = DirectX::XMUINT4;
+
+		using float4x4 = DirectX::XMMATRIX;
 	}
 
 	template<typename Type>
@@ -64,5 +84,38 @@ namespace Dumpling::Dxgi
 		constexpr operator FormatPixel() const noexcept { return format; }
 		constexpr operator DXGI_FORMAT() const noexcept { return format_dx; }
 	};
+
+	using Win32::ComPtr;
+	using Win32::VoidT;
+
+	using Factory = IDXGIFactory4;
+	using FactoryPtr = ComPtr<Factory>;
+
+	using Adapter = IDXGIAdapter1;
+	using AdapterPtr = ComPtr<Adapter>;
+
+	using Output = IDXGIOutput;
+	using OutputPtr = ComPtr<Output>;
+
+	using SwapChain = IDXGISwapChain1;
+	using SwapChainDesc = DXGI_SWAP_CHAIN_DESC1;
+	using SwapChainPtr = ComPtr<SwapChain>;
+
+	// Base Function ********************************************************************************
+
+	struct HardwareRenderers {
+		static HardwareRenderers& Instance();
+		uint8_t AdapterCount() const noexcept;
+		Dxgi::Adapter* GetAdapter(uint8_t adapter_index) const noexcept;
+		std::vector<OutputPtr> EnumOutput(uint8_t adapter_index) const noexcept;
+		std::tuple<SwapChainPtr, HRESULT> CreateSwapChain(IUnknown* device, HWND hwnd, const SwapChainDesc& desc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* = nullptr, IDXGIOutput* output = nullptr);
+	private:
+		HardwareRenderers();
+		FactoryPtr m_Factory;
+		std::vector<Dxgi::AdapterPtr> m_AllAdapter;
+	};
+
+	
+	
 }
 

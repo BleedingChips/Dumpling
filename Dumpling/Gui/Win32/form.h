@@ -2,70 +2,58 @@
 #include <future>
 #include <string>
 #include <Windows.h>
-#include <deque>
-#include "..//..//..//Potato/smart_pointer.h"
-#include "..//..//..//Potato/tool.h"
 #include "aid.h"
+#include "..//..//..//Potato//tool.h"
+#include <functional>
 namespace Dumpling::Win32
 {
-	
-	using Potato::Tool::intrusive_ptr;
-
-	enum class Style
-	{
-		Normal,
-	};
-
 	namespace Error {
-		struct CreateWindowFauit : std::exception
+		struct FaultToCreate : std::exception
 		{
-			DWORD m_result;
-			const char* what() const noexcept override;
-			CreateWindowFauit(DWORD result) : m_result(result) {}
+			const char* what() const noexcept override { return m_String.c_str(); }
+			FaultToCreate(std::string ErrorString) : m_String(std::move(ErrorString)) {}
+		private:
+			std::string m_String;
 		};
 	}
 
-	struct FormProperty
-	{
-		Style style = Style::Normal;
-		std::u16string title = u"PO default title :>";
-		int shift_x = (GetSystemMetrics(SM_CXSCREEN) - 1024) / 2;
-		int shift_y = (GetSystemMetrics(SM_CYSCREEN) - 768) / 2;
-		int width = 1024;
-		int height = 768;
+	struct FormStyle {
+
 	};
 
-	
+	struct FormSetting {
+		const wchar_t* Title = L"PO default title :>";
+		uint32_t Width = 1024;
+		uint32_t Height = 768;
+		uint32_t ShiftX = 0;
+		uint32_t ShiftY = 0;
+	};
+
+	const FormStyle& DefaultStyle() noexcept;
 
 	struct Form;
-	
+	using FormPtr = ComPtr<Form>;
 
-	namespace Implement
-	{
-		struct Control
-		{
-			Control();
-			void add_ref() noexcept;
-			void sub_ref() noexcept;
-			HWND m_handle;
-			Potato::Tool::atomic_reference_count m_ref;
-			mutable std::mutex m_mutex;
-			std::deque<MSG> m_msages;
-		};
-	}
-
-	struct Form
-	{
-		operator bool() const noexcept { return m_ref; }
-		operator HWND() const noexcept { return m_ref->m_handle; }
-		bool pook_event(MSG&) noexcept;
-		static Form create(const FormProperty & = FormProperty{});
-		Form() = default;
-		Form(Form&&) = default;
-		Form& operator=(Form&&) = default;
+	struct Form {
+		using EventFunctionT = std::function<std::optional<LRESULT>(HWND, UINT, WPARAM, LPARAM)>;
+		HWND GetHWnd() const noexcept { return m_Hwnd; }
+		void AddRef() const noexcept { m_Ref.add_ref(); }
+		void Release() const noexcept { if (m_Ref.sub_ref()) delete this; }
+		void OverwriteEventFunction(EventFunctionT event_function) noexcept;
+		//bool Available() const noexcept { return m_available; }
+		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+		static FormPtr Create(const FormSetting& Setting = FormSetting{}, const FormStyle& Style = DefaultStyle());
+	protected:
+		Form(const FormSetting& Setting, const FormStyle& Style);
+		virtual ~Form();
 	private:
-		Potato::Tool::intrusive_ptr<Implement::Control> m_ref;
-		friend struct FormContext;
+		//std::atomic_bool m_available;
+		std::optional<LRESULT> RespondEventInEventLoop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
+		HWND m_Hwnd;
+		std::recursive_mutex m_EventFunctionMutex;
+		EventFunctionT m_EventFunction;
+		mutable Potato::Tool::atomic_reference_count m_Ref;
 	};
 
+	
 }
