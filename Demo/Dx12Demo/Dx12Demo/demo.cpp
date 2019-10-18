@@ -58,12 +58,35 @@ int main()
 	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
 
 	auto Context = ThrowIfFault(Dx12::Context::Create(0));
-
 	auto CommandQueue = ThrowIfFault(Context->CreateCommandQueue(CommandListType::Direct));
-	auto CommandAllocator = ThrowIfFault(Context->CreateCommandAllocator(CommandListType::Direct));
 	auto Form = Dx12::Form::Create(*CommandQueue);
 
-	auto DescHeap = Context->CreateDescriptorHeap(DescriptorHeapType::RT);
+	auto CommandAllocator = ThrowIfFault(Context->CreateCommandAllocator(CommandListType::Direct));
+	auto DescMap = Context->CreateDescriptorMapping("WTF", { {"Data", Dx12::DescResType::CB} });
+	auto DescHeap = Context->CreateDescriptor(DescMap);
+	auto RTDescHeap = Context->CreateRTDSDescriptor("Bask", { "BackBuffer" });
+
+	std::atomic_bool Exit = false;
+
+	Form->OverwriteEventFunction([&](HWND, UINT msg, WPARAM, LPARAM) -> std::optional<LRESULT> {
+		if (msg == WM_QUIT)
+		{
+			Exit = true;
+			return 0;
+		}
+		else
+			return std::nullopt;
+	});
+
+	while (!Exit)
+	{
+		auto Fen = ThrowIfFault(Context->CreateFence());
+		auto List = ThrowIfFault(Context->CreateGraphicCommandList(CommandAllocator, Dx12::CommandListType::Direct));
+		Context->SetRTAsTex2(*RTDescHeap, Form->CurrentBackBuffer(), "BackBuffer");
+		FLOAT Color[4] = {0.5f, 0.5f, 0.5f, 1.0f};
+		List->ClearRenderTargetView(RTDescHeap->RTCpuHandle(0), Color, 0, nullptr);
+		Form->PresentAndSwap(*List);
+	}
 
 	std::this_thread::sleep_for(std::chrono::milliseconds{ 5000 });
 	std::cout << "Down" << std::endl;

@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <d3dcompiler.h>
 #include "..//Dxgi/define_dxgi.h"
+#include "descriptor_table_dx12.h"
 #undef max
 namespace Dumpling::Dx12
 {
@@ -68,18 +69,20 @@ namespace Dumpling::Dx12
 		}
 	}
 
-	DescHead Context::CreateDescriptorHeap(DescriptorHeapType Type, uint32_t Count, DescriptorHeapFlag Flag)
-	{
-		DescriptorHeapPtr Result;
-		D3D12_DESCRIPTOR_HEAP_DESC Desc{ *Type, Count, *Flag, m_NodeMask };
-		HRESULT re = m_Device->CreateDescriptorHeap(&Desc, __uuidof(DescriptorHeap), Result(VoidT{}));
-		assert(SUCCEEDED(re));
-		return DescHead{
-			Type, std::move(Result), m_Device->GetDescriptorHandleIncrementSize(*Type), Count
-		};
+	bool Context::SetRTAsTex2(RTDSDescriptor& Desc, Resource* Res, std::string_view Name, uint32_t MipSlice, uint32_t PlaneSlice, Dxgi::FormatPixel FP) {
+		auto Index = Desc.FindElement(Name);
+		if (Index.has_value())
+		{
+			D3D12_RENDER_TARGET_VIEW_DESC Des{ *FP, D3D12_RTV_DIMENSION_TEXTURE2D };
+			Des.Texture2D = D3D12_TEX2D_RTV{ MipSlice, PlaneSlice };
+			m_Device->CreateRenderTargetView(Res, &Des, Desc.RTCpuHandle(*Index));
+			return true;
+		}
+		return false;
 	}
 
-	void Context::SetRTV2D(DescHead& Heap, uint32_t Solts, Resource& Resource, uint32_t mipmap, DXGI_FORMAT format, uint32_t plane_slice)
+	/*
+	void Context::SetRTV2D(Descriptor& Heap, uint32_t Solts, Resource& Resource, uint32_t mipmap, DXGI_FORMAT format, uint32_t plane_slice)
 	{
 		assert(Heap.m_Type == DescriptorHeapType::RT);
 		D3D12_RENDER_TARGET_VIEW_DESC desc;
@@ -94,6 +97,7 @@ namespace Dumpling::Dx12
 		desc.Texture2D = { mipmap , plane_slice };
 		m_Device->CreateRenderTargetView(&Resource, &desc, Heap[Solts]);
 	}
+	*/
 
 	const FormStyle& Default() noexcept {
 		static FormStyle Tem;

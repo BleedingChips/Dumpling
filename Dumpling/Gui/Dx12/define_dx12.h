@@ -8,21 +8,10 @@
 #include <optional>
 #include "..//Win32/form.h"
 #include "../Dxgi/define_dxgi.h"
+#include "descriptor_table_dx12.h"
 namespace Dumpling::Dx12
 {
 	void InitDebugLayout();
-
-	struct DescHead {
-		DescriptorHeapType Type() const noexcept { return m_Type; }
-		D3D12_CPU_DESCRIPTOR_HANDLE operator[](size_t) const noexcept { return D3D12_CPU_DESCRIPTOR_HANDLE{ GetCPUHandleStart().ptr + m_Offset }; }
-		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandleStart() const noexcept{ return m_Heap->GetCPUDescriptorHandleForHeapStart(); }
-		D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandleStart() const noexcept { return m_Heap->GetGPUDescriptorHandleForHeapStart(); }
-
-		DescriptorHeapType m_Type;
-		DescriptorHeapPtr m_Heap;
-		size_t m_Offset;
-		size_t m_Count;
-	};
 
 	struct Context;
 	using ContextPtr = ComPtr<Context>;
@@ -37,8 +26,10 @@ namespace Dumpling::Dx12
 		std::tuple<CommandQueuePtr, HRESULT> CreateCommandQueue(CommandListType Type = CommandListType::Direct, CommandQueuePriority Priority = CommandQueuePriority::Normal, CommandQueueFlag Flags = CommandQueueFlag::Non);
 		std::tuple<CommandAllocatorPtr, HRESULT> CreateCommandAllocator(CommandListType Type);
 		std::tuple<GraphicCommandListPtr, HRESULT> CreateGraphicCommandList(CommandAllocator* allocator, CommandListType Type);
-		DescHead CreateDescriptorHeap(DescriptorHeapType Type, uint32_t Count = 1, DescriptorHeapFlag Flag = DescriptorHeapFlag::None);
-		void SetRTV2D(DescHead& Heap, uint32_t Solts, Resource& Resource, uint32_t mipmap = 0, DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN, uint32_t plane_slice = 0);
+		DescriptorMappingPtr CreateDescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Element) { return DescriptorMapping::Create(std::move(Name), std::move(Element)); }
+		DescriptorPtr CreateDescriptor(DescriptorMapping* Mapping) { return Descriptor::Create(*m_Device, m_NodeMask, Mapping); }
+		RTDSDescriptorPtr CreateRTDSDescriptor(std::string Name, std::initializer_list<std::string_view> RTName, bool UsedDT = false) { return RTDSDescriptor::Create(*m_Device, m_NodeMask, std::move(Name), RTName, UsedDT); }
+		bool SetRTAsTex2(RTDSDescriptor& Desc, Resource* Res, std::string_view Name, uint32_t MipSlice = 0, uint32_t PlaneSlice = 0, Dxgi::FormatPixel FP = Dxgi::FormatPixel::Unknown);
 
 		static std::tuple<ContextPtr, HRESULT> Create(uint8_t AdapterIndex = 0, D3D_FEATURE_LEVEL Level = D3D_FEATURE_LEVEL_12_1);
 	

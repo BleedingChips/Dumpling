@@ -71,28 +71,6 @@ namespace Dumpling::Dx12
 		inline constexpr ResourceState operator *(D3D12_RESOURCE_STATES type) noexcept { return static_cast<ResourceState>(type); }
 		inline constexpr ResourceState operator |(ResourceState type, ResourceState type2) noexcept { return *(*type | *type2); }
 
-		enum class DescriptorHeapType
-		{
-			CBSRUA = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			Sampler = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-			RT = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-			DS = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
-			Nums = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES
-		};
-
-		inline constexpr D3D12_DESCRIPTOR_HEAP_TYPE operator *(DescriptorHeapType type) noexcept { return static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type); }
-		inline constexpr DescriptorHeapType operator *(D3D12_DESCRIPTOR_HEAP_TYPE type) noexcept { return static_cast<DescriptorHeapType>(type); }
-
-		enum class DescriptorHeapFlag
-		{
-			None = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			ShaderVisible = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		};
-
-		inline constexpr D3D12_DESCRIPTOR_HEAP_FLAGS operator *(DescriptorHeapFlag type) noexcept { return static_cast<D3D12_DESCRIPTOR_HEAP_FLAGS>(type); }
-		inline constexpr DescriptorHeapFlag operator *(D3D12_DESCRIPTOR_HEAP_FLAGS type) noexcept { return static_cast<DescriptorHeapFlag>(type); }
-		inline constexpr DescriptorHeapFlag operator |(DescriptorHeapFlag type, DescriptorHeapFlag type2) noexcept { return *(*type | *type2); }
-
 		enum class CommandQueueFlag 
 		{
 			Non = D3D12_COMMAND_QUEUE_FLAG_NONE,

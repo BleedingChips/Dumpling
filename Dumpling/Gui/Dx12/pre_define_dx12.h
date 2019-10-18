@@ -13,8 +13,7 @@ namespace Dumpling::Dx12
 	using Fence = ID3D12Fence1;
 	using FencePtr = ComPtr<Fence>;
 
-	using DescriptorHeap = ID3D12DescriptorHeap;
-	using DescriptorHeapPtr = ComPtr<DescriptorHeap>;
+	
 
 	using CommandQueue = ID3D12CommandQueue;
 	using CommandQueuePtr = ComPtr<CommandQueue>;
@@ -47,6 +46,7 @@ namespace Dumpling::Dx12
 	using Reflection = ID3D12ShaderReflection;
 	using ReflectionPtr = ComPtr<Reflection>;
 
+	/*
 	struct DescriptorHandleIncrementSize
 	{
 		uint32_t CBV_SRV_UAV;
@@ -78,4 +78,5 @@ namespace Dumpling::Dx12
 			return { start->GetCPUDescriptorHandleForHeapStart().ptr + RTV * index };
 		}
 	};
+	*/
 }

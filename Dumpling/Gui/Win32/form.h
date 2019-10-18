@@ -39,6 +39,8 @@ namespace Dumpling::Win32
 		HWND GetHWnd() const noexcept { return m_Hwnd; }
 		void AddRef() const noexcept { m_Ref.add_ref(); }
 		void Release() const noexcept { if (m_Ref.sub_ref()) delete this; }
+
+		// std::optional<LRESULT>(HWND, UINT, WPARAM, LPARAM)
 		void OverwriteEventFunction(EventFunctionT event_function) noexcept;
 		//bool Available() const noexcept { return m_available; }
 		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
