@@ -38,7 +38,10 @@ namespace Dumpling::Win32
 		using EventFunctionT = std::function<std::optional<LRESULT>(HWND, UINT, WPARAM, LPARAM)>;
 		HWND GetHWnd() const noexcept { return m_Hwnd; }
 		void AddRef() const noexcept { m_Ref.add_ref(); }
-		void Release() const noexcept { if (m_Ref.sub_ref()) delete this; }
+		void Release() const noexcept { 
+			if (m_Ref.sub_ref()) 
+				delete this;
+		}
 
 		// std::optional<LRESULT>(HWND, UINT, WPARAM, LPARAM)
 		void OverwriteEventFunction(EventFunctionT event_function) noexcept;

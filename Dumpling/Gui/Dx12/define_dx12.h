@@ -28,7 +28,7 @@ namespace Dumpling::Dx12
 		std::tuple<GraphicCommandListPtr, HRESULT> CreateGraphicCommandList(CommandAllocator* allocator, CommandListType Type);
 		DescriptorMappingPtr CreateDescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Element) { return DescriptorMapping::Create(std::move(Name), std::move(Element)); }
 		DescriptorPtr CreateDescriptor(DescriptorMapping* Mapping) { return Descriptor::Create(*m_Device, m_NodeMask, Mapping); }
-		RTDSDescriptorPtr CreateRTDSDescriptor(std::string Name, std::initializer_list<std::string_view> RTName, bool UsedDT = false) { return RTDSDescriptor::Create(*m_Device, m_NodeMask, std::move(Name), RTName, UsedDT); }
+		RTDSDescriptorPtr CreateRTDSDescriptor(std::string Name, std::initializer_list<std::string_view> RTName, bool UsedDT = false) { return RTDSDescriptor::Create(m_Device, m_NodeMask, std::move(Name), RTName, UsedDT); }
 		bool SetRTAsTex2(RTDSDescriptor& Desc, Resource* Res, std::string_view Name, uint32_t MipSlice = 0, uint32_t PlaneSlice = 0, Dxgi::FormatPixel FP = Dxgi::FormatPixel::Unknown);
 
 		static std::tuple<ContextPtr, HRESULT> Create(uint8_t AdapterIndex = 0, D3D_FEATURE_LEVEL Level = D3D_FEATURE_LEVEL_12_1);
@@ -70,6 +70,7 @@ namespace Dumpling::Dx12
 		Form(CommandQueue& Queue, const FormSetting&, const FormStyle&);
 		Dxgi::SwapChainPtr m_SwapChain;
 		ResourcePtr m_BackBuffer;
+		ComPtr<DescriptorHeap> m_Heap;
 		uint8_t m_BackBufferIndex;
 		uint8_t m_MaxBufferCount;
 	};

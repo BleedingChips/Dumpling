@@ -195,12 +195,75 @@ namespace Dumpling::Dx12
 			D3D12_RENDER_TARGET_VIEW_DESC Des{ *FP, D3D12_RTV_DIMENSION_TEXTURE2D };
 			Des.Texture2D = D3D12_TEX2D_RTV{ MipSlice, PlaneSlice };
 			dev->CreateRenderTargetView(Res, &Des, RTCpuHandle(*Index));
-			m_Resource[*Index] = {Res, ResourceState::Common};
+			m_RTResources[*Index] = { Res, ResourceState::Common };
 			return true;
 		}
 		return false;
 	}
 
+	void RTDSDescriptor::MarkAsRenderTarget(GraphicCommandList* List, bool DepthWrite) noexcept
+	{
+		assert(List != nullptr);
+		for (auto& ite : m_RTResources)
+		{
+			auto& [ptr, state] = ite;
+			if (ptr && state != ResourceState::RenderTarget)
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAG_NONE
+				};
+				barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
+					ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES , *state, * ResourceState::RenderTarget
+				};
+				List->ResourceBarrier(1, &barrier);
+			}
+		}
+		{
+			auto& [ptr, state] = m_DSResource;
+			ResourceState DepthTargetState = DepthWrite ? ResourceState::DepthWrite : ResourceState::DepthRead;
+			if (ptr && state != DepthTargetState)
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAG_NONE
+				};
+				barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
+					ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES , *state, *DepthTargetState
+				};
+				List->ResourceBarrier(1, &barrier);
+			}
+		}
+		auto RTHandle = RTCpuHandleStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = UsedDS() ? DSCpuHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{};
+		auto DSHandle = UsedDS() ? DSCpuHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
+		List->OMSetRenderTargets(RTCount(), &RTHandle, true, (UsedDS() ? &Handle : nullptr));
+	}
+
+	/*
+	uint32_t RTDSDescriptor::ChangeRTState(GraphicCommandList* List, ResourceState NewState) noexcept
+	{
+		uint32_t count = 0;
+		assert(List != nullptr);
+		for (auto& ite : m_RTResources)
+		{
+			auto& [ptr, state] = ite;
+			if (ptr)
+			{
+				count++;
+				D3D12_RESOURCE_BARRIER barrier{ 
+					D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAG_NONE
+				};
+				barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
+					ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES , *state, *NewState
+				};
+				List->ResourceBarrier(1, &barrier);
+			}
+		}
+		return count;
+	}
+	*/
 
 
 

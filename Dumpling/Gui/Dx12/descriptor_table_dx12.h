@@ -11,6 +11,9 @@ namespace Dumpling::Dx12
 {
 	using Win32::ComPtr;
 
+	using DescriptorHeap = ID3D12DescriptorHeap;
+	using DescriptorHeapPtr = ComPtr<DescriptorHeap>;
+
 	enum class DescResCategory
 	{
 		SRV = 0,
@@ -90,9 +93,9 @@ namespace Dumpling::Dx12
 		static DescriptorPtr Create(Device& Dev, uint32_t NodeMask, DescriptorMapping* Mapping);
 	private:
 		Descriptor() = default;
-		ComPtr<ID3D12DescriptorHeap> m_ResHeap;
+		DescriptorHeapPtr m_ResHeap;
 		uint32_t m_ResOffset;
-		ComPtr<ID3D12DescriptorHeap> m_SamHeap;
+		DescriptorHeapPtr m_SamHeap;
 		uint32_t m_SamOffset;
 		DescriptorMappingPtr m_Mapping;
 		mutable Potato::Tool::atomic_reference_count m_Ref;
@@ -104,7 +107,7 @@ namespace Dumpling::Dx12
 	struct RTDSDescriptor {
 		void AddRef() const noexcept;
 		void Release() const noexcept;
-		bool UsedDT() const noexcept { return m_DTHeap; }
+		bool UsedDS() const noexcept { return m_DSHeap; }
 		static RTDSDescriptorPtr Create(Device* Dev, uint32_t NodeMask, std::string Name, std::initializer_list<std::string_view> RTName, bool UsedDT = false);
 		bool SetRTAsTex2(Device* dev, Resource* Res, std::string_view Name, uint32_t MipSlice, uint32_t PlaneSlice, Dxgi::FormatPixel FP);
 		std::optional<uint32_t> FindElement(std::string_view Name);
@@ -118,19 +121,24 @@ namespace Dumpling::Dx12
 			assert(index < RTCount());
 			return D3D12_CPU_DESCRIPTOR_HANDLE{ RTCpuHandleStart().ptr + static_cast<uint64_t>(m_RTOffset)* index };
 		}
-		D3D12_CPU_DESCRIPTOR_HANDLE DTCpuHandle() const noexcept {
-			assert(DTCount() > 0);
-			return m_DTHeap->GetCPUDescriptorHandleForHeapStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE DSCpuHandle() const noexcept {
+			assert(DSCount() > 0);
+			return m_DSHeap->GetCPUDescriptorHandleForHeapStart();
 		}
 		uint32_t RTCount() const noexcept { return m_RTCount; }
-		uint32_t DTCount() const noexcept { return m_DTHeap ? 1 : 0; }
+		uint32_t DSCount() const noexcept { return m_DSHeap ? 1 : 0; }
+		void SetAsRenderTarget(GraphicCommandList* List) noexcept;
+		void ChangeRTStateToRenderTarget(GraphicCommandList* List) noexcept;
+		void MarkAsPresent(GraphicCommandList* List) noexcept;
+		void MarkAsCommmand(GraphicCommandList* List) noexcept;
 	protected:
 		RTDSDescriptor() = default;
-		ComPtr<ID3D12DescriptorHeap> m_RTHeap;
+		DescriptorHeapPtr m_RTHeap;
 		uint32_t m_RTOffset;
 		uint32_t m_RTCount;
-		ComPtr<ID3D12DescriptorHeap> m_DTHeap;
-		std::vector<std::tuple<ResourcePtr, ResourceState>> m_Resource;
+		DescriptorHeapPtr m_DSHeap;
+		std::vector<std::tuple<ResourcePtr, ResourceState>> m_RTResources;
+		std::tuple<ResourcePtr, ResourceState> m_DSResource;
 		std::vector<std::string> m_Mapping;
 		std::string m_Name;
 		mutable Potato::Tool::atomic_reference_count m_Ref;

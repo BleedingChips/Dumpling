@@ -69,7 +69,7 @@ int main()
 	std::atomic_bool Exit = false;
 
 	Form->OverwriteEventFunction([&](HWND, UINT msg, WPARAM, LPARAM) -> std::optional<LRESULT> {
-		if (msg == WM_QUIT)
+		if (msg == WM_CLOSE)
 		{
 			Exit = true;
 			return 0;
@@ -87,8 +87,9 @@ int main()
 		List->ClearRenderTargetView(RTDescHeap->RTCpuHandle(0), Color, 0, nullptr);
 		Form->PresentAndSwap(*List);
 	}
+	volatile int i = 0;
 
-	std::this_thread::sleep_for(std::chrono::milliseconds{ 5000 });
+	//std::this_thread::sleep_for(std::chrono::milliseconds{ 5000 });
 	std::cout << "Down" << std::endl;
 
 	/*
