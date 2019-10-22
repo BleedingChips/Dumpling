@@ -7,6 +7,7 @@
 #include <map>
 #include <array>
 #include <vector>
+#include <memory>
 namespace Dumpling::Dx12 
 {
 	using Win32::ComPtr;
@@ -41,15 +42,14 @@ namespace Dumpling::Dx12
 	};
 
 	struct DescriptorMapping;
-	using DescriptorMappingPtr = ComPtr<DescriptorMapping>;
+	using DescriptorMappingPtr = std::shared_ptr<DescriptorMapping>;
 
 	struct DescriptorMapping {
-		void AddRef() const noexcept;
-		void Release() const noexcept;
 		std::string_view Name() const noexcept { return m_Name; }
 		uint32_t ResourceCount() const noexcept { return m_ResourceCount; }
 		uint32_t SamplerCount() const noexcept { return m_SamplerCount; }
-		static DescriptorMappingPtr Create(std::string Name, std::initializer_list<DescriptorElement> Mapping);
+		DescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Map);
+		inline static DescriptorMappingPtr Create(std::string Name, std::initializer_list<DescriptorElement> Map) { return std::make_shared<DescriptorMapping>(std::move(Name), std::move(Map)); }
 		std::optional<std::tuple<DescResType, uint32_t, Dxgi::FormatPixel>> FindElement(DescResCategory ResType, std::string_view view) const;
 	private:
 		DescriptorMapping() = default;
@@ -59,16 +59,22 @@ namespace Dumpling::Dx12
 		std::array<size_t, *DescResCategory::Num> m_ElenmentCount;
 		uint32_t m_ResourceCount;
 		uint32_t m_SamplerCount;
-		mutable Potato::Tool::atomic_reference_count m_Ref;
 	};
 
 	struct Descriptor;
 	using DescriptorPtr = ComPtr<Descriptor>;
 
+	struct Descriptor {
+		DescriptorPtr Create(size_t count);
+	private:
+		Descriptor();
+		DescriptorHeapPtr m_SamHeap;
+		uint32_t m_DesOffset;
+		uint32_t m_DesCount;
+	};
+
 	struct Descriptor
 	{
-		void AddRef() const noexcept;
-		void Release() const noexcept;
 		std::string_view Name() const noexcept { return m_Mapping->Name(); }
 		D3D12_CPU_DESCRIPTOR_HANDLE ResourceCpuHandleStart() const noexcept 
 		{ 
@@ -95,9 +101,17 @@ namespace Dumpling::Dx12
 		Descriptor() = default;
 		DescriptorHeapPtr m_ResHeap;
 		uint32_t m_ResOffset;
-		DescriptorHeapPtr m_SamHeap;
-		uint32_t m_SamOffset;
+		
 		DescriptorMappingPtr m_Mapping;
+		mutable Potato::Tool::atomic_reference_count m_Ref;
+	};
+
+	struct SimpleDescriptorMapping {
+		void AddRef() const noexcept;
+		void Release() const noexcept;
+		std::optional<uint32_t> FindElement(std::string_view Name) const noexcept;
+	private:
+		std::vector<std::string> m_Name;
 		mutable Potato::Tool::atomic_reference_count m_Ref;
 	};
 

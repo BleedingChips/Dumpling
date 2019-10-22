@@ -79,6 +79,17 @@ namespace Dumpling::Dx12
 
 		inline constexpr D3D12_COMMAND_QUEUE_FLAGS operator *(CommandQueueFlag type) noexcept { return static_cast<D3D12_COMMAND_QUEUE_FLAGS>(type); }
 		inline constexpr CommandQueueFlag operator *(D3D12_COMMAND_QUEUE_FLAGS type) noexcept { return static_cast<CommandQueueFlag>(type); }
+
+		enum class DescriptorType
+		{
+			Resource = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			Sampler = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+			RenderTarget = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			DepthStencil = D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+		};
+
+		inline constexpr D3D12_DESCRIPTOR_HEAP_TYPE operator *(DescriptorType type) noexcept { return static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type); }
+		inline constexpr DescriptorType operator *(D3D12_DESCRIPTOR_HEAP_TYPE type) noexcept { return static_cast<DescriptorType>(type); }
 	}
 	using namespace Enum;
 }

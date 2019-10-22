@@ -20,50 +20,28 @@ namespace Dumpling::Dx12
 		}
 	}
 
-	void DescriptorMapping::AddRef() const noexcept
+	DescriptorMapping::DescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Map)
+		: m_Name(std::move(Name))
 	{
-		m_Ref.add_ref();
-	}
-
-	void DescriptorMapping::Release() const noexcept
-	{
-		if (m_Ref.sub_ref())
-			delete this;
-	}
-
-	DescriptorMappingPtr DescriptorMapping::Create(std::string Name, std::initializer_list<DescriptorElement> Mapping)
-	{
-		std::array<size_t, *DescResCategory::Num> Count;
-		for (auto& ite : Count) ite = 0;
-		for (auto& ite : Mapping)
-		{
-			auto Categ= TypeToIndex(ite.Type);
-			++Count[*Categ];
-		}
-		std::array<size_t, *DescResCategory::Num> Shift;
-		Shift[0] = 0;
-		for (size_t i = 1; i < *DescResCategory::Num; ++i)
-			Shift[i] = Shift[i-1] + Count[i - 1];
-		uint32_t ResourceCount = static_cast<uint32_t>(Shift[*DescResCategory::Sampler]);
-		uint32_t SamplerCount = static_cast<uint32_t>(Count[*DescResCategory::Sampler]);
-
-		std::vector<std::tuple<std::string, DescResType, Dxgi::FormatPixel>> ResultArray;
-		ResultArray.resize(ResourceCount + SamplerCount);
-		std::array<size_t, *DescResCategory::Num> Index;
-		for (auto& ite : Index) ite = 0;
-		for (auto& ite : Mapping)
+		m_ElenmentCount.fill(0);
+		for (auto& ite : Map)
 		{
 			auto Categ = TypeToIndex(ite.Type);
-			ResultArray[Shift[*Categ] + Index[*Categ]++] = { std::string{ite.Name}, ite.Type, ite.Format };
+			++m_ElenmentCount[*Categ];
 		}
-		DescriptorMappingPtr Result = new DescriptorMapping{};
-		Result->m_Name = std::move(Name);
-		Result->m_Elements = std::move(ResultArray);
-		Result->m_ElementsOffset = Shift;
-		Result->m_ElenmentCount = Count;
-		Result->m_ResourceCount = ResourceCount;
-		Result->m_SamplerCount = SamplerCount;
-		return Result;
+		m_ElementsOffset[0] = 0;
+		for (size_t i = 1; i < *DescResCategory::Num; ++i)
+			m_ElementsOffset[i] = m_ElementsOffset[i - 1] + m_ElenmentCount[i - 1];
+		m_ResourceCount = static_cast<uint32_t>(m_ElementsOffset[*DescResCategory::Sampler]);
+		m_SamplerCount = static_cast<uint32_t>(m_ElenmentCount[*DescResCategory::Sampler]);
+		m_Elements.resize(m_ResourceCount + m_SamplerCount);
+		std::array<size_t, *DescResCategory::Num> Index;
+		for (auto& ite : Index) ite = 0;
+		for (auto& ite : Map)
+		{
+			auto Categ = TypeToIndex(ite.Type);
+			m_Elements[m_ElementsOffset[*Categ] + Index[*Categ]++] = { std::string{ite.Name}, ite.Type, ite.Format };
+		}
 	}
 
 	std::optional<std::tuple<DescResType, uint32_t, Dxgi::FormatPixel>> DescriptorMapping::FindElement(DescResCategory ResType, std::string_view view) const

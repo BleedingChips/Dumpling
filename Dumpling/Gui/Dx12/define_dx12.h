@@ -11,6 +11,7 @@
 #include "descriptor_table_dx12.h"
 namespace Dumpling::Dx12
 {
+
 	void InitDebugLayout();
 
 	struct Context;
