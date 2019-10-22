@@ -17,6 +17,24 @@ namespace Dumpling::Dx12
 	struct Context;
 	using ContextPtr = ComPtr<Context>;
 
+	struct StateLog {
+		void ChangeState(GraphicCommandList* List, ResourceState NewState, uint32_t SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
+			assert(List != nullptr);
+			if (m_Res && m_State != NewState)
+			{
+				D3D12_RESOURCE_BARRIER Barr{
+					D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAG_NONE
+				};
+				Barr.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{ m_Res, SubResource, *m_State, *NewState };
+				List->ResourceBarrier(1, &Barr);
+				m_State = NewState;
+			}
+		}
+		ResourcePtr m_Res;
+		ResourceState m_State = ResourceState::Common;
+	};
+
 	struct Context 
 	{
 		
@@ -28,9 +46,16 @@ namespace Dumpling::Dx12
 		std::tuple<CommandAllocatorPtr, HRESULT> CreateCommandAllocator(CommandListType Type);
 		std::tuple<GraphicCommandListPtr, HRESULT> CreateGraphicCommandList(CommandAllocator* allocator, CommandListType Type);
 		DescriptorMappingPtr CreateDescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Element) { return DescriptorMapping::Create(std::move(Name), std::move(Element)); }
-		DescriptorPtr CreateDescriptor(DescriptorMapping* Mapping) { return Descriptor::Create(*m_Device, m_NodeMask, Mapping); }
-		RTDSDescriptorPtr CreateRTDSDescriptor(std::string Name, std::initializer_list<std::string_view> RTName, bool UsedDT = false) { return RTDSDescriptor::Create(m_Device, m_NodeMask, std::move(Name), RTName, UsedDT); }
-		bool SetRTAsTex2(RTDSDescriptor& Desc, Resource* Res, std::string_view Name, uint32_t MipSlice = 0, uint32_t PlaneSlice = 0, Dxgi::FormatPixel FP = Dxgi::FormatPixel::Unknown);
+		Descriptor CreateDescriptor(DescriptorType Type, size_t Count) { return Descriptor{ m_Device, m_NodeMask, Type, Count }; }
+		RTDescriptor CreateRTDescriptor(size_t Count) { return RTDescriptor{ m_Device, m_NodeMask, Count }; }
+		void SetTex2AsRTV(RTDescriptor& Desc, Resource* Res, uint32_t Index, uint32_t MipSlice = 0, uint32_t PlaneSlice = 0, Dxgi::FormatPixel FP = Dxgi::FormatPixel::Unknown) {
+			return Desc.SetTex2AsRTV(m_Device, Res, Index, MipSlice, PlaneSlice, FP);
+		}
+		
+		
+		
+		//RTDSDescriptorPtr CreateRTDSDescriptor(std::string Name, std::initializer_list<std::string_view> RTName, bool UsedDT = false) { return RTDSDescriptor::Create(m_Device, m_NodeMask, std::move(Name), RTName, UsedDT); }
+		
 
 		static std::tuple<ContextPtr, HRESULT> Create(uint8_t AdapterIndex = 0, D3D_FEATURE_LEVEL Level = D3D_FEATURE_LEVEL_12_1);
 	

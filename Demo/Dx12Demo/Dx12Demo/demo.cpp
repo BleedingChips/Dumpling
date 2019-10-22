@@ -63,8 +63,6 @@ int main()
 
 	auto CommandAllocator = ThrowIfFault(Context->CreateCommandAllocator(CommandListType::Direct));
 	auto DescMap = Context->CreateDescriptorMapping("WTF", { {"Data", Dx12::DescResType::CB} });
-	auto DescHeap = Context->CreateDescriptor(DescMap);
-	auto RTDescHeap = Context->CreateRTDSDescriptor("Bask", { "BackBuffer" });
 
 	std::atomic_bool Exit = false;
 
@@ -82,10 +80,21 @@ int main()
 	{
 		auto Fen = ThrowIfFault(Context->CreateFence());
 		auto List = ThrowIfFault(Context->CreateGraphicCommandList(CommandAllocator, Dx12::CommandListType::Direct));
-		Context->SetRTAsTex2(*RTDescHeap, Form->CurrentBackBuffer(), "BackBuffer");
-		FLOAT Color[4] = {0.5f, 0.5f, 0.5f, 1.0f};
-		List->ClearRenderTargetView(RTDescHeap->RTCpuHandle(0), Color, 0, nullptr);
+		auto Heap = Context->CreateRTDescriptor(1);
+		Context->SetTex2AsRTV(Heap, Form->CurrentBackBuffer(), 0);
+		Dx12::StateLog SL{ Form->CurrentBackBuffer(), ResourceState::Present };
+		SL.ChangeState(List, ResourceState::RenderTarget);
+		FLOAT Color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
+		List->ClearRenderTargetView(Heap.CPUHandle(), Color, 0, nullptr);
+		SL.ChangeState(List, ResourceState::Present);
+		List->Close();
+		Dx12::CommandList* CL[] = {List};
+		CommandQueue->ExecuteCommandLists(1, CL);
+		CommandQueue->Signal(Fen, 1);
+		while(Fen->GetCompletedValue() != 1)
+			std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
 		Form->PresentAndSwap(*List);
+		CommandAllocator->Reset();
 	}
 	volatile int i = 0;
 

@@ -60,6 +60,29 @@ namespace Dumpling::Dx12
 		return std::nullopt;
 	}
 
+	Descriptor::Descriptor(Device* Dev, uint32_t NodeMask, DescriptorType Type, size_t Count)
+		: m_Type(Type), m_Count(Count)
+	{
+		assert(Dev != nullptr);
+		D3D12_DESCRIPTOR_HEAP_DESC Desc{ *Type, m_Count, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, NodeMask };
+		HRESULT re = Dev->CreateDescriptorHeap(&Desc, __uuidof(ID3D12DescriptorHeap), m_Heap(Win32::VoidT{}));
+		assert(SUCCEEDED(re));
+		m_Offset = Dev->GetDescriptorHandleIncrementSize(*Type);
+	}
+
+	void RTDescriptor::SetTex2AsRTV(Device* dev, Resource* Res, uint32_t Index, uint32_t MipSlice, uint32_t PlaneSlice, Dxgi::FormatPixel FP)
+	{
+		assert(Index < m_Count);
+		assert(Type() == DescriptorType::RenderTarget);
+		D3D12_RENDER_TARGET_VIEW_DESC Des{ *FP, D3D12_RTV_DIMENSION_TEXTURE2D };
+		Des.Texture2D = D3D12_TEX2D_RTV{ MipSlice, PlaneSlice };
+		dev->CreateRenderTargetView(Res, &Des, CPUHandle(Index));
+	}
+
+
+
+
+	/*
 	DescriptorPtr Descriptor::Create(Device& Dev, uint32_t NodeMask, DescriptorMapping* Mapping)
 	{
 		if (Mapping != nullptr)
@@ -217,6 +240,7 @@ namespace Dumpling::Dx12
 		auto DSHandle = UsedDS() ? DSCpuHandle() : D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
 		List->OMSetRenderTargets(RTCount(), &RTHandle, true, (UsedDS() ? &Handle : nullptr));
 	}
+	*/
 
 	/*
 	uint32_t RTDSDescriptor::ChangeRTState(GraphicCommandList* List, ResourceState NewState) noexcept

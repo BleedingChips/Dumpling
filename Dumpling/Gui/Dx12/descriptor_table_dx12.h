@@ -48,11 +48,10 @@ namespace Dumpling::Dx12
 		std::string_view Name() const noexcept { return m_Name; }
 		uint32_t ResourceCount() const noexcept { return m_ResourceCount; }
 		uint32_t SamplerCount() const noexcept { return m_SamplerCount; }
-		DescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Map);
 		inline static DescriptorMappingPtr Create(std::string Name, std::initializer_list<DescriptorElement> Map) { return std::make_shared<DescriptorMapping>(std::move(Name), std::move(Map)); }
 		std::optional<std::tuple<DescResType, uint32_t, Dxgi::FormatPixel>> FindElement(DescResCategory ResType, std::string_view view) const;
+		DescriptorMapping(std::string Name, std::initializer_list<DescriptorElement> Map);
 	private:
-		DescriptorMapping() = default;
 		std::string m_Name;
 		std::vector<std::tuple<std::string, DescResType, Dxgi::FormatPixel>> m_Elements;
 		std::array<size_t, *DescResCategory::Num> m_ElementsOffset;
@@ -62,17 +61,34 @@ namespace Dumpling::Dx12
 	};
 
 	struct Descriptor;
-	using DescriptorPtr = ComPtr<Descriptor>;
+	using DescriptorPtr = std::shared_ptr<Descriptor>;
 
 	struct Descriptor {
-		DescriptorPtr Create(size_t count);
-	private:
-		Descriptor();
-		DescriptorHeapPtr m_SamHeap;
-		uint32_t m_DesOffset;
-		uint32_t m_DesCount;
+		Descriptor(Device* Dev, uint32_t NodeMask, DescriptorType Type, size_t Count);
+		Descriptor(Descriptor&&) = default;
+		~Descriptor() = default;
+		DescriptorType Type() const noexcept { return m_Type; };
+		operator bool() const noexcept { return m_Heap; }
+		D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle(uint32_t Index = 0) const noexcept { 
+			assert(m_Count < Index);
+			return D3D12_CPU_DESCRIPTOR_HANDLE{ m_Heap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<uint64_t>(m_Offset)* Index };
+		}
+	protected:
+		DescriptorType m_Type;
+		DescriptorHeapPtr m_Heap;
+		uint32_t m_Offset;
+		uint32_t m_Count;
 	};
 
+	struct RTDescriptor : Descriptor {
+		using Descriptor::Descriptor;
+		RTDescriptor(Device* Dev, uint32_t NodeMask, size_t Count) : Descriptor(Dev, NodeMask, DescriptorType::RenderTarget, Count) {}
+		RTDescriptor(RTDescriptor&&) = default;
+		RTDescriptor(Descriptor&& des) : Descriptor(std::move(des)) {}
+		void SetTex2AsRTV(Device* dev, Resource* Res, uint32_t Index, uint32_t MipSlice = 0, uint32_t PlaneSlice = 0, Dxgi::FormatPixel FP = Dxgi::FormatPixel::Unknown);
+	};
+
+	/*
 	struct Descriptor
 	{
 		std::string_view Name() const noexcept { return m_Mapping->Name(); }
@@ -162,6 +178,7 @@ namespace Dumpling::Dx12
 	{
 
 	};
+	*/
 
 	/*
 	enum class DescriptorHeapType

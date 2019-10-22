@@ -69,6 +69,7 @@ namespace Dumpling::Dx12
 		}
 	}
 
+	/*
 	bool Context::SetRTAsTex2(RTDSDescriptor& Desc, Resource* Res, std::string_view Name, uint32_t MipSlice, uint32_t PlaneSlice, Dxgi::FormatPixel FP) {
 		auto Index = Desc.FindElement(Name);
 		if (Index.has_value())
@@ -80,6 +81,7 @@ namespace Dumpling::Dx12
 		}
 		return false;
 	}
+	*/
 
 	/*
 	void Context::SetRTV2D(Descriptor& Heap, uint32_t Solts, Resource& Resource, uint32_t mipmap, DXGI_FORMAT format, uint32_t plane_slice)
