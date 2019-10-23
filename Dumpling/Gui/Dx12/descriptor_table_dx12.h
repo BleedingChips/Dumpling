@@ -70,7 +70,7 @@ namespace Dumpling::Dx12
 		DescriptorType Type() const noexcept { return m_Type; };
 		operator bool() const noexcept { return m_Heap; }
 		D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle(uint32_t Index = 0) const noexcept { 
-			assert(m_Count < Index);
+			assert(Index < m_Count);
 			return D3D12_CPU_DESCRIPTOR_HANDLE{ m_Heap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<uint64_t>(m_Offset)* Index };
 		}
 	protected:

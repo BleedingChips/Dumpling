@@ -90,10 +90,10 @@ int main()
 		List->Close();
 		Dx12::CommandList* CL[] = {List};
 		CommandQueue->ExecuteCommandLists(1, CL);
+		Form->PresentAndSwap();
 		CommandQueue->Signal(Fen, 1);
 		while(Fen->GetCompletedValue() != 1)
 			std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
-		Form->PresentAndSwap(*List);
 		CommandAllocator->Reset();
 	}
 	volatile int i = 0;

@@ -88,14 +88,14 @@ namespace Dumpling::Dx12
 	struct Form : Win32::Form
 	{
 		static FormPtr Create(CommandQueue& Queue, const FormSetting& Setting = FormSetting{}, const FormStyle& Style = Default());
-		ResourcePtr CurrentBackBuffer() const noexcept { return m_BackBuffer; }
-		void PresentAndSwap(GraphicCommandList&) noexcept;
+		ResourcePtr CurrentBackBuffer() const noexcept { return m_AllBackBuffer[m_BackBufferIndex]; }
+		void PresentAndSwap() noexcept;
 		uint8_t CurrentBackBufferIndex() const noexcept { return m_BackBufferIndex; }
 		std::tuple<ResourcePtr, HRESULT> GetBackBuffer(uint8_t index) noexcept;
 	private:
 		Form(CommandQueue& Queue, const FormSetting&, const FormStyle&);
 		Dxgi::SwapChainPtr m_SwapChain;
-		ResourcePtr m_BackBuffer;
+		std::vector<ResourcePtr> m_AllBackBuffer;
 		ComPtr<DescriptorHeap> m_Heap;
 		uint8_t m_BackBufferIndex;
 		uint8_t m_MaxBufferCount;

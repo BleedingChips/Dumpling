@@ -115,26 +115,27 @@ namespace Dumpling::Dx12
 			DXGI_SCALING_STRETCH, DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_ALPHA_MODE_UNSPECIFIED, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 		};
 		m_SwapChain = Win32::ThrowIfFault(Dxgi::HardwareRenderers::Instance().CreateSwapChain(&Queue, GetHWnd(), ChainDest));
-		HRESULT re;
-		std::tie(m_BackBuffer, re) = GetBackBuffer(m_BackBufferIndex);
-		assert(SUCCEEDED(re));
-		m_MaxBufferCount = 2;
+		m_MaxBufferCount = ChainDest.BufferCount;
+		m_AllBackBuffer.resize(m_MaxBufferCount);
+		for (size_t i = 0; i < m_MaxBufferCount; ++i)
+		{
+			HRESULT re;
+			std::tie(m_AllBackBuffer[i], re) = GetBackBuffer(i);
+			assert(SUCCEEDED(re));
+		}
 	}
 
 	std::tuple<ResourcePtr, HRESULT> Form::GetBackBuffer(uint8_t index) noexcept
 	{
 		ResourcePtr res;
-		HRESULT re = m_SwapChain->GetBuffer(0, __uuidof(Resource), res(VoidT{}));
+		HRESULT re = m_SwapChain->GetBuffer(index, __uuidof(Resource), res(VoidT{}));
 		return {std::move(res), re};
 	}
 
-	void Form::PresentAndSwap(GraphicCommandList& List) noexcept {
-		m_SwapChain->Present(1, 0);
-		++m_BackBufferIndex;
-		m_BackBufferIndex = m_BackBufferIndex & m_MaxBufferCount;
-		HRESULT re;
-		std::tie(m_BackBuffer, re) = GetBackBuffer(m_BackBufferIndex);
-		assert(SUCCEEDED(re));
+	void Form::PresentAndSwap() noexcept {
+		DXGI_PRESENT_PARAMETERS Para{ 0, nullptr  , nullptr , nullptr };
+		m_SwapChain->Present1(0, 0, &Para);
+		m_BackBufferIndex = (m_BackBufferIndex + 1) % m_MaxBufferCount;
 	}
 
 	FormPtr Form::Create(CommandQueue& Queue, const FormSetting& Setting, const FormStyle& Style)
