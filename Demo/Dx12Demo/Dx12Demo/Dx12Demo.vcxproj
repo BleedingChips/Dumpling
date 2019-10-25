@@ -145,6 +145,7 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\descriptor_table_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\enum_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pre_define_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\rawmaterial.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h" />

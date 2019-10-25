@@ -107,6 +107,9 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\descriptor_table_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\rawmaterial.h">
+      <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="VertexShader.hlsl">
