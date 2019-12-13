@@ -6,6 +6,7 @@
 #include <thread>
 #include <filesystem>
 #include <fstream>
+#include "..//..//..//Dumpling/Gui/Dx12/pipeline.h"
 using namespace Dumpling;
 using Dxgi::FormatPixel;
 
@@ -15,9 +16,11 @@ using Win32::ThrowIfFault;
 
 namespace fs = std::filesystem;
 
+#include <iostream>
+
+
 int main()
 {
-
 
 #ifdef _DEBUG
 	Dx12::InitDebugLayout();
@@ -56,6 +59,12 @@ int main()
 
 	std::vector<std::byte> vs_shader = load_file(U"VertexShader.cso");
 	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
+
+	auto path = resource_path;
+	path.append(U"VertexShader.cso");
+	auto total_path = fs::absolute(path);
+
+	auto KK = Dx12::LoadEntireFile(total_path);
 
 	auto Context = ThrowIfFault(Dx12::Context::Create(0));
 	auto CommandQueue = ThrowIfFault(Context->CreateCommandQueue(CommandListType::Direct));

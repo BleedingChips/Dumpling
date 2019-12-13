@@ -1,7 +1,7 @@
 #pragma once
 #include <d3d12.h>
-#include <d3d12shader.h>
 #include <assert.h>
+#include "../Dxgi/define_dxgi.h"
 namespace Dumpling::Dx12
 {
 	using Dxgi::ComPtr;
@@ -42,9 +42,6 @@ namespace Dumpling::Dx12
 
 	using Blob = ID3DBlob;
 	using BlobPtr = ComPtr<Blob>;
-
-	using Reflection = ID3D12ShaderReflection;
-	using ReflectionPtr = ComPtr<Reflection>;
 
 	/*
 	struct DescriptorHandleIncrementSize
