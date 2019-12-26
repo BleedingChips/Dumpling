@@ -12,8 +12,24 @@ namespace Dumpling::Dx12
 {
 	using Win32::ComPtr;
 
+	struct DefaultHeap {
+		ComPtr<ID3D12Heap> mHeap;
+	};
+
 	using DescriptorHeap = ID3D12DescriptorHeap;
 	using DescriptorHeapPtr = ComPtr<DescriptorHeap>;
+
+	struct Texture2D {
+		ResourcePtr mResource;
+		operator bool() const { return mResource; }
+	};
+
+	struct ConstBuffer {
+		ResourcePtr mResource;
+		operator bool() const { return mResource; }
+	};
+
+	//ResourcePtr CreateTexture2DCommited(Device& device,);
 
 	enum class DescResCategory
 	{

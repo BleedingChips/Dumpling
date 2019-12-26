@@ -35,6 +35,20 @@ namespace Dumpling::Dx12
 		ResourceState m_State = ResourceState::Common;
 	};
 
+	enum class ResourceType
+	{
+		ConstBuffer,
+		StructureBuffer,
+		Texture1,
+		Texture1A,
+		Texture2,
+		Texture2A,
+		Texture2MS,
+		Texture2AMS,
+		Texture3,
+		TextureCube,
+	};
+
 	struct Context 
 	{
 		

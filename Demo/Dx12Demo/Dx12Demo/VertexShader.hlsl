@@ -1,4 +1,4 @@
-float4 main(float4 pos : POSITION, float3 uv : TEXTURE) : SV_POSITION
+float4 main(float4 pos : POSITION, float2 uv : TEXTURE, float2 PC : TEXTURE2) : SV_POSITION
 {
 	return pos;
 }

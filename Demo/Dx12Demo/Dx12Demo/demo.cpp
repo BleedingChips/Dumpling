@@ -61,7 +61,7 @@ int main()
 	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
 
 	auto path = resource_path;
-	path.append(U"VertexShader.cso");
+	path.append(U"PixelShader.cso");
 	auto total_path = fs::absolute(path);
 
 	auto KK = Dx12::LoadEntireFile(total_path);
