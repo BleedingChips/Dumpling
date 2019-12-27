@@ -57,10 +57,7 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\descriptro_table_dx12.cpp">
-      <Filter>Dumpling\Gui\Dx12</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\pipeline.cpp">
+    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClCompile>
   </ItemGroup>
@@ -98,19 +95,10 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\enum_dx12.h">
-      <Filter>Dumpling\Gui\Dx12</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pre_define_dx12.h">
-      <Filter>Dumpling\Gui\Dx12</Filter>
-    </ClInclude>
     <ClInclude Include="Testing.h">
       <Filter>源文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\descriptor_table_dx12.h">
-      <Filter>Dumpling\Gui\Dx12</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\pipeline.h">
+    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClInclude>
   </ItemGroup>

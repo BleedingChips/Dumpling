@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 #include "..//Win32//aid.h"
 #include <dxgi1_4.h>
+#include <optional>
 namespace Dumpling::Dxgi
 {
 	// Enum redefine **********************************************************************
@@ -109,6 +110,7 @@ namespace Dumpling::Dxgi
 		Dxgi::Adapter* GetAdapter(uint8_t adapter_index) const noexcept;
 		std::vector<OutputPtr> EnumOutput(uint8_t adapter_index) const noexcept;
 		std::tuple<SwapChainPtr, HRESULT> CreateSwapChain(IUnknown* device, HWND hwnd, const SwapChainDesc& desc, const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* = nullptr, IDXGIOutput* output = nullptr);
+		std::optional<uint8_t> CalculateAdapter(LUID luid) const noexcept;
 	private:
 		HardwareRenderers();
 		FactoryPtr m_Factory;

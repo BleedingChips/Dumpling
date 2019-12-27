@@ -1,19 +1,59 @@
 #pragma once
-#include "enum_dx12.h"
 #include "../Dxgi/define_dxgi.h"
-#include "pre_define_dx12.h"
-#include "..//..//..//Potato/tool.h"
+#include <d3d12.h>
 #include <array>
 #include <assert.h>
 #include <optional>
-#include "..//Win32/form.h"
-#include "../Dxgi/define_dxgi.h"
-#include "descriptor_table_dx12.h"
 namespace Dumpling::Dx12
 {
+	using Win32::ComPtr;
+	using Win32::ComBase;
+	using Win32::VoidT;
 
+	using Device = ID3D12Device;
+	using DevicePtr = ComPtr<Device>;
+
+	using Fence = ID3D12Fence1;
+	using FencePtr = ComPtr<Fence>;
+
+	using CommandQueue = ID3D12CommandQueue;
+	using CommandQueuePtr = ComPtr<CommandQueue>;
+	using CommandAllocator = ID3D12CommandAllocator;
+	using CommandAllocatorPtr = ComPtr<CommandAllocator>;
+	using GraphicCommandList = ID3D12GraphicsCommandList;
+	using GraphicCommandListPtr = ComPtr<GraphicCommandList>;
+	using CommandList = ID3D12CommandList;
+	using Resource = ID3D12Resource;
+	using ResourcePtr = ComPtr<Resource>;
+
+	using DescriptorHeap = ID3D12DescriptorHeap;
+	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
+
+	using RootSignature = ID3D12RootSignature;
+	using RootSignaturePtr = ComPtr<RootSignature>;
+
+	using PipelineState = ID3D12PipelineState;
+	using PipelineStatePtr = ID3D12PipelineState;
+
+	using Blob = ID3DBlob;
+	using BlobPtr = ComPtr<Blob>;
+
+	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
+	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
+	using ResourcePtr = ComPtr<ID3D12Resource>;
+
+	UINT DeviceNodeMask(Device& Dev);
+	DevicePtr CreateDevice(uint8_t AdapterIndex = 0, D3D_FEATURE_LEVEL Level = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1);
+	FencePtr CreateFence(Device& Dev, uint32_t Value = 0, D3D12_FENCE_FLAGS Flag = D3D12_FENCE_FLAGS::D3D12_FENCE_FLAG_NONE);
+	CommandQueuePtr CreateCommandQueue(Device& Dev, D3D12_COMMAND_LIST_TYPE Type, D3D12_COMMAND_QUEUE_PRIORITY Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAGS Flags = D3D12_COMMAND_QUEUE_FLAG_NONE);
+	CommandAllocatorPtr CreateCommandAllocator(Device& Dev, D3D12_COMMAND_LIST_TYPE Type);
+	GraphicCommandListPtr CreateGraphicCommandList(Device& Dev, CommandAllocator& allocator, D3D12_COMMAND_LIST_TYPE Type);
+	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap = 0);
+	ResourcePtr CreateUploadBuffer(Device& Dev, uint64_t Length);
+	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*>, D3D12_RESOURCE_STATES OldState, D3D12_RESOURCE_STATES NewState, uint32_t SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 	void InitDebugLayout();
 
+	/*
 	struct Context;
 	using ContextPtr = ComPtr<Context>;
 
@@ -35,19 +75,7 @@ namespace Dumpling::Dx12
 		ResourceState m_State = ResourceState::Common;
 	};
 
-	enum class ResourceType
-	{
-		ConstBuffer,
-		StructureBuffer,
-		Texture1,
-		Texture1A,
-		Texture2,
-		Texture2A,
-		Texture2MS,
-		Texture2AMS,
-		Texture3,
-		TextureCube,
-	};
+	
 
 	struct Context 
 	{
@@ -114,6 +142,7 @@ namespace Dumpling::Dx12
 		uint8_t m_BackBufferIndex;
 		uint8_t m_MaxBufferCount;
 	};
+	*/
 
 	
 

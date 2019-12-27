@@ -23,6 +23,17 @@ namespace Dumpling::Dxgi
 		return std::move(result);
 	}
 
+	std::optional<uint8_t> HardwareRenderers::CalculateAdapter(LUID luid) const noexcept
+	{
+		for (uint8_t i =0; i < m_AllAdapter.size(); ++i)
+		{
+			DXGI_ADAPTER_DESC1 desc1;
+			if(SUCCEEDED(m_AllAdapter[i]->GetDesc1(&desc1)) && luid.HighPart == desc1.AdapterLuid.HighPart && luid.LowPart == desc1.AdapterLuid.LowPart)
+				return i;
+		}
+		return std::nullopt;
+	}
+
 	HardwareRenderers::HardwareRenderers() {
 		HRESULT re = CreateDXGIFactory(__uuidof(Factory), m_Factory(VoidT{}));
 		assert(SUCCEEDED(re));

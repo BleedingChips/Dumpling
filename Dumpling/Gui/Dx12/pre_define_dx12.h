@@ -13,8 +13,6 @@ namespace Dumpling::Dx12
 	using Fence = ID3D12Fence1;
 	using FencePtr = ComPtr<Fence>;
 
-	
-
 	using CommandQueue = ID3D12CommandQueue;
 	using CommandQueuePtr = ComPtr<CommandQueue>;
 	using CommandAllocator = ID3D12CommandAllocator;

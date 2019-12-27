@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <d3dcompiler.h>
 #include "..//Dxgi/define_dxgi.h"
-#include "descriptor_table_dx12.h"
 #undef max
 namespace Dumpling::Dx12
 {
@@ -14,7 +13,77 @@ namespace Dumpling::Dx12
 		assert(SUCCEEDED(re));
 		debugController->EnableDebugLayer();
 	}
+
+	UINT DeviceNodeMask(Device& Dev)
+	{
+		return (1 << *Dxgi::HardwareRenderers::Instance().CalculateAdapter(Dev.GetAdapterLuid()));
+	}
+
+	DevicePtr CreateDevice(uint8_t AdapterIndex, D3D_FEATURE_LEVEL Level)
+	{
+		auto adapter = Dxgi::HardwareRenderers::Instance().GetAdapter(AdapterIndex);
+		if (adapter)
+		{
+			DevicePtr Ptr;
+			HRESULT re = D3D12CreateDevice(adapter, Level, __uuidof(Device), Ptr(VoidT{}));
+			return Ptr;
+		}
+		return {};
+	}
+
+	FencePtr CreateFence(Device& Dev, uint32_t Value, D3D12_FENCE_FLAGS Flag)
+	{
+		FencePtr Ptr;
+		HRESULT re = Dev.CreateFence(Value, Flag, __uuidof(Fence), Ptr(VoidT{}));
+		return Ptr;
+	}
+
+	CommandQueuePtr CreateCommandQueue(Device& Dev, D3D12_COMMAND_LIST_TYPE Type, D3D12_COMMAND_QUEUE_PRIORITY Priority, D3D12_COMMAND_QUEUE_FLAGS Flags)
+	{
+		CommandQueuePtr Ptr;
+		auto Index = Dxgi::HardwareRenderers::Instance().CalculateAdapter(Dev.GetAdapterLuid());
+		if (Index)
+		{
+			D3D12_COMMAND_QUEUE_DESC desc{ Type, Priority, Flags, DeviceNodeMask(Dev) };
+			HRESULT re = Dev.CreateCommandQueue(&desc, __uuidof(CommandQueue), Ptr(VoidT{}));
+			return Ptr;
+		}
+		return {};
+	}
+
+	CommandAllocatorPtr CreateCommandAllocator(Device& Dev, D3D12_COMMAND_LIST_TYPE Type)
+	{
+		CommandAllocatorPtr Ptr;
+		HRESULT re = Dev.CreateCommandAllocator(Type, __uuidof(CommandAllocator), Ptr(VoidT{}));
+		return Ptr;
+	}
+
+	GraphicCommandListPtr CreateGraphicCommandList(Device& Dev, CommandAllocator& allocator, D3D12_COMMAND_LIST_TYPE Type)
+	{
+		GraphicCommandListPtr Ptr;
+		HRESULT re = Dev.CreateCommandList(DeviceNodeMask(Dev), Type, &allocator, nullptr, __uuidof(GraphicCommandList), Ptr(VoidT{}));
+		return Ptr;
+	}
+
+	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap)
+	{
+		D3D12_HEAP_PROPERTIES Pri{ D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, DeviceNodeMask(Dev), DeviceNodeMask(Dev)};
+		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_TEXTURE2D, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Width, Height, 1, Mapmap, Format, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
+		ResourcePtr Ptr;
+		Dev.CreateCommittedResource(&Pri, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(Resource), Ptr(VoidT{}));
+		return Ptr;
+	}
+
+	ResourcePtr CreateUploadBuffer(Device& Dev, uint64_t Length)
+	{
+		D3D12_HEAP_PROPERTIES Pri{ D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, DeviceNodeMask(Dev), DeviceNodeMask(Dev) };
+		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Length, 1, 1, 1, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+		ResourcePtr Ptr;
+		Dev.CreateCommittedResource(&Pri, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(Resource), Ptr(VoidT{}));
+		return Ptr;
+	}
 	
+	/*
 	Context::Context(uint8_t AdapterIndex, D3D_FEATURE_LEVEL Level) : m_AdapterIndex(AdapterIndex)
 	{
 		auto adapter = Dxgi::HardwareRenderers::Instance().GetAdapter(AdapterIndex);
@@ -68,6 +137,7 @@ namespace Dumpling::Dx12
 			return { ContextPtr{}, re };
 		}
 	}
+	*/
 
 	/*
 	bool Context::SetRTAsTex2(RTDSDescriptor& Desc, Resource* Res, std::string_view Name, uint32_t MipSlice, uint32_t PlaneSlice, Dxgi::FormatPixel FP) {
@@ -101,6 +171,7 @@ namespace Dumpling::Dx12
 	}
 	*/
 
+	/*
 	const FormStyle& Default() noexcept {
 		static FormStyle Tem;
 		return Tem;
@@ -142,6 +213,7 @@ namespace Dumpling::Dx12
 	{
 		return new Form{ Queue, Setting, Style };
 	}
+	*/
 
 	/*
 

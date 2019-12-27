@@ -1,9 +1,9 @@
 #pragma once
-#include "enum_dx12.h"
+//#include "enum_dx12.h"
 #include "../Win32/aid.h"
 #include "../../../Potato/tool.h"
 #include "../Dxgi/define_dxgi.h"
-#include "pre_define_dx12.h"
+//#include "pre_define_dx12.h"
 #include <map>
 #include <array>
 #include <vector>

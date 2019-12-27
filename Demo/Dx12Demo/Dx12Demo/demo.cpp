@@ -1,17 +1,16 @@
 #include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
-#include "..//../..//Dumpling/Gui/Win32/form.h"
+#include "..//..//..//Dumpling/Gui/Dx12/form_dx12.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include <filesystem>
 #include <fstream>
-#include "..//..//..//Dumpling/Gui/Dx12/pipeline.h"
+//#include "..//..//..//Dumpling/Gui/Dx12/pipeline.h"
 using namespace Dumpling;
 using Dxgi::FormatPixel;
 
 using namespace Dxgi::DataType;
-using namespace Dx12::Enum;
 using Win32::ThrowIfFault;
 
 namespace fs = std::filesystem;
@@ -64,17 +63,11 @@ int main()
 	path.append(U"PixelShader.cso");
 	auto total_path = fs::absolute(path);
 
-	auto KK = Dx12::LoadEntireFile(total_path);
+	auto Dev = Dx12::CreateDevice();
+	auto Que = Dx12::CreateCommandQueue(*Dev, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-	auto Context = ThrowIfFault(Dx12::Context::Create(0));
-	auto CommandQueue = ThrowIfFault(Context->CreateCommandQueue(CommandListType::Direct));
-	auto Form = Dx12::Form::Create(*CommandQueue);
-
-	auto CommandAllocator = ThrowIfFault(Context->CreateCommandAllocator(CommandListType::Direct));
-	auto DescMap = Context->CreateDescriptorMapping("WTF", { {"Data", Dx12::DescResType::CB} });
-
+	auto Form = Dx12::CreateForm(*Que);
 	std::atomic_bool Exit = false;
-
 	Form->OverwriteEventFunction([&](HWND, UINT msg, WPARAM, LPARAM) -> std::optional<LRESULT> {
 		if (msg == WM_CLOSE)
 		{
@@ -84,7 +77,38 @@ int main()
 		else
 			return std::nullopt;
 	});
+	auto Texture = Dx12::CreateTexture2DConst(*Dev, DXGI_FORMAT_R32G32B32A32_FLOAT, 1024, 1024);
+	auto UpLoadBuffer = Dx12::CreateUploadBuffer(*Dev, 1024 * 1024 * 128);
 
+	while (!Exit)
+	{
+		
+	}
+
+	//auto KK = Dx12::LoadEntireFile(total_path);
+
+	//auto Context = ThrowIfFault(Dx12::Context::Create(0));
+	//auto CommandQueue = ThrowIfFault(Context->CreateCommandQueue(CommandListType::Direct));
+	//auto Form = Dx12::Form::Create(*CommandQueue);
+
+	//auto CommandAllocator = ThrowIfFault(Context->CreateCommandAllocator(CommandListType::Direct));
+	//auto DescMap = Context->CreateDescriptorMapping("WTF", { {"Data", Dx12::DescResType::CB} });
+
+	//std::atomic_bool Exit = false;
+
+	/*
+	Form->OverwriteEventFunction([&](HWND, UINT msg, WPARAM, LPARAM) -> std::optional<LRESULT> {
+		if (msg == WM_CLOSE)
+		{
+			Exit = true;
+			return 0;
+		}
+		else
+			return std::nullopt;
+	});
+	*/
+
+	/*
 	while (!Exit)
 	{
 		auto Fen = ThrowIfFault(Context->CreateFence());
@@ -106,6 +130,7 @@ int main()
 		CommandAllocator->Reset();
 	}
 	volatile int i = 0;
+	*/
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds{ 5000 });
 	std::cout << "Down" << std::endl;
