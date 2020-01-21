@@ -1,3 +1,30 @@
+#include "../Gui/Dxgi/define_dxgi.h"
+#include <filesystem>
+namespace Dumpling::Mscf
+{
+	using Dxgi::ComPtr;
+	template<typename T> using ComBase = Dxgi::ComBase<T>;
+
+	struct Mscf : ComBase<Mscf> {
+
+	};
+
+	using MscfPtr = ComPtr<Mscf>;
+
+	ComPtr<Mscf> Load(const std::filesystem::path& Path);
+
+
+}
+
+
+
+
+
+
+
+
+
+/*
 #include "../po/tool/intrusive_ptr.h"
 #include "mscf_syntax.h"
 namespace PO::Mscf
@@ -308,4 +335,4 @@ namespace PO::Mscf
 
 	//Complie::mscf_file load_mscf_file(const std::filesystem::path& P);
 
-}
+//}*/

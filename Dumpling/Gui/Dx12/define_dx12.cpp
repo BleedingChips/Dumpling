@@ -65,12 +65,12 @@ namespace Dumpling::Dx12
 		return Ptr;
 	}
 
-	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap)
+	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap, D3D12_RESOURCE_STATES State)
 	{
 		D3D12_HEAP_PROPERTIES Pri{ D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, DeviceNodeMask(Dev), DeviceNodeMask(Dev)};
 		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_TEXTURE2D, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Width, Height, 1, Mapmap, Format, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
 		ResourcePtr Ptr;
-		Dev.CreateCommittedResource(&Pri, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(Resource), Ptr(VoidT{}));
+		Dev.CreateCommittedResource(&Pri, D3D12_HEAP_FLAG_NONE, &Desc, State, nullptr, __uuidof(Resource), Ptr(VoidT{}));
 		return Ptr;
 	}
 
@@ -82,6 +82,101 @@ namespace Dumpling::Dx12
 		Dev.CreateCommittedResource(&Pri, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(Resource), Ptr(VoidT{}));
 		return Ptr;
 	}
+
+	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*> Res, D3D12_RESOURCE_STATES OldState, D3D12_RESOURCE_STATES NewState, uint32_t SubResource)
+	{
+		for (auto& ite : Res)
+		{
+			if (ite != nullptr)
+			{
+				D3D12_RESOURCE_BARRIER Barr{
+					D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAG_NONE
+				};
+				Barr.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{ ite, SubResource, OldState, NewState };
+				List.ResourceBarrier(1, &Barr);
+			}
+		}
+	}
+
+	ComPtr<DescriptorMapping> CreateDescriptorMapping(const std::vector<std::tuple<std::string_view, ResourceType>>& ResourceName)
+	{
+		size_t ResourceCount = 0;
+		size_t SamplerCount = 0;
+		DescriptorMapping::StorageMapping TemplateMapping;
+		size_t Index = 0;
+		for (auto& ite : ResourceName)
+		{
+			auto& [Name, Type] = ite;
+			if (Type == ResourceType::Sampler)
+				++SamplerCount;
+			else
+				++ResourceCount;
+			auto Result = TemplateMapping.insert({ std::tuple<ResourceType, std::string>{Type, std::move(Name)}, Index });
+			if (Result.second)
+				++Index;
+		}
+		return new DescriptorMapping{std::move(TemplateMapping), ResourceCount, SamplerCount };
+	}
+
+	std::optional<size_t> DescriptorMapping::Find(std::string_view View, ResourceType RT) const
+	{
+		auto Result = Mapping.find({RT, View});
+		if (Result != Mapping.end())
+			return Result->second;
+		else
+			return std::nullopt;
+	}
+
+	ResourceDescriptor::ResourceDescriptor(Device& Dev, DescriptorMappingPtr Ptr)
+	{
+		assert(Ptr);
+		HRESULT Result = S_OK;
+		if (Ptr->ResourceCount() != 0)
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC Desc{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, static_cast<UINT>(Ptr->ResourceCount()), D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DeviceNodeMask(Dev) };
+			Result = Dev.CreateDescriptorHeap(&Desc, __uuidof(DescriptorHeap), mResource(VoidT{}));
+		}
+		assert(SUCCEEDED(Result));
+		
+		if (Ptr->SamplerCount() != 0)
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC Desc{ D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, static_cast<UINT>(Ptr->SamplerCount()), D3D12_DESCRIPTOR_HEAP_FLAG_NONE, DeviceNodeMask(Dev) };
+			Result = Dev.CreateDescriptorHeap(&Desc, __uuidof(DescriptorHeap), mResource(VoidT{}));
+		}
+		assert(SUCCEEDED(Result));
+		mMapping = std::move(Ptr);
+	}
+
+	bool ResourceDescriptor::SetTex2D(Device& Dev, std::string_view view, ResourcePtr Re, Dxgi::FormatPixel Format, std::tuple<size_t, size_t> Mipmap)
+	{
+		assert(mMapping);
+		if (mResource)
+		{
+			auto Find = mMapping->Find(view, ResourceType::Tex2D);
+			if (Find)
+			{
+				UINT Size = Dev.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+				auto [MaxLevel, MipLevel] = Mipmap;
+				D3D12_TEX2D_SRV SRV{
+					static_cast<UINT>(MaxLevel),
+					static_cast<UINT>(MipLevel),
+					0,
+					0.f
+				};
+				D3D12_SHADER_RESOURCE_VIEW_DESC Desc{
+					*Format,
+					D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D,
+					D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING
+				};
+				Desc.Texture2D = SRV;
+				Dev.CreateShaderResourceView(Re, &Desc, { mResource->GetCPUDescriptorHandleForHeapStart().ptr + *Find * Size });
+				return true;
+			}
+		}
+		return false;
+	}
+
 	
 	/*
 	Context::Context(uint8_t AdapterIndex, D3D_FEATURE_LEVEL Level) : m_AdapterIndex(AdapterIndex)

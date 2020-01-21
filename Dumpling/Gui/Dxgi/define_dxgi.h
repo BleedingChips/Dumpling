@@ -9,6 +9,7 @@
 namespace Dumpling::Dxgi
 {
 	// Enum redefine **********************************************************************
+
 	enum class FormatPixel
 	{
 		RGBA32_Float = DXGI_FORMAT_R32G32B32A32_FLOAT,
@@ -23,6 +24,13 @@ namespace Dumpling::Dxgi
 		D24S8_Unorn_Uint = DXGI_FORMAT_D24_UNORM_S8_UINT,
 		Unknown = DXGI_FORMAT_UNKNOWN,
 	};
+
+
+	std::optional<size_t> CalculatePixelSize(DXGI_FORMAT);
+	struct Texture2Size {
+		Texture2Size(DXGI_FORMAT Format, size_t Width, size_t Height, size_t Mipmap = 0);
+	};
+	
 
 	inline constexpr DXGI_FORMAT operator*(Dumpling::Dxgi::FormatPixel format) noexcept
 	{
@@ -87,6 +95,7 @@ namespace Dumpling::Dxgi
 	};
 
 	using Win32::ComPtr;
+	template<typename T> using ComBase = Win32::ComBase<T>;
 	using Win32::VoidT;
 
 	using Factory = IDXGIFactory4;

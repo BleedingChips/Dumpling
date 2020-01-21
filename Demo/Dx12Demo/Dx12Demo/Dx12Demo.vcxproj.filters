@@ -34,6 +34,9 @@
     <Filter Include="Dumpling\Gui\Dx">
       <UniqueIdentifier>{cd2cc10d-bfcb-4b62-a0c0-2bdfc1b78a18}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Dumpling\Mscf">
+      <UniqueIdentifier>{b3a3c6dd-73b4-474d-9a1b-5e9d962bab2b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="demo.cpp">
@@ -59,6 +62,12 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp">
       <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Mscf\complier_mscf.cpp">
+      <Filter>Dumpling\Mscf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp">
+      <Filter>Dumpling\Mscf</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -100,6 +109,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h">
+      <Filter>Dumpling\Mscf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h">
+      <Filter>Dumpling\Mscf</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -135,6 +135,8 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Mscf\complier_mscf.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
     <ClCompile Include="..\..\..\Potato\lexical.cpp" />
     <ClCompile Include="..\..\..\Potato\tool.cpp" />
@@ -146,6 +148,8 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h" />
+    <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h" />
+    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
     <ClInclude Include="..\..\..\Potato\character_encoding.h" />
     <ClInclude Include="..\..\..\Potato\lexical.h" />

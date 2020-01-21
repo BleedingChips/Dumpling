@@ -1,5 +1,19 @@
 #include "mscf.h"
 
+namespace Dumpling::Mscf
+{
+	ComPtr<Mscf> Load(const std::filesystem::path& Path)
+	{
+
+	}
+}
+
+
+
+
+
+
+/*
 using std::variant;
 using std::holds_alternative;
 using std::get;
@@ -274,3 +288,4 @@ namespace PO::Mscf
 
 	}
 }
+*/

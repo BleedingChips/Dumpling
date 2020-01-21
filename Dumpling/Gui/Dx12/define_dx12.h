@@ -4,6 +4,9 @@
 #include <array>
 #include <assert.h>
 #include <optional>
+#include <map>
+#include <string_view>
+
 namespace Dumpling::Dx12
 {
 	using Win32::ComPtr;
@@ -48,10 +51,79 @@ namespace Dumpling::Dx12
 	CommandQueuePtr CreateCommandQueue(Device& Dev, D3D12_COMMAND_LIST_TYPE Type, D3D12_COMMAND_QUEUE_PRIORITY Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAGS Flags = D3D12_COMMAND_QUEUE_FLAG_NONE);
 	CommandAllocatorPtr CreateCommandAllocator(Device& Dev, D3D12_COMMAND_LIST_TYPE Type);
 	GraphicCommandListPtr CreateGraphicCommandList(Device& Dev, CommandAllocator& allocator, D3D12_COMMAND_LIST_TYPE Type);
-	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap = 0);
+	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap = 0, D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON);
 	ResourcePtr CreateUploadBuffer(Device& Dev, uint64_t Length);
+	template<typename Function>
+	bool MappingBuffer(Resource& Res, UINT SubResource, size_t Begin, size_t Length, Function&& F)
+	{
+		D3D12_RANGE Range{ Begin , Begin + Length };
+		
+		void* Pointer = nullptr;
+		HRESULT re = Res.Map(SubResource, &Range, &Pointer);
+		if (SUCCEEDED(re))
+		{
+			Potato::Tool::scope_guard SG([&]() noexcept {
+				Res.Unmap(SubResource, &Range);
+			});
+			F(reinterpret_cast<std::byte*>(Pointer));
+			return true;
+		}
+		return false;
+	}
 	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*>, D3D12_RESOURCE_STATES OldState, D3D12_RESOURCE_STATES NewState, uint32_t SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 	void InitDebugLayout();
+
+	enum class ResourceType 
+	{
+		Tex2D = 0,
+		Sampler,
+	};
+
+	struct DescriptorMapping : ComBase<DescriptorMapping>
+	{
+		struct CustomLess 
+		{
+			bool operator()(const std::tuple<ResourceType, std::string_view>& i1, const std::tuple<ResourceType, std::string_view>& i2) const
+			{
+				auto i1i = static_cast<uint32_t>(std::get<0>(i1));
+				auto i2i = static_cast<uint32_t>(std::get<0>(i2));
+				return i1i < i2i || (i1i == i2i) && std::get<1>(i1) < std::get<1>(i2);
+			}
+		};
+		size_t ResourceCount() const { return mResourceCount; }
+		size_t SamplerCount() const { return mSamplerCount; }
+		std::optional<size_t> Find(std::string_view View, ResourceType) const;
+	private:
+		friend ComPtr<DescriptorMapping> CreateDescriptorMapping(const std::vector<std::tuple<std::string_view, ResourceType>>& ResourceName);
+		using StorageMapping = std::map<std::tuple<ResourceType, std::string_view>, size_t, CustomLess>;
+		DescriptorMapping(StorageMapping InputMap, size_t ResourceCount, size_t SamplerCount)
+			: Mapping(std::move(InputMap)), mResourceCount(ResourceCount), mSamplerCount(SamplerCount) {}
+		StorageMapping Mapping;
+		size_t mResourceCount;
+		size_t mSamplerCount;
+	};
+
+	ComPtr<DescriptorMapping> CreateDescriptorMapping(const std::vector<std::tuple<std::string_view, ResourceType>>& ResourceName);
+	inline ComPtr<DescriptorMapping> CreateDescriptorMapping(std::initializer_list<std::tuple<std::string_view, ResourceType>> ResourceName) { return CreateDescriptorMapping(std::vector<std::tuple<std::string_view, ResourceType>>(ResourceName)); }
+	
+
+	using DescriptorMappingPtr = ComPtr<DescriptorMapping>;
+
+	struct ResourceDescriptor {
+		ResourceDescriptor(Device& Dev, DescriptorMappingPtr Ptr);
+		bool SetTex2D(Device& Dev, std::string_view view, ResourcePtr Re, Dxgi::FormatPixel Format, std::tuple<size_t, size_t> Mipmap = { 0, static_cast<size_t>(-1) });
+		operator bool() const { return mMapping; };
+	private:
+		DescriptorMappingPtr mMapping;
+		DescriptorHeapPtr mResource;
+		DescriptorHeapPtr mSampler;
+	};
+
+	inline ResourceDescriptor CreateResourceDescriptor(Device& Dev, DescriptorMappingPtr Ptr) { return ResourceDescriptor{Dev, std::move(Ptr)}; }
+
+
+
+
 
 	/*
 	struct Context;

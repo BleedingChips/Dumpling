@@ -65,7 +65,8 @@ int main()
 
 	auto Dev = Dx12::CreateDevice();
 	auto Que = Dx12::CreateCommandQueue(*Dev, D3D12_COMMAND_LIST_TYPE_DIRECT);
-
+	auto Allo = Dx12::CreateCommandAllocator(*Dev, D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto Command = Dx12::CreateGraphicCommandList(*Dev, *Allo, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto Form = Dx12::CreateForm(*Que);
 	std::atomic_bool Exit = false;
 	Form->OverwriteEventFunction([&](HWND, UINT msg, WPARAM, LPARAM) -> std::optional<LRESULT> {
@@ -77,8 +78,30 @@ int main()
 		else
 			return std::nullopt;
 	});
-	auto Texture = Dx12::CreateTexture2DConst(*Dev, DXGI_FORMAT_R32G32B32A32_FLOAT, 1024, 1024);
+
+	auto Mapping = Dx12::CreateDescriptorMapping({
+		{"DefaultTexture", Dx12::ResourceType::Tex2D}
+		});
+
+	auto Description = Dx12::CreateResourceDescriptor(*Dev, Mapping);
+
+
+
+	auto Texture = Dx12::CreateTexture2DConst(*Dev, DXGI_FORMAT_R32G32B32A32_FLOAT, 1024, 1024, 1);
 	auto UpLoadBuffer = Dx12::CreateUploadBuffer(*Dev, 1024 * 1024 * 128);
+	auto Re = Dx12::MappingBuffer(*UpLoadBuffer, 0, 0, 1024 * 1024 * 128, [](std::byte* Data) {
+		for (size_t i = 0; i < 1024 * 1024 * 128; ++i)
+			*reinterpret_cast<uint8_t*>(Data + i) = 0;
+	});
+	Dx12::ChangeState(*Command, { Texture }, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	//Dx12::ChangeState(*Command, { UpLoadBuffer }, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	auto Fence = Dx12::CreateFence(*Dev);
+	//Command->CopyBufferRegion(Texture, 0, UpLoadBuffer, 0, 1024 * 1024 * 128);
+	Command->Close();
+	ID3D12CommandList* List[] = { Command };
+	Que->ExecuteCommandLists(1, List);
+	Que->Signal(Fence, 1);
+	while (Fence->GetCompletedValue() != 1);
 
 	while (!Exit)
 	{
