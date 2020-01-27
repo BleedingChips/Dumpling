@@ -134,7 +134,8 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\aid_win32.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Mscf\complier_mscf.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
@@ -146,8 +147,8 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid_win32.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h" />
     <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h" />
     <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />

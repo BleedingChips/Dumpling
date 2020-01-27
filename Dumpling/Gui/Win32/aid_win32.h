@@ -2,6 +2,8 @@
 #include "..//..//..//Potato/smart_pointer.h"
 #include "..//..//..//Potato/tool.h"
 #include <Windows.h>
+#include <list>
+#include <filesystem>
 namespace Dumpling::Win32
 {
 	namespace Error {
@@ -57,4 +59,6 @@ namespace Dumpling::Win32
 	};
 
 	template<typename Type> using ComPtr = Potato::Tool::intrusive_ptr<Type, ComWrapper>;
+
+	std::list<std::filesystem::path> SearchVisualStudioPath();
 }

@@ -42,9 +42,6 @@
     <ClCompile Include="demo.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form.cpp">
-      <Filter>Dumpling\Gui\Win32</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
@@ -69,14 +66,14 @@
     <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp">
       <Filter>Dumpling\Mscf</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\aid_win32.cpp">
+      <Filter>Dumpling\Gui\Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp">
+      <Filter>Dumpling\Gui\Win32</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid.h">
-      <Filter>Dumpling\Gui\Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form.h">
-      <Filter>Dumpling\Gui\Win32</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Potato\auto_adapter.h">
       <Filter>Potato</Filter>
     </ClInclude>
@@ -115,6 +112,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h">
       <Filter>Dumpling\Mscf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid_win32.h">
+      <Filter>Dumpling\Gui\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h">
+      <Filter>Dumpling\Gui\Win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

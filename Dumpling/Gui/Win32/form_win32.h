@@ -2,7 +2,7 @@
 #include <future>
 #include <string>
 #include <Windows.h>
-#include "aid.h"
+#include "aid_win32.h"
 #include "..//..//..//Potato//tool.h"
 #include <functional>
 namespace Dumpling::Win32

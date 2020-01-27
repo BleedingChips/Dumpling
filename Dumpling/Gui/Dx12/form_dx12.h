@@ -1,6 +1,6 @@
 #pragma once
 #include "define_dx12.h"
-#include "../Win32/form.h"
+#include "../Win32/form_win32.h"
 namespace Dumpling::Dx12
 {
 	struct FormStyle

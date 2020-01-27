@@ -41,6 +41,9 @@ int main()
 #endif
 #endif
 
+	Win32::SearchVisualStudioPath();
+	return 0;
+
 	auto p = fs::current_path();
 
 	auto load_file = [&](const char32_t* input_path) {

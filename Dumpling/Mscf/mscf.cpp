@@ -4,7 +4,7 @@ namespace Dumpling::Mscf
 {
 	ComPtr<Mscf> Load(const std::filesystem::path& Path)
 	{
-
+		return {};
 	}
 }
 
