@@ -20,8 +20,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{692A700B-696F-49A7-99F7-2E6C4DD22F96}</ProjectGuid>
-    <RootNamespace>Dx12Demo</RootNamespace>
+    <ProjectGuid>{D4BB3F0B-E198-4535-BFFF-995D9D56AB1D}</ProjectGuid>
+    <RootNamespace>Parser</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -29,27 +29,27 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -69,40 +69,51 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -110,16 +121,16 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -127,64 +138,28 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>d3d12.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\aid_win32.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Mscf\complier_mscf.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp" />
-    <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
-    <ClCompile Include="..\..\..\Potato\lexical.cpp" />
-    <ClCompile Include="..\..\..\Potato\syntax.cpp" />
-    <ClCompile Include="..\..\..\Potato\tool.cpp" />
-    <ClCompile Include="demo.cpp" />
+    <ClInclude Include="..\Potato\auto_adapter.h" />
+    <ClInclude Include="..\Potato\character_encoding.h" />
+    <ClInclude Include="..\Potato\lexical.h" />
+    <ClInclude Include="..\Potato\parser.h" />
+    <ClInclude Include="..\Potato\smart_pointer.h" />
+    <ClInclude Include="..\Potato\syntax.h" />
+    <ClInclude Include="..\Potato\tmp.h" />
+    <ClInclude Include="..\Potato\tmpcall.h" />
+    <ClInclude Include="..\Potato\tool.h" />
+    <ClInclude Include="MscParser.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid_win32.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h" />
-    <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h" />
-    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\define_msc.h" />
-    <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
-    <ClInclude Include="..\..\..\Potato\character_encoding.h" />
-    <ClInclude Include="..\..\..\Potato\lexical.h" />
-    <ClInclude Include="..\..\..\Potato\parser.h" />
-    <ClInclude Include="..\..\..\Potato\smart_pointer.h" />
-    <ClInclude Include="..\..\..\Potato\syntax.h" />
-    <ClInclude Include="..\..\..\Potato\tmp.h" />
-    <ClInclude Include="..\..\..\Potato\tmpcall.h" />
-    <ClInclude Include="..\..\..\Potato\tool.h" />
-    <ClInclude Include="Testing.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-    </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
-    </FxCompile>
+    <ClCompile Include="..\Potato\character_encoding.cpp" />
+    <ClCompile Include="..\Potato\lexical.cpp" />
+    <ClCompile Include="..\Potato\parser.cpp" />
+    <ClCompile Include="..\Potato\syntax.cpp" />
+    <ClCompile Include="..\Potato\tool.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,9 +1,35 @@
 #include "../Gui/Dxgi/define_dxgi.h"
 #include <filesystem>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 namespace Dumpling::Mscf
 {
+
 	using Dxgi::ComPtr;
 	template<typename T> using ComBase = Dxgi::ComBase<T>;
+	struct Msc : ComBase<Msc> {
+
+		virtual ~Msc() = default;
+	};
+
+
+
+	
 
 	struct Mscf : ComBase<Mscf> {
 

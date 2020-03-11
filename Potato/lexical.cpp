@@ -3,7 +3,7 @@
 #include <assert.h>
 namespace Potato::Lexical
 {
-
+	/*
 	uint64_t OctalToValue(const wchar_t* input, size_t input_size)
 	{
 		uint64_t value = 0;
@@ -144,5 +144,6 @@ namespace Potato::Lexical
 		}
 		return 0;
 	}
+	*/
 
 }

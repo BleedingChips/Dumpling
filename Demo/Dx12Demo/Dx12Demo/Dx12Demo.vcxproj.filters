@@ -72,6 +72,9 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp">
       <Filter>Dumpling\Gui\Win32</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Potato\syntax.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Potato\auto_adapter.h">
@@ -118,6 +121,15 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h">
       <Filter>Dumpling\Gui\Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\syntax.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Msc\define_msc.h">
+      <Filter>Dumpling\Mscf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\parser.h">
+      <Filter>Potato</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

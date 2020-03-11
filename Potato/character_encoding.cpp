@@ -7,12 +7,12 @@
 namespace Potato::Encoding
 {
 
-	size_t ansis_to_utf16s_require_space(const char* input, size_t input_length, uint32_t code_page) noexcept
+	size_t ansis_to_wchar_require_space(const char* input, size_t input_length, uint32_t code_page) noexcept
 	{
 		return MultiByteToWideChar(code_page, 0, input, static_cast<int>(input_length), nullptr, 0);
 	}
 
-	size_t ansis_to_utf16s(const char* input, size_t input_length, char16_t* output, size_t output_length, uint32_t code_page) noexcept
+	size_t ansis_to_wchar(const char* input, size_t input_length, wchar_t* output, size_t output_length, uint32_t code_page) noexcept
 	{
 		if (output_length != 0)
 		{
@@ -21,13 +21,13 @@ namespace Potato::Encoding
 		return 0;
 	}
 
-	size_t utf16s_to_ansis_require_space(const char16_t* input, size_t input_length, uint32_t code_page) noexcept
+	size_t wchar_to_ansis_require_space(const wchar_t* input, size_t input_length, uint32_t code_page) noexcept
 	{
 		BOOL unchangleble = true;
 		return WideCharToMultiByte(code_page, 0, reinterpret_cast<const wchar_t*>(input), static_cast<int>(input_length), nullptr, 0, "?", &unchangleble);
 	}
 
-	size_t utf16s_to_ansis(const char16_t* input, size_t input_length, char* output, size_t output_length, uint32_t code_page) noexcept
+	size_t wchar_to_ansis(const wchar_t* input, size_t input_length, char* output, size_t output_length, uint32_t code_page) noexcept
 	{
 		if (output_length != 0)
 		{
@@ -36,36 +36,277 @@ namespace Potato::Encoding
 		}
 		return 0;
 	}
-}
 
-
-#endif
-
-namespace Potato::Encoding
-{
 	size_t ansi_require_space(char da) noexcept
 	{
 		return static_cast<uint8_t>(da) > 127 ? 2 : 1;
 	}
+}
+#endif
 
-	size_t utf8_require_space(char da) noexcept
+namespace Potato::Encoding
+{
+	namespace Implement
 	{
-		if ((da & 0xFE) == 0xFC)
-			return 6;
-		else if ((da & 0xFC) == 0xF8)
-			return 5;
-		else if ((da & 0xF8) == 0xF0)
-			return 4;
-		else if ((da & 0xF0) == 0xE0)
-			return 3;
-		else if ((da & 0xE0) == 0xC0)
-			return 2;
-		else if ((da & 0x80) == 0)
-			return 1;
-		else
+
+		std::size_t char_imp<char>::single_char_space(type first_char) noexcept
+		{
+			if ((first_char & 0xFE) == 0xFC)
+				return 6;
+			else if ((first_char & 0xFC) == 0xF8)
+				return 5;
+			else if ((first_char & 0xF8) == 0xF0)
+				return 4;
+			else if ((first_char & 0xF0) == 0xE0)
+				return 3;
+			else if ((first_char & 0xE0) == 0xC0)
+				return 2;
+			else if ((first_char & 0x80) == 0)
+				return 1;
+			else
+				return 0;
+		}
+
+
+		std::optional<std::size_t> char_imp<char>::check_single_char(const type* input, std::size_t length) noexcept
+		{
+			if (input != nullptr && length != 0)
+			{
+				std::size_t size = single_char_space(input[0]);
+				if (size != 0 && size <= length)
+				{
+					for (size_t i = 1; i < size; ++i)
+					{
+						if ((input[i] & 0xC0) != 0x80)
+							return std::nullopt;
+					}
+					return { size };
+				}
+				return std::nullopt;
+			}
+			return { 0 };
+		}
+
+
+		std::size_t char_imp<char>::to_single(const type* input, std::size_t length, char* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length != 0);
+			if (output_length > length)
+			{
+				std::memcpy(output, input, length);
+				return length;
+			}
+			else {
+				return 0;
+			}
+		}
+
+		std::size_t char_imp<char>::to_single(const type* input, std::size_t length, char16_t* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length != 0);
+			char32_t buffer[char_imp<char32_t>::max_space];
+			auto tar32 = to_single(input, length, buffer, char_imp<char32_t>::max_space);
+			auto tar16= char_imp<char32_t>::to_single(buffer, tar32, output, output_length);
+			return tar16;
+		}
+
+		std::size_t char_imp<char>::to_single(const type* input, std::size_t length, char32_t* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length != 0);
+			if (output_length >= 1)
+			{
+				switch (length)
+				{
+				case 1: output[0] = input[0]; break;
+				case 2: output[0] = ((input[0] & 0x1F) << 6) | (input[1] & 0x3F); break;
+				case 3: output[0] = ((input[0] & 0x0F) << 12) | ((input[1] & 0x3F) << 6) | (input[2] & 0x3F); break;
+				case 4: output[0] = ((input[0] & 0x07) << 18) | ((input[1] & 0x3F) << 12) | ((input[2] & 0x3F) << 6) | (input[3] & 0x3F); break;
+				case 5: output[0] = ((input[0] & 0x03) << 24) | ((input[1] & 0x3F) << 18) | ((input[2] & 0x3F) << 12) | ((input[3] & 0x3F) << 6) | (input[4] & 0x3F); break;
+				case 6: output[0] = ((input[0] & 0x01) << 30) | ((input[1] & 0x3F) << 24) | ((input[2] & 0x3F) << 18) | ((input[3] & 0x3F) << 12) | ((input[4] & 0x3F) << 6) | (input[5] & 0x3F); break;
+				}
+				return 1;
+			}
 			return 0;
+		}
+
+		std::size_t char_imp<char16_t>::single_char_space(type first_char) noexcept
+		{
+			if (first_char <= 0x00ffff)
+				return 1;
+			else if ((first_char & 0xD800) == 0xD800)
+				return 2;
+			else
+				return 0;
+		}
+
+		std::optional<std::size_t> char_imp<char16_t>::check_single_char(const type* input, std::size_t length) noexcept
+		{
+			if (input != nullptr && length != 0)
+			{
+				auto size = single_char_space(input[0]);
+				if (size == 1)
+					return { 1 };
+				else if (size == 2 && length >= 2 && (input[1] & 0xDC00) == 0xD800)
+				{
+					return { 2 };
+				}
+				return std::nullopt;
+			}
+			return { 0 };
+		}
+
+		std::size_t char_imp<char16_t>::to_single(const type* input, std::size_t length, char* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length != 0);
+			char32_t buffer[char_imp<char32_t>::max_space];
+			auto tar32 = to_single(input, length, buffer, char_imp<char32_t>::max_space);
+			auto tar8 = char_imp<char32_t>::to_single(buffer, tar32, output, output_length);
+			return tar8;
+		}
+
+		std::size_t char_imp<char16_t>::to_single(const type* input, std::size_t length, char16_t* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length != 0);
+			if (length <= output_length)
+			{
+				std::memcpy(output, input, length * sizeof(char16_t));
+				return length;
+			}
+			return 0;
+		}
+
+		std::size_t char_imp<char16_t>::to_single(const type* input, std::size_t length, char32_t* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length != 0);
+			if (output != nullptr && output_length != 0)
+			{
+				switch (length)
+				{
+				case 1: output[0] = *input; break;
+				case 2: output[0] = (((input[0] & 0x3FF) << 10) | (input[1] & 0x3FF)) + 0x10000; break;
+				}
+			}
+			return 0;
+		}
+
+		std::optional<std::size_t> char_imp<char32_t>::check_single_char(const type* input, std::size_t length) noexcept
+		{
+			if (input != nullptr && length != 0)
+				return { 1 };
+			else
+				return { 0 };
+		}
+
+		std::size_t char_imp<char32_t>::to_single(const type* input, std::size_t length, char* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length ==1);
+			if (output != nullptr)
+			{
+				if ((input[0] & 0xFFFFFF80) == 0)
+				{
+					if (output_length >= 1)
+					{
+						*output = static_cast<char>(input[0] & 0x0000007F);
+						return 1;
+					}
+				}
+				else if ((input[0] & 0xFFFF'F800) == 0)
+				{
+					if (output_length >= 2)
+					{
+						*output = 0xC0 | static_cast<char>((input[0] & 0x07C0) >> 6);
+						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0x3F));
+						return 2;
+					}
+				}
+				else if ((input[0] & 0xFFFF'0000) == 0)
+				{
+					if (output_length >= 3)
+					{
+						*output = 0xE0 | static_cast<char>((input[0] & 0xF000) >> 12);
+						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
+						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0x3F));
+						return 3;
+					}
+				}
+				else if ((input[0] & 0xFFE0'0000) == 0)
+				{
+					if (output_length >= 4)
+					{
+						*output = 0x1E | static_cast<char>((input[0] & 0x1C0000) >> 18);
+						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0x3F000) >> 12);
+						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
+						*(output + 3) = 0x80 | static_cast<char>((input[0] & 0x3F));
+						return 4;
+					}
+				}
+				else if ((input[0] & 0xFC00'0000) == 0)
+				{
+					if (output_length >= 5)
+					{
+						*output = 0xF8 | static_cast<char>((input[0] & 0x300'0000) >> 24);
+						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0xFC'0000) >> 18);
+						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0x3'F000) >> 12);
+						*(output + 3) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
+						*(output + 4) = 0x80 | static_cast<char>((input[0] & 0x3F));
+						return 5;
+					}
+				}
+				else if ((input[0] & 0x8000'0000) == 0)
+				{
+					if (output_length >= 6)
+					{
+						*output = 0xFC | static_cast<char>((input[0] & 0x4000'0000) >> 30);
+						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0x3F00'0000) >> 24);
+						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0xFC'0000) >> 18);
+						*(output + 3) = 0x80 | static_cast<char>((input[0] & 0x3'F000) >> 12);
+						*(output + 4) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
+						*(output + 5) = 0x80 | static_cast<char>((input[0] & 0x3F));
+						return 6;
+					}
+				}
+				else
+					assert(false);
+			}
+			return 0;
+		}
+
+		std::size_t char_imp<char32_t>::to_single(const type* input, std::size_t length, char16_t* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length == 1);
+			if (input[0] >= 0x10000 && input[0] <= 0x10FFFF)
+			{
+				if (output_length >= 2)
+				{
+					char32_t tem = input[0] - 0x10000;
+					output[0] = ((tem & 0xFFC00) >> 10) & 0xD800;
+					output[1] = (tem & 0x3FF) & 0xDC00;
+					return 2;
+				}
+			}
+			else {
+				if (output_length >= 1)
+				{
+					output[0] = static_cast<char16_t>(input[0]);
+					return 1;
+				}
+			}
+			return 0;
+		}
+
+		std::size_t char_imp<char32_t>::to_single(const type* input, std::size_t length, char32_t* output, std::size_t output_length) noexcept
+		{
+			assert(input != nullptr && length == 1);
+			if (output != nullptr && output_length != 0)
+			{
+				std::memcpy(output, input, sizeof(char32_t));
+				return 1;
+			}
+			return 0;
+		}
 	}
 
+	/*
 	bool utf8_check_string(const char* input, size_t avalible, size_t require_space) noexcept
 	{
 		if (require_space != 0 && avalible >= require_space)
@@ -377,11 +618,13 @@ namespace Potato::Encoding
 		temporary.resize(std::get<1>(pair));
 		return temporary;
 	}
+	*/
 }
+
 
 namespace Potato::Encoding
 {
-
+	/*
 	std::optional<size_t> encoding_wrapper<char>::require_space(char input) noexcept
 	{
 		if ((input & 0xFE) == 0xFC)
@@ -612,6 +855,7 @@ namespace Potato::Encoding
 		}
 		return 0;
 	}
+	*/
 
 	const unsigned char utf8_bom[] = { 0xEF, 0xBB, 0xBF };
 	const unsigned char utf16_le_bom[] = { 0xFF, 0xFE };

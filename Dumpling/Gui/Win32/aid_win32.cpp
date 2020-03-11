@@ -49,7 +49,7 @@ namespace Dumpling::Win32
 
 		char* Name = nullptr;
 		auto String = "\"" + P.generic_string() + "\"";
-		std::string Re = "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe\"\0";
+		std::string Re = "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe \" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath \0";
 			"cd";
 		LPSTR Ter = Re.data();
 		std::string Re2 = R"(C:\Users\chips\Desktop\Project3\x64\Debug\Project3.exe)";
