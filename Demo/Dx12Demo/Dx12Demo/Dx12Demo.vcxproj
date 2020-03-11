@@ -140,6 +140,7 @@
     <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
     <ClCompile Include="..\..\..\Potato\lexical.cpp" />
+    <ClCompile Include="..\..\..\Potato\parser.cpp" />
     <ClCompile Include="..\..\..\Potato\syntax.cpp" />
     <ClCompile Include="..\..\..\Potato\tool.cpp" />
     <ClCompile Include="demo.cpp" />

@@ -4,206 +4,7 @@
 #include <assert.h>
 namespace
 {
-	using namespace Potato;
-	using storage_t = lr1::storage_t;
-	std::set<storage_t> calculate_nullable_set(const std::vector<std::vector<storage_t>>& production)
-	{
-		std::set<storage_t> result;
-		bool set_change = true;
-		while (set_change)
-		{
-			set_change = false;
-			for (auto& ite : production)
-			{
-				assert(ite.size() >= 1);
-				if (ite.size() == 1)
-				{
-					set_change |= result.insert(ite[0]).second;
-				}
-				else {
-					bool nullable_set = true;
-					for (size_t index = 1; index < ite.size(); ++index)
-					{
-						storage_t symbol = ite[index];
-						if (lr1::is_terminal(symbol) || result.find(symbol) == result.end())
-						{
-							nullable_set = false;
-							break;
-						}
-					}
-					if (nullable_set)
-						set_change |= result.insert(ite[0]).second;
-				}
-			}
-		}
-		return result;
-	}
-
-	std::map<storage_t, std::set<storage_t>> calculate_noterminal_first_set(
-		const std::vector<std::vector<storage_t>>& production,
-		const std::set<storage_t>& nullable_set
-	)
-	{
-		std::map<storage_t, std::set<storage_t>> result;
-		bool set_change = true;
-		while (set_change)
-		{
-			set_change = false;
-			for (auto& ite : production)
-			{
-				assert(ite.size() >= 1);
-				for (size_t index = 1; index < ite.size(); ++index)
-				{
-					auto head = ite[0];
-					auto target = ite[index];
-					if (lr1::is_terminal(target))
-					{
-						set_change |= result[head].insert(target).second;
-						break;
-					}
-					else {
-						if (nullable_set.find(target) == nullable_set.end())
-						{
-							auto& ref = result[head];
-							auto find = result.find(target);
-							if (find != result.end())
-								for (auto& ite3 : find->second)
-									set_change |= ref.insert(ite3).second;
-							break;
-						}
-					}
-				}
-			}
-		}
-		return result;
-	}
-
-	std::pair<std::set<storage_t>, bool> calculate_production_first_set(
-		std::vector<storage_t>::const_iterator begin, std::vector<storage_t>::const_iterator end,
-		const std::set<storage_t>& nullable_set,
-		const std::map<storage_t, std::set<storage_t>>& first_set
-	)
-	{
-		std::set<storage_t> temporary;
-		for (auto ite = begin; ite != end; ++ite)
-		{
-			if (Implement::is_terminal(*ite))
-			{
-				temporary.insert(*ite);
-				return { std::move(temporary), false };
-			}
-			else {
-				auto find = first_set.find(*ite);
-				if (find != first_set.end())
-				{
-					temporary.insert(find->second.begin(), find->second.end());
-					if (nullable_set.find(*ite) == nullable_set.end())
-						return { std::move(temporary), false };
-				}
-				else
-					throw Implement::lr1_production_head_missing{ *ite, 0 };
-			}
-		}
-		return { std::move(temporary), true };
-	}
-
-	std::set<storage_t> calculate_production_first_set_forward(
-		std::vector<storage_t>::const_iterator begin, std::vector<storage_t>::const_iterator end,
-		const std::set<storage_t>& nullable_set,
-		const std::map<storage_t, std::set<storage_t>>& first_set,
-		const std::set<storage_t>& forward
-	)
-	{
-		auto result = calculate_production_first_set(begin, end, nullable_set, first_set);
-		if (result.second)
-			result.first.insert(forward.begin(), forward.end());
-		return std::move(result.first);
-	}
-
-	std::vector<std::set<storage_t>> calculate_productions_first_set(
-		const std::multimap<storage_t, std::vector<storage_t>>& production,
-		const std::set<storage_t>& nullable_set,
-		const std::map<storage_t, std::set<storage_t>>& first_set_noterminal
-	)
-	{
-		std::vector<std::set<storage_t>> temporary;
-		temporary.reserve(production.size());
-		for (auto& ite : production)
-			temporary.push_back(std::move(calculate_production_first_set(ite.second.begin(), ite.second.end(), nullable_set, first_set_noterminal).first));
-		return temporary;
-	}
-
-	bool compress_less()
-	{
-		return false;
-	}
-
-	template<typename T, typename K> int compress_less_implement(T&& t, K&& k)
-	{
-		if (t < k) return 1;
-		if (t == k) return 0;
-		return -1;
-	}
-
-	template<typename T, typename K, typename ...OT> bool compress_less(T&& t, K&& k, OT&&... ot)
-	{
-		int result = compress_less_implement(t, k);
-		if (result == 1)
-			return true;
-		if (result == 0)
-			return compress_less(std::forward<OT>(ot)...);
-		return false;
-	}
-
-	struct production_index
-	{
-		storage_t m_production_index;
-		storage_t m_production_element_index;
-		bool operator<(const production_index& pe) const
-		{
-			return m_production_index < pe.m_production_index || (m_production_index == pe.m_production_index && m_production_element_index < pe.m_production_element_index);
-		}
-		bool operator==(const production_index& pe) const
-		{
-			return m_production_index == pe.m_production_index && m_production_element_index == pe.m_production_element_index;
-		}
-	};
-
-	struct production_element
-	{
-		production_index m_index;
-		std::set<std::set<storage_t>>::iterator m_forward_set;
-		bool operator<(const production_element& pe) const
-		{
-			return compress_less(m_index, pe.m_index, &(*m_forward_set), &(*pe.m_forward_set));
-		}
-		bool operator==(const production_element& pe) const
-		{
-			return m_index == pe.m_index && m_forward_set == pe.m_forward_set;
-		}
-	};
-
-	using temporary_state_map = std::map<production_index, std::set<std::set<storage_t>>::iterator>;
-
-	bool insert_temporary_state_map(production_index index, temporary_state_map& handled, std::set<std::set<storage_t>>::iterator ite, std::set<std::set<storage_t>>& total_forward_set)
-	{
-		auto find_res = handled.insert({ index, ite });
-		if (find_res.second)
-			return true;
-		else {
-			if (find_res.first->second != ite)
-			{
-				std::set<storage_t> new_set = *find_res.first->second;
-				bool change = false;
-				for (auto& ite : *ite)
-					change = new_set.insert(ite).second || change;
-				find_res.first->second = total_forward_set.insert(new_set).first;
-				return change;
-			}
-		}
-		return false;
-	}
-
+	
 
 }
 
@@ -211,16 +12,6 @@ namespace
 
 namespace Potato
 {
-	
-
-	lr1 lr1::create_table(
-		uint32_t start_symbol,
-		std::vector<std::vector<uint32_t>> production,
-		std::vector<std::tuple<std::vector<std::variant<uint32_t, std::pair<uint32_t, uint32_t>>>, Associativity>> priority
-	)
-	{
-
-	}
 
 
 
@@ -230,7 +21,7 @@ namespace Potato
 
 
 
-
+	/*
 	parser::parser(
 		std::map<std::wstring, uint32_t> production_mapping,
 		const std::vector<std::tuple<std::wstring, uint32_t>>& token_rex,
@@ -247,6 +38,7 @@ namespace Potato
 			this->token_rex.push_back({ std::wregex(str, flag), index });
 		}
 	}
+	*/
 
 
 
@@ -390,7 +182,7 @@ namespace Potato
 						}
 					}
 					if (!Done)
-						throw SBNFError{ line_count, LR"(Unregenized token)", {ite, line_end} };
+						throw Error::SBNFError{ line_count, LR"(Unregenized token)", {ite, line_end} };
 				}
 				switch (state)
 				{
@@ -417,7 +209,7 @@ namespace Potato
 						}
 					}
 					if (!Currect)
-						throw SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
+						throw Error::SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
 				}
 				break;
 				case 1:
@@ -431,7 +223,7 @@ namespace Potato
 							if (Symbol == TerSymbol::Terminal)
 								remove_set.insert(str);
 							else
-								throw SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
+								throw Error::SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
 						}
 					}
 				}
@@ -481,7 +273,7 @@ namespace Potato
 							
 						}
 						else {
-							throw SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
+							throw Error::SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
 						}
 					}
 				}
@@ -506,7 +298,7 @@ namespace Potato
 	}
 	
 
-	std::variant<std::monostate, parser, SBNFError> LoadSBNFCode(const std::wstring& code)
+	std::optional<parser> LoadSBNFCode(const std::wstring& code)
 	{
 		auto [Ter, Remove, Unnamed, Pro, Priority] = DetectCodeToSymbol(code);
 		std::map<std::wstring_view, uint32_t> TerminalMapping;
@@ -556,10 +348,10 @@ namespace Potato
 		//std::vector<std::wstring> Terminal;
 		//std::map<std::wstring_view>
 
-		return {};
+		return std::nullopt;
 	}
 
-	std::variant<std::monostate, parser, SBNFError> LoadSBNFFile(const std::filesystem::path& Path)
+	std::optional<parser> LoadSBNFFile(const std::filesystem::path& Path)
 	{
 		using namespace Potato::Encoding;
 		std::ifstream input(Path, std::ios::binary);
@@ -590,6 +382,6 @@ namespace Potato
 			}
 			return LoadSBNFCode(result);
 		}
-		return {};
+		return std::nullopt;
 	}
 }

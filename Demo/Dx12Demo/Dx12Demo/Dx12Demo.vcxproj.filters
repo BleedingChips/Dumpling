@@ -75,6 +75,9 @@
     <ClCompile Include="..\..\..\Potato\syntax.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Potato\parser.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Potato\auto_adapter.h">

@@ -14,209 +14,154 @@
 
 namespace Potato
 {
-	enum class Associativity
-	{
-		Left,
-		Right,
-	};
 
-	template<typename Terminal>
-	struct ast_node_terminal
+	struct lr1
 	{
-		Terminal symbol;
-		uint32_t data_index;
-	};
+		using storage_t = uint32_t;
+		static constexpr storage_t mask = 0x8000'0000;
 
-	template<typename NoTerminal, typename Terminal>
-	struct ast_node
-	{
-		using storage = std::variant<ast_node, ast_node_terminal<Terminal>>;
-		struct element : storage
+		static inline bool is_terminal(storage_t symbol) noexcept { return symbol < mask; }
+		static inline storage_t terminal_eof() { return static_cast<storage_t>(mask - 1); }
+		static inline storage_t noterminal_start() { return (0xffff'ffff); }
+
+		struct ope_priority
 		{
-			using storage::variant;
-			element(const element&) = default;
-			element(element&&) = default;
-			element& operator= (const element&) = default;
-			element& operator=(element&&) = default;
-			storage& var() { return static_cast<storage&>(*this); }
-			const storage& var() const { return static_cast<const storage&>(*this); }
-			bool is_terminal() const noexcept { return std::holds_alternative<ast_node_terminal<Terminal>>(var()); }
-			operator ast_node& () { return std::get<ast_node>(var()); }
-			operator const ast_node& () const { return std::get<ast_node>(var()); }
-			operator ast_node_terminal<Terminal>& () { return std::get<ast_node_terminal<Terminal>>(var()); }
-			operator const ast_node_terminal<Terminal>& () const { return std::get<ast_node_terminal<Terminal>>(var()); }
-			ast_node& cast() { return std::get<ast_node>(var()); }
-			const ast_node& cast() const { return std::get<ast_node>(var()); }
-			ast_node_terminal<Terminal>& cast_terminal() { return std::get<ast_node_terminal<Terminal>>(var()); }
-			const ast_node_terminal<Terminal>& cast_terminal() const { return std::get<ast_node_terminal<Terminal>>(var()); }
+			ope_priority(std::vector<storage_t> sym, bool lp = true) : sym(std::move(sym)), left_priority(lp) {}
+			std::vector<storage_t> sym;
+			bool left_priority;
 		};
-		ast_node(NoTerminal symbol, uint32_t production, std::vector<element> list) : m_symbol(symbol), m_production(production),
-			m_node_list(std::move(list))
-		{}
-		element& operator[](size_t index) { return m_node_list[index]; }
-		const element& operator[](size_t index) const { return m_node_list[index]; }
-		size_t size() const { return m_node_list.size(); }
-		NoTerminal symbol() const { return m_symbol; }
+
+		static lr1 create_table(
+			uint32_t start_symbol,
+			std::vector<std::vector<storage_t>> production,
+			std::vector<ope_priority> priority
+		);
+
+		struct table
+		{
+			std::map<storage_t, storage_t> m_shift;
+			std::map<storage_t, storage_t> m_reduce;
+		};
+
+		struct reduce_conflict : std::logic_error
+		{
+			storage_t m_conflig_token;
+			storage_t m_old_state_index;
+			storage_t m_new_state_index;
+			std::vector<std::tuple<storage_t, std::vector<storage_t>, std::set<storage_t>>> m_state;
+			reduce_conflict(storage_t token, storage_t old_state_index, storage_t new_state_index, std::vector<std::tuple<storage_t, std::vector<storage_t>, std::set<storage_t>>>);
+		};
+
+		struct production_head_missing : std::logic_error
+		{
+			storage_t m_require_head;
+			storage_t m_production_index;
+			production_head_missing(storage_t head, storage_t index);
+		};
+
+		struct same_production : std::logic_error
+		{
+			storage_t m_old_production_index;
+			storage_t m_new_production_index;
+			std::vector<storage_t> m_production;
+			same_production(storage_t old_index, storage_t new_index, std::vector<storage_t> production);
+		};
+
+		struct operator_level_conflict : std::logic_error
+		{
+			storage_t m_token;
+			operator_level_conflict(storage_t token) : std::logic_error("operator level conflict"), m_token(token) {}
+		};
+
+		lr1(
+			storage_t start_symbol,
+			std::vector<std::vector<storage_t>> production,
+			std::vector<ope_priority> priority
+		) : lr1(create_table(start_symbol, std::move(production), std::move(priority))) {}
+
+		lr1(
+			std::vector<std::tuple<storage_t, storage_t>> production,
+			std::vector<table> table
+		) : m_production(std::move(production)), m_table(std::move(table)) {}
+
+		lr1(lr1&&) = default;
+
 	private:
-		NoTerminal m_symbol;
-		uint32_t m_production;
-		std::vector<element> m_node_list;
+
+		lr1() = default;
+
+		std::vector<std::tuple<storage_t, storage_t>> m_production;
+		std::vector<table> m_table;
 	};
 
-	template<typename NoTerminal, typename Terminal> struct CFG_prodution
+	
+	/*
+	struct production_index
 	{
-		NoTerminal m_head_symbol;
-		std::initializer_list<std::variant<NoTerminal, Terminal>> m_production;
-		CFG_prodution(NoTerminal start_symbol, std::initializer_list<std::variant<NoTerminal, Terminal>> production)
-			: m_head_symbol(start_symbol), m_production(production) {}
-		CFG_prodution(CFG_prodution&&) = default;
+		uint32_t m_production_index;
+		uint32_t m_production_element_index;
+		bool operator<(const production_index& pe) const
+		{
+			return m_production_index < pe.m_production_index || (m_production_index == pe.m_production_index && m_production_element_index < pe.m_production_element_index);
+		}
+		bool operator==(const production_index& pe) const
+		{
+			return m_production_index == pe.m_production_index && m_production_element_index == pe.m_production_element_index;
+		}
 	};
 
-	template<typename Terminal> struct operator_priority
+	struct LR1_implement
 	{
-		std::initializer_list<std::variant<Terminal, std::pair<Terminal, Terminal>>> m_operator;
-		Associativity m_associativity;
-		operator_priority(operator_priority&&) = default;
-		operator_priority(std::initializer_list<std::variant<Terminal, std::pair<Terminal, Terminal>>> ope) : m_operator(ope), m_associativity(Associativity::Left) {}
-		operator_priority(std::initializer_list<std::variant<Terminal, std::pair<Terminal, Terminal>>> ope, Associativity ass) : m_operator(ope), m_associativity(ass) {}
+		LR1_implement(uint32_t start_symbol, std::vector<std::vector<uint32_t>> production,
+			std::vector<std::tuple<std::vector<std::variant<uint32_t, std::pair<uint32_t, uint32_t>>>, Associativity>> input);
+		LR1_implement(const uint32_t* input, size_t length);
+		size_t calculate_data_length() const noexcept;
+		void output_data(uint32_t* output) const noexcept;
+	private:
+		std::vector<std::tuple<uint32_t, uint32_t>> m_production;
+		std::vector<shift_reduce_description> m_table;
+		friend struct lr1_processor;
+	};
+
+	struct accect {};
+
+	struct lr1_process_error_state {
+		std::set<uint32_t> m_shift;
+		std::map<uint32_t, uint32_t> m_reduce;
+	};
+
+	struct lr1_process_unacceptable_error : std::logic_error, lr1_process_error_state {
+		uint32_t m_forward_token;
+		lr1_process_unacceptable_error(uint32_t forward_token, lr1_process_error_state lpes);
+	};
+
+	struct lr1_process_uncomplete_error : std::logic_error, lr1_process_error_state {
+		lr1_process_uncomplete_error(lr1_process_error_state lpes);
+	};
+
+	struct lr1_processor
+	{
+		struct result
+		{
+			uint32_t reduce_symbol;
+			uint32_t reduce_production_index;
+			uint32_t element_used;
+		};
+
+		lr1_processor(const LR1_implement&);
+		std::vector<result> receive(uint32_t symbol);
+		auto finish_input() { return receive(terminal_eof()); }
+	private:
+		const LR1_implement& m_syntax;
+		//std::deque<uint64_t> m_buffer;
+		std::vector<uint32_t> m_state_stack;
+		std::vector<uint32_t> m_input_buffer;
 	};
 	
 	namespace Implement
 	{
 
-		//static constexpr uint64_t flag = 0x8000'0000'0000'0000;
-		static constexpr uint32_t flag = 0x8000'0000;
-
-		inline bool is_terminal(uint32_t value) { return value < flag; }
-
-		inline uint32_t terminal_eof() { return static_cast<uint32_t>(flag - 1); }
-		inline uint32_t noterminal_start() { return (0xffff'ffff); }
-		template<typename NoTerminal> NoTerminal cast_noterminal(uint32_t input)
-		{
-			assert(input >= flag);
-			return static_cast<NoTerminal>(input & (flag - 1));
-		}
-		template<typename Terminal> Terminal cast_terminal(uint32_t input)
-		{
-			assert(input < flag);
-			return static_cast<Terminal>(input);
-		}
-
-		template<typename NoTerminal, typename Terminal> uint32_t cast_symbol(std::variant<NoTerminal, Terminal> input)
-		{
-			uint32_t value = std::visit([](auto input) { return static_cast<uint32_t>(input); }, input);
-			assert(value < flag);
-			if (std::holds_alternative<NoTerminal>(input))
-				return value | flag;
-			else
-				return value;
-		}
-
-		template<typename NoTerminal, typename Terminal> std::variant<NoTerminal, Terminal> cast_symbol(uint32_t input)
-		{
-			if (is_terminal(input))
-				return static_cast<Terminal>(input);
-			else
-				return static_cast<NoTerminal>(input & (flag - 1));
-		}
-
-		struct shift_reduce_description
-		{
-			std::map<uint32_t, uint32_t> m_shift;
-			std::map<uint32_t, uint32_t> m_reduce;
-		};
-
-		struct lr1_reduce_conflict : std::logic_error
-		{
-			uint32_t m_conflig_token;
-			uint32_t m_old_state_index;
-			uint32_t m_new_state_index;
-			std::vector<std::tuple<uint32_t, std::vector<uint32_t>, std::set<uint32_t>>> m_state;
-			lr1_reduce_conflict(uint32_t token, uint32_t old_state_index, uint32_t new_state_index, std::vector<std::tuple<uint32_t, std::vector<uint32_t>, std::set<uint32_t>>>);
-		};
-
-		struct lr1_production_head_missing : std::logic_error
-		{
-			uint32_t m_require_head;
-			uint32_t m_production_index;
-			lr1_production_head_missing(uint32_t head, uint32_t index);
-		};
-
-		struct lr1_same_production : std::logic_error
-		{
-			uint32_t m_old_production_index;
-			uint32_t m_new_production_index;
-			std::vector<uint32_t> m_production;
-			lr1_same_production(uint32_t old_index, uint32_t new_index, std::vector<uint32_t> production);
-		};
-
-		struct lr1_operator_level_conflict : std::logic_error
-		{
-			uint32_t m_token;
-			lr1_operator_level_conflict(uint32_t token) : std::logic_error("operator level conflict"), m_token(token) {}
-		};
-
-		struct production_index
-		{
-			uint32_t m_production_index;
-			uint32_t m_production_element_index;
-			bool operator<(const production_index& pe) const
-			{
-				return m_production_index < pe.m_production_index || (m_production_index == pe.m_production_index && m_production_element_index < pe.m_production_element_index);
-			}
-			bool operator==(const production_index& pe) const
-			{
-				return m_production_index == pe.m_production_index && m_production_element_index == pe.m_production_element_index;
-			}
-		};
-
-		struct LR1_implement
-		{
-			LR1_implement(uint32_t start_symbol, std::vector<std::vector<uint32_t>> production,
-				std::vector<std::tuple<std::vector<std::variant<uint32_t, std::pair<uint32_t, uint32_t>>>, Associativity>> input);
-			LR1_implement(const uint32_t* input, size_t length);
-			size_t calculate_data_length() const noexcept;
-			void output_data(uint32_t* output) const noexcept;
-		private:
-			std::vector<std::tuple<uint32_t, uint32_t>> m_production;
-			std::vector<shift_reduce_description> m_table;
-			friend struct lr1_processor;
-		};
-
-		struct accect {};
-
-		struct lr1_process_error_state {
-			std::set<uint32_t> m_shift;
-			std::map<uint32_t, uint32_t> m_reduce;
-		};
-
-		struct lr1_process_unacceptable_error : std::logic_error, lr1_process_error_state {
-			uint32_t m_forward_token;
-			lr1_process_unacceptable_error(uint32_t forward_token, lr1_process_error_state lpes);
-		};
-
-		struct lr1_process_uncomplete_error : std::logic_error, lr1_process_error_state {
-			lr1_process_uncomplete_error(lr1_process_error_state lpes);
-		};
-
-		struct lr1_processor
-		{
-			struct result
-			{
-				uint32_t reduce_symbol;
-				uint32_t reduce_production_index;
-				uint32_t element_used;
-			};
-
-			lr1_processor(const LR1_implement&);
-			std::vector<result> receive(uint32_t symbol);
-			auto finish_input() { return receive(terminal_eof()); }
-		private:
-			const LR1_implement& m_syntax;
-			//std::deque<uint64_t> m_buffer;
-			std::vector<uint32_t> m_state_stack;
-			std::vector<uint32_t> m_input_buffer;
-		};
+		
 
 	}
 
@@ -274,6 +219,7 @@ namespace Potato
 			LR1_operator_level_conflict(Terminal token) : std::logic_error("operator level conflict"), m_token(token) {}
 		};
 	}
+	*/
 
 	/*
 	example:
@@ -315,6 +261,7 @@ namespace Potato
 	);
 	*/
 
+/*
 	// See the example in the source code
 	template<typename NoTerminal, typename Terminal>
 	struct LR1 : Implement::LR1_implement
@@ -497,5 +444,6 @@ namespace Potato
 		static_assert(std::is_same_v<std::remove_const_t<std::remove_reference_t<decltype(*begin)>>, Terminal>, "");
 		return Implement::generate_ast_execute<NoTerminal, Terminal>{}(syntax, begin, end);
 	}
-	
+	*/
 };
+
