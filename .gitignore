@@ -44,3 +44,14 @@
 /Demo/*/*/Release
 /Demo/*/*/x64/Debug
 /Demo/*/*/x64/Release
+/Parser/Debug
+/Parser/Release
+/Parser/x64/Debug
+/Parser/x64/Release
+/Parser/*/Debug
+/Parser/*/Release
+/Parser/*/x64/Debug
+/Parser/*/x64/Release
+*.pdb
+*.idb
+*.tlog

@@ -13,9 +13,6 @@
 namespace Potato
 {
 
-
-
-
 	struct parser 
 	{
 		parser(
@@ -48,7 +45,7 @@ namespace Potato
 		};
 	}
 
-	std::optional<parser> LoadSBNFFile(const std::filesystem::path& Path);
+	std::optional<parser> LoadSBNFFile(const std::filesystem::path& Path, std::wstring& storage);
 	std::optional<parser> LoadSBNFCode(const std::wstring& Code);
 
 

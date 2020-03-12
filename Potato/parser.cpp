@@ -2,43 +2,10 @@
 #include <fstream>
 #include "character_encoding.h"
 #include <assert.h>
-namespace
-{
-	
-
-}
-
-
 
 namespace Potato
 {
 
-
-
-
-
-
-
-
-
-	/*
-	parser::parser(
-		std::map<std::wstring, uint32_t> production_mapping,
-		const std::vector<std::tuple<std::wstring, uint32_t>>& token_rex,
-		std::set<uint32_t> remove_set,
-		std::set<uint32_t> temp_non_terminal,
-		Implement::LR1_implement imp
-	)
-		: production_mapping(std::move(production_mapping)), remove_set(std::move(remove_set)), temp_non_terminal(std::move(temp_non_terminal)), lr1_imp(std::move(lr1_imp))
-	{
-		auto flag = std::regex::optimize | std::regex::nosubs;
-		for (auto& ite : token_rex)
-		{
-			auto& [str, index] = ite;
-			this->token_rex.push_back({ std::wregex(str, flag), index });
-		}
-	}
-	*/
 
 
 
@@ -74,7 +41,7 @@ namespace Potato
 		return { end, end };
 	}
 
-	enum class TerSymbol : std::size_t
+	enum class TerSymbol : lr1::storage_t
 	{
 		Empty = 0,
 		DefineTerminal = 1,
@@ -92,7 +59,13 @@ namespace Potato
 		RS_Brace = 13,
 		Terminal,
 		Or,
+
+		Statement = lr1::noterminal_start(),
+		TerList,
+
 	};
+
+	lr1::storage_t operator*(TerSymbol input) { return static_cast<lr1::storage_t>(input); }
 
 	std::wstring_view view(std::wstring::const_iterator s, std::wstring::const_iterator e) {
 		assert(s <= e);
@@ -107,11 +80,8 @@ namespace Potato
 	运算符优先级
 	*/
 	std::tuple<
-		std::vector<std::tuple<std::wstring_view, std::wstring_view, std::size_t>>,
-		std::set<std::wstring_view>,
-		std::set<std::wstring_view>,
-		std::map<std::wstring_view, std::vector<std::tuple<std::vector<std::tuple<std::wstring_view, TerSymbol>>, std::size_t>>>,
-		std::vector<std::tuple<TerSymbol, std::wstring_view, std::size_t>>
+		std::vector<std::tuple<std::vector<std::tuple<TerSymbol, std::wstring_view>>, std::size_t>>,
+		std::array<std::size_t, 4>
 	> DetectCodeToSymbol(const std::wstring& code)
 	{
 		auto flag = std::regex::optimize | std::regex::nosubs;
@@ -133,7 +103,7 @@ namespace Potato
 			std::wregex {LR"(\()", flag}, // LS_Brace (
 			std::wregex {LR"(\))", flag}, // RS_Brace )
 			std::wregex {LR"([a-zA-Z_][a-zA-Z_0-9]*(?=[^a-zA-Z_0-9]|$))", flag}, // Terminal
-			std::wregex {LR"(\|)", flag} // Or
+			std::wregex {LR"(\|)", flag}, // Or
 		};
 
 		auto ite = code.begin();
@@ -143,12 +113,8 @@ namespace Potato
 
 		size_t SymbolIndex = 0;
 
-		std::vector<std::tuple<std::wstring_view, std::wstring_view, std::size_t>> ter_regex;
-		std::set<std::wstring_view> remove_set;
-		std::set<std::wstring_view> unnamed_set;
-		std::map<std::wstring_view, std::vector<std::tuple<std::vector<std::tuple<std::wstring_view, TerSymbol>>, std::size_t>>> productions;
-		std::vector<std::tuple<TerSymbol, std::wstring_view, std::size_t>> priority;
-		std::wstring_view last_noterminal;
+		std::vector<std::tuple<std::vector<std::tuple<TerSymbol, std::wstring_view>>, std::size_t>> AllToken;
+		std::array<std::size_t, 4> Size = { 0, 0, 0, 0 };
 		while (ite != code_end)
 		{
 			auto line_start = ite;
@@ -184,127 +150,135 @@ namespace Potato
 					if (!Done)
 						throw Error::SBNFError{ line_count, LR"(Unregenized token)", {ite, line_end} };
 				}
-				switch (state)
-				{
-				case 0:
-				{
-					bool Currect = false;
-					if (LineSymbol.size() == 1 && std::get<0>(LineSymbol[0]) == TerSymbol::Mask)
-					{
-						Currect = true;
-						state += 1;
-					}
-					else if (LineSymbol.size() == 3)
-					{
-						if (std::get<0>(LineSymbol[0]) == TerSymbol::DefineTerminal && std::get<0>(LineSymbol[1]) == TerSymbol::Equal)
-						{
-							auto [Token, view] = LineSymbol[2];
-							if (Token == TerSymbol::Rex || Token == TerSymbol::DefineTerminal)
-							{
-								Currect = true;
-								std::wstring_view token = std::get<1>(LineSymbol[0]);
-								std::wstring_view token_regex{ std::get<1>(LineSymbol[2])};
-								ter_regex.push_back({token, token_regex, line_count});
-							}
-						}
-					}
-					if (!Currect)
-						throw Error::SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
-				}
-				break;
-				case 1:
+				if (LineSymbol.size() > 0)
 				{
 					if (LineSymbol.size() == 1 && std::get<0>(LineSymbol[0]) == TerSymbol::Mask)
-						state += 1;
+					{
+						++state;
+						if (state >= 5)
+							throw Error::SBNFError{ line_count, LR"(Section overfall)" , {} };
+					}
 					else {
-						for (auto& ite : LineSymbol)
-						{
-							auto [Symbol, str] = ite;
-							if (Symbol == TerSymbol::Terminal)
-								remove_set.insert(str);
-							else
-								throw Error::SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
-						}
+						AllToken.push_back({ std::move(LineSymbol), line_count });
+						++Size[state];
 					}
-				}
-				break;
-				case 2:
-				{
-					if (!LineSymbol.empty())
-					{
-						auto [sym, str] = LineSymbol[0];
-						bool Currect = false;
-						decltype(LineSymbol)::const_iterator start;
-						if (LineSymbol.size() == 1 && std::get<0>(LineSymbol[0]) == TerSymbol::Mask)
-						{
-							state += 1;
-							break;
-						}
-						else if (sym == TerSymbol::NoTerminal || sym == TerSymbol::StartSymbol)
-						{
-							last_noterminal = str;
-							if (LineSymbol.size() >= 2 && std::get<0>(LineSymbol[1]) == TerSymbol::Equal)
-							{
-								start = LineSymbol.begin() + 2;
-								Currect = true;
-							}
-						}
-						else if (sym == TerSymbol::Equal)
-						{
-							if (!last_noterminal.empty())
-							{
-								start = LineSymbol.begin() + 1;
-								Currect = true;
-							}
-						}
-						if (Currect)
-						{
-							std::vector<std::tuple<std::wstring_view, TerSymbol>> Tem;
-							for (; start != LineSymbol.end(); ++start)
-							{
-								auto [sym, str] = *start;
-								if (sym == TerSymbol::RexTerminal)
-									unnamed_set.insert(str);
-								Tem.push_back({ str, sym });
-								auto FindIte = productions.insert({ last_noterminal , {} });
-								std::tuple<std::vector<std::tuple<std::wstring_view, TerSymbol>>, std::size_t> Res{ std::move(Tem), line_count };
-								FindIte.first->second.push_back(std::move(Res));
-							}
-							
-						}
-						else {
-							throw Error::SBNFError{ line_count, LR"(Error Synax)", {line_start, line_end} };
-						}
-					}
-				}
-				break;
-				case 3:
-				{
-					for (auto& ite : LineSymbol)
-					{
-						auto [Symbol, str] = ite;
-						priority.push_back({ Symbol, str, line_count });
-					}
-				}
-				break;
-				default:
-					break;
 				}
 			}
 			++line_count;
 			ite = line_next;
 		}
-		return  { std::move(ter_regex), std::move(remove_set),  std::move(unnamed_set), std::move(productions), std::move(priority) };
+		return  { std::move(AllToken), Size };
 	}
-	
 
 	std::optional<parser> LoadSBNFCode(const std::wstring& code)
 	{
-		auto [Ter, Remove, Unnamed, Pro, Priority] = DetectCodeToSymbol(code);
-		std::map<std::wstring_view, uint32_t> TerminalMapping;
-		std::vector<std::tuple<std::wstring, std::size_t>> RegexToTerminal;
-		uint32_t TerminalIndex = 0;
+		using type = lr1::storage_t;
+		auto [AllToken,  Size] = DetectCodeToSymbol(code);
+
+		lr1 imp[4] = {
+			lr1::create(*TerSymbol::Statement, {
+		{*TerSymbol::Statement, *TerSymbol::DefineTerminal, *TerSymbol::Equal, *TerSymbol::Rex},
+		{*TerSymbol::Statement, *TerSymbol::DefineTerminal, *TerSymbol::Equal, *TerSymbol::DefineTerminal},
+			},
+			{}
+		),
+			lr1::create(*TerSymbol::Statement, {
+			{*TerSymbol::Statement, *TerSymbol::Terminal},
+			{*TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Terminal},
+			},
+			{}
+		),
+
+		lr1::create(
+			*TerSymbol::Statement, {
+			{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::NoTerminal },
+			{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::Terminal },
+			{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal, *TerSymbol::TerList },
+			{ *TerSymbol::Statement, *TerSymbol::Equal, *TerSymbol::TerList },
+			{ *TerSymbol::Statement, *TerSymbol::Equal },
+			{ *TerSymbol::TerList, *TerSymbol::NoTerminal },
+			{ *TerSymbol::TerList, *TerSymbol::Terminal },
+			{ *TerSymbol::TerList, *TerSymbol::RexTerminal },
+			{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::TerList},
+			{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::Or, *TerSymbol::TerList },
+			{ *TerSymbol::TerList, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace },
+			{ *TerSymbol::TerList, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace },
+			{ *TerSymbol::TerList, *TerSymbol::LB_Brace, *TerSymbol::TerList, *TerSymbol::RB_Brace },
+			},
+			{}
+		),
+
+		lr1::create(
+			*TerSymbol::Statement, {
+			{ *TerSymbol::TerList, *TerSymbol::RexTerminal },
+			{ *TerSymbol::TerList, *TerSymbol::Terminal },
+			{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::TerList },
+			{ *TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Statement },
+			{ *TerSymbol::Statement, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace },
+			{ *TerSymbol::Statement, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace },
+			},
+			{}
+		) };
+
+		std::array<std::size_t, 4> SectionStart = { 0, 0, 0, 0 };
+		std::array<std::size_t, 4> SectionEnd = { 0, 0, 0, 0 };
+		for (size_t i = 1; i < 4; ++i)
+			SectionStart[i] = SectionStart[i - 1] + Size[i - 1];
+		for (size_t i = 0; i < 4; ++i)
+			SectionEnd[i] = SectionStart[i] + Size[i];
+
+		
+		std::vector<lr1_processor::ast> AllAst;
+		for (size_t i = 0; i < AllToken.size(); ++i)
 		{
+			for (size_t k = 4; k > 0; --k)
+			{
+				if (i >= SectionStart[k - 1])
+				{
+					auto& [vec, lin] = AllToken[i];
+					lr1_processor pro(imp[k-1]);
+					AllAst.push_back(pro.generate_ast(vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }));
+					break;
+				}
+			}
+		}
+
+		std::map<std::wstring_view, type> ter_to_index;
+		std::map<type, std::wstring_view> index_to_ter;
+		std::vector<std::tuple<std::wstring, type>> rexs;
+		std::set<type> unused_index;
+		type terminal_start = 0;
+		type noterminal_start = lr1::noterminal_start();
+
+		for (size_t i = SectionStart[0]; i < SectionEnd[0]; ++i)
+		{
+			auto& AST = AllAst[i];
+			assert(AST.sym == *TerSymbol::Statement);
+			std::vector<lr1_processor::ast> Vect = std::get<0>(AST.index);
+			assert(Vect.size() == 3);
+
+			auto& Data = std::get<0>(AllToken[i]);
+			auto& Token = std::get<1>(Data[std::get<1>(Vect[0].index)]);
+			auto& Token2 = std::get<1>(Data[std::get<1>(Vect[2].index)]);
+			auto Ite = ter_to_index.insert({ Token, terminal_start });
+			if (Ite.second)
+			{
+				index_to_ter.insert({ Ite.first->second, Ite.first->first });
+				++terminal_start;
+			}
+				
+			rexs.push_back({ std::wstring{Token2}, Ite.first->second });
+		}
+
+		volatile int i = 0;
+
+
+		/*
+		std::map<std::wstring_view, type> TerminalMapping;
+		std::vector<std::tuple<std::wstring, type>> RegexToTerminal;
+
+		{
+			uint32_t TerminalIndex = 0;
 			std::vector<std::wstring_view> Order(Unnamed.begin(), Unnamed.end());
 			std::sort(Order.begin(), Order.end(), [](const std::wstring_view& l, const std::wstring_view& r) {
 				if (l.size() > r.size())
@@ -334,13 +308,56 @@ namespace Potato
 				RegexToTerminal.push_back({ Rex ,TerminalIndex });
 				++TerminalIndex;
 			}
+
+			for (auto& ite : Ter)
+			{
+				auto [ter, rex, index] = ite;
+				auto find = TerminalMapping.insert({ ter, TerminalIndex });
+				if (find.second)
+					++TerminalIndex;
+				RegexToTerminal.push_back({ std::wstring{rex}, find.first->second });
+			}
 		}
 
-		
+		std::set<type> remove_set;
 
+		{
+			for (auto& ite : Remove)
+			{
+				auto find = TerminalMapping.find(ite);
+				if (find != TerminalMapping.end())
+					remove_set.insert(find->second);
+			}
+		}
+
+		static lr1 imp(*TerSymbol::Statement, {
+			{*TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal, *TerSymbol::NullableTerList},
+			{*TerSymbol::NullableTerList},
+			{*TerSymbol::NullableTerList, *TerSymbol::NullableTerList, *TerSymbol::TerList},
+			{*TerSymbol::TerList, *TerSymbol::NoTerminal},
+			{*TerSymbol::TerList, *TerSymbol::Terminal},
+			{*TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::Or, *TerSymbol::TerList},
+			{*TerSymbol::TerList, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::LS_Brace},
+			{*TerSymbol::TerList, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::LM_Brace},
+			},
+			{}
+		);
+		{
+			for (auto& ite : Pro)
+			{
+				for (auto& ite2 : ite.second)
+				{
+					lr1_processor processor{ imp };
+					lr1_processor::ast result = processor.generate_ast(std::get<0>(ite2).begin(), std::get<0>(ite2).end(), [](auto input) {return *std::get<1>(input); });
+				}
+				
+			}
+			
+		}
 		std::wstring Table;
 		std::vector<std::wstring> TerminalRegex;
 		std::map<std::wstring_view, std::tuple<uint32_t, bool>> index;
+		*/
 		//for(size_t )
 
 
@@ -351,12 +368,13 @@ namespace Potato
 		return std::nullopt;
 	}
 
-	std::optional<parser> LoadSBNFFile(const std::filesystem::path& Path)
+	std::optional<parser> LoadSBNFFile(const std::filesystem::path& Path, std::wstring& storage)
 	{
 		using namespace Potato::Encoding;
 		std::ifstream input(Path, std::ios::binary);
 		if (input.is_open())
 		{
+			storage.clear();
 			char Bom[4] = { 0,0, 0, 0 };
 			input.read(Bom, 4);
 			auto [type, size] = translate_binary_to_bomtype(reinterpret_cast<const std::byte*>(Bom), 4);
@@ -373,14 +391,14 @@ namespace Potato
 			case BomType::None:
 			{
 				string_encoding<char> utf8_string(reinterpret_cast<char*>(Read), buffer_size);
-				result = utf8_string.to_string<wchar_t>();
+				storage = utf8_string.to_string<wchar_t>();
 				break;
 			}
 			default:
 				assert(false);
 				break;
 			}
-			return LoadSBNFCode(result);
+			return { LoadSBNFCode(storage) };
 		}
 		return std::nullopt;
 	}

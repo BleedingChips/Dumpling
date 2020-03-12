@@ -410,7 +410,7 @@ namespace Potato
 		: std::logic_error("same production"), m_old_production_index(old_index), m_new_production_index(new_index), m_production(std::move(production))
 	{}
 
-	lr1 lr1::create_table(
+	lr1 lr1::create(
 		uint32_t start_symbol,
 		std::vector<std::vector<storage_t>> production,
 		std::vector<ope_priority> priority
@@ -418,9 +418,17 @@ namespace Potato
 	{
 		std::vector<std::tuple<storage_t, storage_t>> m_production;
 		std::vector<table> m_table;
-
-		production.push_back({ noterminal_start(), start_symbol });
-		m_production.reserve(production.size());
+		for (auto& ite : production)
+		{
+			assert(ite.size() <= std::numeric_limits<uint32_t>::max());
+			for (auto& ite2 : ite)
+			{
+				if (ite2 == lr1::start_symbol() || ite2 == lr1::eof_symbol())
+					throw unavailable_symbol{};
+			}
+		}
+		production.push_back({ lr1::start_symbol(), start_symbol });
+		m_production.reserve(production.size() + 1);
 		for (auto& ite : production)
 		{
 			assert(ite.size() <= std::numeric_limits<uint32_t>::max());
@@ -508,7 +516,7 @@ namespace Potato
 		std::vector<decltype(state_map_mapping)::iterator> stack;
 		uint32_t current_state = 0;
 		{
-			auto re = all_forward_set.insert({ terminal_eof() }).first;
+			auto re = all_forward_set.insert({ eof_symbol() }).first;
 			temporary_state_map temmap{ {production_index{static_cast<storage_t>(production.size()) - 1, 0}, re} };
 			auto result = search_direct_mapping(std::move(temmap), all_forward_set, production_map, production, null_set, first_set, remove);
 			auto result2 = state_map_mapping.insert({ std::move(result), current_state });
@@ -543,13 +551,167 @@ namespace Potato
 		for (auto& ite : temporary_table)
 		{
 			m_table.push_back(std::move(ite.second));
-			assert(m_table.size() == ite.first + 1);
+			assert(m_table.size() == static_cast<size_t>(ite.first) + 1);
 		}
 		lr1 result;
 		result.m_production = std::move(m_production);
 		result.m_table = std::move(m_table);
 		return std::move(result);
 	}
+
+	lr1_processor::unacceptable_error::unacceptable_error(storage_t forward_token, error_state lpes)
+		: std::logic_error("unacceptable token"), m_forward_token(forward_token), error_state(std::move(lpes)) {}
+
+	lr1_processor::uncomplete_error::uncomplete_error(error_state lps)
+		: std::logic_error("unacceptable eof"), error_state(std::move(lps)) {}
+
+	void lr1_processor::receive(storage_t symbol)
+	{
+		assert(!m_state_stack.empty());
+		m_input_buffer.push_back(symbol);
+	}
+
+	void lr1_processor::try_reduce(std::vector<ast>& storage_buffer, storage_t symbol, size_t index)
+	{
+		assert(!m_state_stack.empty());
+		m_input_buffer.push_back(symbol);
+		storage_buffer.push_back(ast{ symbol, size_t{index} });
+		while (!m_input_buffer.empty())
+		{
+			storage_t input = *m_input_buffer.rbegin();
+			storage_t state = *m_state_stack.rbegin();
+			auto& ref = m_table_ref.m_table[state];
+			if (auto reduce = ref.m_reduce.find(input); reduce != ref.m_reduce.end())
+			{
+				storage_t production_index = reduce->second;
+				assert(production_index < m_table_ref.m_production.size());
+				storage_t head_symbol;
+				storage_t production_count;
+				std::tie(head_symbol, production_count) = m_table_ref.m_production[production_index];
+				assert(m_state_stack.size() >= production_count);
+				m_state_stack.resize(m_state_stack.size() - production_count);
+				if (head_symbol != lr1::start_symbol())
+				{
+					m_input_buffer.push_back(head_symbol);
+					assert(storage_buffer.size() >= production_count + 1);
+					auto tem = std::move(*storage_buffer.rbegin());
+					size_t start = storage_buffer.size() - production_count - 1;
+					ast re{ head_symbol, std::vector<ast>{ std::move_iterator(storage_buffer.begin() + start), std::move_iterator(storage_buffer.begin() + start + production_count) } };
+					storage_buffer.resize(start);
+					storage_buffer.push_back(std::move(re));
+					storage_buffer.push_back(std::move(tem));
+				}
+				else
+				{
+					assert(m_state_stack.size() == 1);
+					assert(storage_buffer.size() == 2);
+					storage_buffer.pop_back();
+					m_input_buffer.clear();
+				}
+			}
+			else if (auto shift = ref.m_shift.find(input); shift != ref.m_shift.end())
+			{
+				m_input_buffer.pop_back();
+				m_state_stack.push_back(shift->second);
+			}
+			else {
+				std::set<storage_t> total_shift;
+				for (auto& ite : ref.m_shift)
+					total_shift.insert(ite.first);
+				throw unacceptable_error{ input, {std::move(total_shift), ref.m_reduce} };
+			}
+		}
+	}
+	/*
+	auto lr1_processor::try_reduce()->std::optional<std::tuple<storage_t, storage_t, storage_t>>
+	{
+		assert(!m_state_stack.empty());
+		while (!m_input_buffer.empty())
+		{
+			storage_t input = *m_input_buffer.rbegin();
+			storage_t state = *m_state_stack.rbegin();
+			auto& ref = m_table_ref.m_table[state];
+			if (auto reduce = ref.m_reduce.find(input); reduce != ref.m_reduce.end())
+			{
+				storage_t production_index = reduce->second;
+				assert(production_index < m_table_ref.m_production.size());
+				storage_t head_symbol;
+				storage_t production_count;
+				std::tie(head_symbol, production_count) = m_table_ref.m_production[production_index];
+				assert(m_state_stack.size() >= production_count);
+				m_state_stack.resize(m_state_stack.size() - production_count);
+				if (head_symbol != lr1::noterminal_start())
+					m_input_buffer.push_back(head_symbol);
+				else
+				{
+					assert(m_state_stack.size() == 1);
+					m_input_buffer.clear();
+				}
+				return std::tuple<storage_t, storage_t, storage_t>{ head_symbol, production_index, production_count };
+			}
+			else if (auto shift = ref.m_shift.find(input); shift != ref.m_shift.end())
+			{
+				m_input_buffer.pop_back();
+				m_state_stack.push_back(shift->second);
+			}
+			else {
+				std::set<storage_t> total_shift;
+				for (auto& ite : ref.m_shift)
+					total_shift.insert(ite.first);
+				throw unacceptable_error{ input, {std::move(total_shift), ref.m_reduce} };
+			}
+		}
+		return std::nullopt;
+	}
+	*/
+
+	/*
+	auto lr1_processor::receive(storage_t symbol) -> std::vector<result>
+	{
+		assert(!m_state_stack.empty());
+		std::vector<result> re;
+		m_input_buffer.push_back(symbol);
+		while (!m_input_buffer.empty())
+		{
+			storage_t input = *m_input_buffer.rbegin();
+			storage_t state = *m_state_stack.rbegin();
+			auto& ref = m_table_ref.m_table[state];
+			if (auto reduce = ref.m_reduce.find(input); reduce != ref.m_reduce.end())
+			{
+				storage_t production_index = reduce->second;
+				assert(production_index < m_table_ref.m_production.size());
+				storage_t head_symbol;
+				storage_t production_count;
+				std::tie(head_symbol, production_count) = m_table_ref.m_production[production_index];
+				assert(m_state_stack.size() >= production_count);
+				m_state_stack.resize(m_state_stack.size() - production_count);
+
+				re.push_back({ head_symbol, production_index, production_count });
+				if (head_symbol != lr1::noterminal_start())
+					m_input_buffer.push_back(head_symbol);
+				else
+				{
+					assert(m_state_stack.size() == 1);
+					m_input_buffer.clear();
+				}
+			}
+			else if (auto shift = ref.m_shift.find(input); shift != ref.m_shift.end())
+			{
+				m_input_buffer.pop_back();
+				m_state_stack.push_back(shift->second);
+			}
+			else {
+				std::set<storage_t> total_shift;
+				for (auto& ite : ref.m_shift)
+					total_shift.insert(ite.first);
+				throw unacceptable_error{ input, {std::move(total_shift), ref.m_reduce} };
+			}
+		}
+		return std::move(re);
+	}
+	*/
+
+
 
 	/*
 	LR1_implement::LR1_implement(uint32_t start_symbol, std::vector<std::vector<uint32_t>> production,

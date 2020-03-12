@@ -6,11 +6,15 @@
 
 int main()
 {
+	using namespace Potato;
+
+
 	auto p = std::filesystem::current_path();
+	std::wstring storage;
 	try {
-		auto Re = Potato::LoadSBNFFile(LR"(msc.sbnf)");
+		auto Re = Potato::LoadSBNFFile(LR"(msc.sbnf)", storage);
 	}
-	catch (Potato::SBNFError error)
+	catch (Potato::Error::SBNFError error)
 	{
 		volatile int i = 0;
 	}

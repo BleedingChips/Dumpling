@@ -21,18 +21,20 @@ namespace Potato
 		static constexpr storage_t mask = 0x8000'0000;
 
 		static inline bool is_terminal(storage_t symbol) noexcept { return symbol < mask; }
-		static inline storage_t terminal_eof() { return static_cast<storage_t>(mask - 1); }
-		static inline storage_t noterminal_start() { return (0xffff'ffff); }
+		static constexpr inline storage_t eof_symbol() { return static_cast<storage_t>(mask - 1); }
+		static constexpr inline storage_t noterminal_start() { return mask; }
+		static constexpr inline storage_t start_symbol() { return (0xffff'ffff); }
 
 		struct ope_priority
 		{
 			ope_priority(std::vector<storage_t> sym, bool lp = true) : sym(std::move(sym)), left_priority(lp) {}
+			ope_priority(storage_t sym, bool lp = true) : sym({ sym }), left_priority(lp) {}
 			std::vector<storage_t> sym;
 			bool left_priority;
 		};
 
-		static lr1 create_table(
-			uint32_t start_symbol,
+		static lr1 create(
+			storage_t start_symbol,
 			std::vector<std::vector<storage_t>> production,
 			std::vector<ope_priority> priority
 		);
@@ -59,6 +61,8 @@ namespace Potato
 			production_head_missing(storage_t head, storage_t index);
 		};
 
+		struct unavailable_symbol {};
+
 		struct same_production : std::logic_error
 		{
 			storage_t m_old_production_index;
@@ -77,7 +81,7 @@ namespace Potato
 			storage_t start_symbol,
 			std::vector<std::vector<storage_t>> production,
 			std::vector<ope_priority> priority
-		) : lr1(create_table(start_symbol, std::move(production), std::move(priority))) {}
+		) : lr1(create(start_symbol, std::move(production), std::move(priority))) {}
 
 		lr1(
 			std::vector<std::tuple<storage_t, storage_t>> production,
@@ -90,8 +94,68 @@ namespace Potato
 
 		lr1() = default;
 
+		friend struct lr1_processor;
+
 		std::vector<std::tuple<storage_t, storage_t>> m_production;
 		std::vector<table> m_table;
+	};
+
+	struct lr1_processor
+	{
+		using storage_t = lr1::storage_t;
+
+		struct error_state {
+			std::set<storage_t> m_shift;
+			std::map<storage_t, storage_t> m_reduce;
+		};
+
+		struct unacceptable_error : std::logic_error, error_state {
+			storage_t m_forward_token;
+			unacceptable_error(storage_t forward_token, error_state lpes);
+		};
+
+		struct uncomplete_error : std::logic_error, error_state {
+			uncomplete_error(error_state lpes);
+		};
+		
+		lr1_processor(const lr1& table) : m_table_ref(table) { clear(); }
+
+		struct ast {
+			storage_t sym;
+			// to no terminal, storage the ast_list, to terminal storage index in token stream
+			std::variant<std::vector<ast>, size_t> index;
+		};
+
+		// SymbolFunction -> Symbol (const Type& Token)
+		template<typename Type, typename SymbolFunction>
+		ast generate_ast(Type begin, Type end, SymbolFunction&& SF)
+		{
+			std::vector<ast> ast_buffer;
+			size_t index = 0;
+			for (; true; ++begin)
+			{
+				if (begin != end)
+					try_reduce(ast_buffer, std::forward<SymbolFunction&&>(SF)(*begin), index);
+				else {
+					try_reduce(ast_buffer, lr1::eof_symbol(), index);
+					assert(ast_buffer.size() == 1);
+					return std::move(ast_buffer[0]);
+				}
+				++index;
+			}
+			assert(false);
+			return {};
+		}
+
+		void clear() { m_state_stack = { 0 }; m_input_buffer.clear(); }
+
+	private:
+		void receive(storage_t symbol);
+		//reduce_symbol reduce_production_index element_used
+		void try_reduce(std::vector<ast>& storage_buffer, storage_t symbol, size_t index);
+		const lr1& m_table_ref;
+		std::vector<storage_t> m_state_stack;
+		std::vector<storage_t> m_input_buffer;
 	};
 
 	
