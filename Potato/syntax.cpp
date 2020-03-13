@@ -421,6 +421,8 @@ namespace Potato
 		for (auto& ite : production)
 		{
 			assert(ite.size() <= std::numeric_limits<uint32_t>::max());
+			if(is_terminal(ite[0]))
+				throw unavailable_symbol{};
 			for (auto& ite2 : ite)
 			{
 				if (ite2 == lr1::start_symbol() || ite2 == lr1::eof_symbol())
@@ -565,20 +567,13 @@ namespace Potato
 	lr1_processor::uncomplete_error::uncomplete_error(error_state lps)
 		: std::logic_error("unacceptable eof"), error_state(std::move(lps)) {}
 
-	void lr1_processor::receive(storage_t symbol)
+	void lr1_processor::try_reduce(storage_t symbol, size_t index, void (*Function)(void* Func, travel input), void* data)
 	{
 		assert(!m_state_stack.empty());
-		m_input_buffer.push_back(symbol);
-	}
-
-	void lr1_processor::try_reduce(std::vector<ast>& storage_buffer, storage_t symbol, size_t index)
-	{
-		assert(!m_state_stack.empty());
-		m_input_buffer.push_back(symbol);
-		storage_buffer.push_back(ast{ symbol, size_t{index} });
+		m_input_buffer.push_back({ symbol, index });
 		while (!m_input_buffer.empty())
 		{
-			storage_t input = *m_input_buffer.rbegin();
+			auto [input, token_index] = *m_input_buffer.rbegin();
 			storage_t state = *m_state_stack.rbegin();
 			auto& ref = m_table_ref.m_table[state];
 			if (auto reduce = ref.m_reduce.find(input); reduce != ref.m_reduce.end())
@@ -592,25 +587,33 @@ namespace Potato
 				m_state_stack.resize(m_state_stack.size() - production_count);
 				if (head_symbol != lr1::start_symbol())
 				{
-					m_input_buffer.push_back(head_symbol);
-					assert(storage_buffer.size() >= production_count + 1);
-					auto tem = std::move(*storage_buffer.rbegin());
-					size_t start = storage_buffer.size() - production_count - 1;
-					ast re{ head_symbol, std::vector<ast>{ std::move_iterator(storage_buffer.begin() + start), std::move_iterator(storage_buffer.begin() + start + production_count) } };
-					storage_buffer.resize(start);
-					storage_buffer.push_back(std::move(re));
-					storage_buffer.push_back(std::move(tem));
+					m_input_buffer.push_back({ head_symbol, 0 });
+					if (head_symbol != lr1::start_symbol())
+					{
+						assert(Function != nullptr && data != nullptr);
+						travel input;
+						input.symbol = head_symbol;
+						input.no_terminal_production_index = production_index;
+						input.no_terminal_production_count = production_count;
+						(*Function)(data, input);
+					}
 				}
 				else
 				{
 					assert(m_state_stack.size() == 1);
-					assert(storage_buffer.size() == 2);
-					storage_buffer.pop_back();
 					m_input_buffer.clear();
 				}
 			}
 			else if (auto shift = ref.m_shift.find(input); shift != ref.m_shift.end())
 			{
+				auto [sym, index] = *m_input_buffer.rbegin();
+				if (lr1::is_terminal(sym))
+				{
+					travel input;
+					input.symbol = sym;
+					input.terminal_token_index = index;
+					(*Function)(data, input);
+				}
 				m_input_buffer.pop_back();
 				m_state_stack.push_back(shift->second);
 			}
@@ -622,6 +625,33 @@ namespace Potato
 			}
 		}
 	}
+
+	void lr1_ast::imp::operator()(lr1_processor::travel input)
+	{
+		if (input.is_terminal())
+		{
+			lr1_ast ast{ input.symbol, input.terminal_token_index };
+			ast_buffer.push_back(std::move(ast));
+		}
+		else {
+			auto size = input.no_terminal_production_count;
+			size_t start = ast_buffer.size() - size;
+			std::vector<lr1_ast> list{ std::move_iterator(ast_buffer.begin() + start), std::move_iterator(ast_buffer.end()) };
+			lr1_ast ast{ input.symbol, std::move(list) };
+			ast_buffer.resize(start);
+			ast_buffer.push_back(std::move(ast));
+		}
+	}
+
+	lr1_ast lr1_ast::imp::result()
+	{
+		assert(ast_buffer.size() == 1);
+		auto re = std::move(*ast_buffer.begin());
+		ast_buffer.clear();
+		return std::move(re);
+	}
+
+
 	/*
 	auto lr1_processor::try_reduce()->std::optional<std::tuple<storage_t, storage_t, storage_t>>
 	{

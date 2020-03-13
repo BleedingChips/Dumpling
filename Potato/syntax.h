@@ -117,15 +117,22 @@ namespace Potato
 		struct uncomplete_error : std::logic_error, error_state {
 			uncomplete_error(error_state lpes);
 		};
+
+		struct travel
+		{
+			storage_t symbol;
+			union 
+			{
+				std::size_t no_terminal_production_index;
+				std::size_t terminal_token_index;
+			};
+			std::size_t no_terminal_production_count;
+			bool is_terminal() const noexcept { return lr1::is_terminal(symbol); }
+		};
 		
 		lr1_processor(const lr1& table) : m_table_ref(table) { clear(); }
 
-		struct ast {
-			storage_t sym;
-			// to no terminal, storage the ast_list, to terminal storage index in token stream
-			std::variant<std::vector<ast>, size_t> index;
-		};
-
+		/*
 		// SymbolFunction -> Symbol (const Type& Token)
 		template<typename Type, typename SymbolFunction>
 		ast generate_ast(Type begin, Type end, SymbolFunction&& SF)
@@ -146,16 +153,72 @@ namespace Potato
 			assert(false);
 			return {};
 		}
+		*/
+
+		template<typename Type, typename SymbolFunction, typename RespondFunction>
+		void analyze(Type begin, Type end, SymbolFunction&& SF, RespondFunction&& Function)
+		{
+			auto TransFunc = [](void* Func, travel input) {
+				std::forward<RespondFunction&&>(*reinterpret_cast<std::remove_reference_t<RespondFunction>*>(Func)).operator()(input);
+			};
+			size_t index = 0;
+			for (; true; ++begin)
+			{
+				if (begin != end)
+					try_reduce(std::forward<SymbolFunction&&>(SF)(*begin), index, TransFunc, &Function);
+				else {
+					try_reduce(lr1::eof_symbol(), index, TransFunc, &Function);
+					break;
+				}
+				++index;
+			}
+		}
 
 		void clear() { m_state_stack = { 0 }; m_input_buffer.clear(); }
 
 	private:
-		void receive(storage_t symbol);
-		//reduce_symbol reduce_production_index element_used
-		void try_reduce(std::vector<ast>& storage_buffer, storage_t symbol, size_t index);
+		// for no terminal, index means production index, for terminal ,index means token stream index, count means elements in production
+		void try_reduce(storage_t symbol, size_t index, void (*Function)(void* Func, travel input), void* data);
 		const lr1& m_table_ref;
 		std::vector<storage_t> m_state_stack;
-		std::vector<storage_t> m_input_buffer;
+		std::vector<std::tuple<storage_t, std::size_t>> m_input_buffer;
+	};
+
+	template<typename Type, typename SymbolFunction, typename RespondFunction>
+	void lr1_process(const lr1& imp, Type begin, Type end, SymbolFunction&& SF, RespondFunction&& Function)
+	{
+		lr1_processor pro(imp);
+		pro.analyze(begin, end, std::forward<SymbolFunction&&>(SF), std::forward<RespondFunction&&>(Function));
+	}
+
+	struct lr1_ast {
+		lr1::storage_t sym;
+		// to no terminal, storage the ast_list, to terminal storage index in token stream
+		std::variant<std::vector<lr1_ast>, size_t> index;
+
+		struct imp
+		{
+			std::vector<lr1_ast> ast_buffer;
+			void operator()(lr1_processor::travel input);
+			lr1_ast result();
+		};
+
+		template<typename Type, typename SymbolFunction>
+		static lr1_ast analyze(const lr1& lr1_imp, Type begin, Type end, SymbolFunction&& SF)
+		{
+			lr1_processor processer(lr1_imp);
+			imp i;
+			processer.analyze(begin, end, std::forward<SymbolFunction&&>(SF), i);
+			return i.result();
+		}
+
+		/*
+		template<typename Function>
+		void post_order_traversal(Function&& Fun) {
+			const ast* cur = this;
+			std::vector<std::array<std::vector<ast>::const_iterator, 2>> StackBuffer;
+		}
+		*/
 	};
 
 	

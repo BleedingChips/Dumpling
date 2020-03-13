@@ -65,7 +65,7 @@ namespace Potato
 
 	};
 
-	lr1::storage_t operator*(TerSymbol input) { return static_cast<lr1::storage_t>(input); }
+	constexpr lr1::storage_t operator*(TerSymbol input) { return static_cast<lr1::storage_t>(input); }
 
 	std::wstring_view view(std::wstring::const_iterator s, std::wstring::const_iterator e) {
 		assert(s <= e);
@@ -175,6 +175,261 @@ namespace Potato
 		using type = lr1::storage_t;
 		auto [AllToken,  Size] = DetectCodeToSymbol(code);
 
+		std::array<std::size_t, 4> SectionStart = { 0, 0, 0, 0 };
+		std::array<std::size_t, 4> SectionEnd = { 0, 0, 0, 0 };
+		for (size_t i = 1; i < 4; ++i)
+			SectionStart[i] = SectionStart[i - 1] + Size[i - 1];
+		for (size_t i = 0; i < 4; ++i)
+			SectionEnd[i] = SectionStart[i] + Size[i];
+
+		
+
+		std::map<std::wstring_view, type> symbol_to_index;
+		std::map<type, std::wstring_view> index_to_symbol;
+		std::vector<std::tuple<std::wstring, type>> rexs;
+		std::set<type> unused_terminal;
+		type terminal_start = 0;
+		type noterminal_start = 0;
+		std::optional<type> start_symbol;
+		std::vector<std::vector<type>> production;
+
+		{
+
+			static lr1 imp(*TerSymbol::Statement, {
+				{*TerSymbol::Statement, *TerSymbol::DefineTerminal, *TerSymbol::Equal, *TerSymbol::Rex},
+				{*TerSymbol::Statement, *TerSymbol::DefineTerminal, *TerSymbol::Equal, *TerSymbol::DefineTerminal},
+				},
+				{}
+			);
+
+
+			std::wstring_view back_buffer;
+			for (size_t i = SectionStart[0]; i < SectionEnd[0]; ++i)
+			{
+				auto& [vec, lin] = AllToken[i];
+				try {
+					lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+						if (input.symbol == *TerSymbol::DefineTerminal)
+						{
+							auto& ref = vec[input.terminal_token_index];
+							back_buffer = std::get<1>(vec[input.terminal_token_index]);
+						}
+						else if (input.symbol == *TerSymbol::Rex || input.symbol == *TerSymbol::DefineTerminal)
+						{
+							auto& ref = vec[input.terminal_token_index];
+							auto rex = std::get<1>(vec[input.terminal_token_index]);
+							auto re = symbol_to_index.insert({ back_buffer, terminal_start });
+							if (re.second)
+							{
+								index_to_symbol.insert({ terminal_start , back_buffer});
+								++terminal_start;
+							}
+							rexs.push_back({ std::wstring{rex}, re.first->second });
+						}
+					});
+				}
+				catch (...)
+				{
+					volatile int i = 0;
+				}
+			}
+		}
+
+		{
+
+
+			static lr1 imp(*TerSymbol::Statement, {
+			{*TerSymbol::Statement, *TerSymbol::Terminal},
+			{*TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Terminal},
+				},
+				{}
+			);
+
+			for (size_t i = SectionStart[1]; i < SectionEnd[1]; ++i)
+			{
+				auto& [vec, lin] = AllToken[i];
+				try {
+					lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+						if (input.symbol == *TerSymbol::Terminal)
+						{
+							auto& ref = vec[input.terminal_token_index];
+							auto sym_string = std::get<1>(vec[input.terminal_token_index]);
+							auto find = symbol_to_index.find(sym_string);
+							if (find != symbol_to_index.end())
+								unused_terminal.insert(find->second);
+							else
+								throw Error::SBNFError{ lin, L"Removed Terminal Is Not Defined", std::wstring{sym_string} };
+
+						}
+					});
+				}
+				catch (...)
+				{
+					volatile int i = 0;
+				}
+				//lr1_processor pro(imp[k - 1]);
+				//AllAst.push_back(pro.generate_ast(vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }));
+			}
+		}
+
+		{
+			static lr1 imp(
+				*TerSymbol::Statement, {
+				{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::NoTerminal },
+				{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::Terminal },
+				{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal, *TerSymbol::TerList },
+				{ *TerSymbol::Statement, *TerSymbol::Equal, *TerSymbol::TerList },
+				{ *TerSymbol::Statement, *TerSymbol::Equal },
+				{ *TerSymbol::TerList, *TerSymbol::NoTerminal },
+				{ *TerSymbol::TerList, *TerSymbol::Terminal },
+				{ *TerSymbol::TerList, *TerSymbol::RexTerminal },
+				{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::TerList},
+				{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::Or, *TerSymbol::TerList },
+				{ *TerSymbol::TerList, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace },
+				{ *TerSymbol::TerList, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace },
+				{ *TerSymbol::TerList, *TerSymbol::LB_Brace, *TerSymbol::TerList, *TerSymbol::RB_Brace },
+				},
+				{}
+			);
+
+			std::vector<std::wstring_view> rex_terminal;
+			std::vector<std::vector<type>> stack;
+			std::map<std::vector<type>, type> temporary_terminal;
+			std::optional<type> last_no_terminal;
+
+			for (size_t i = SectionStart[2]; i < SectionEnd[2]; ++i)
+			{
+				auto& [vec, lin] = AllToken[i];
+				try {
+					lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+						if (input.is_terminal())
+						{
+							auto& ref = vec[input.terminal_token_index];
+							auto sym_string = std::get<1>(ref);
+							switch (input.symbol)
+							{
+							case *TerSymbol::NoTerminal:
+							{
+								auto result = symbol_to_index.insert({ sym_string, noterminal_start });
+								if (result.second)
+								{
+									index_to_symbol.insert({ noterminal_start, sym_string });
+									++noterminal_start;
+								}
+								stack.push_back({ result.first->second });
+								break;
+							}
+							case *TerSymbol::RexTerminal:
+							{
+								auto result = symbol_to_index.insert({ sym_string, terminal_start });
+								if (result.second)
+								{
+									index_to_symbol.insert({ terminal_start, sym_string });
+									++terminal_start;
+									rex_terminal.push_back(sym_string);
+								}
+								stack.push_back({ result.first->second });
+								break;
+							}
+							case *TerSymbol::Terminal:
+							{
+								auto ite = symbol_to_index.find(sym_string);
+								if (ite != symbol_to_index.end())
+								{
+									if (unused_terminal.find(ite->second) != unused_terminal.end())
+										stack.push_back({ ite->second });
+									else
+										throw Error::SBNFError{ lin, L"Removed Terminal used in Production", std::wstring{sym_string} };
+								}else
+									throw Error::SBNFError{ lin, L"Undefined Terminal", std::wstring{sym_string} };
+								break;
+							}
+							default:
+								break;
+							
+							}
+						}
+						else {
+							switch (input.no_terminal_production_index)
+							{
+							case 0:
+							case 1:
+							{
+								assert(stack.size() == 1 && stack[0].size() == 1);
+								if (!start_symbol)
+									start_symbol = stack[0][0];
+								else
+								{
+									auto Find = index_to_symbol.find(*start_symbol);
+									assert(Find != index_to_symbol.end());
+									throw Error::SBNFError{ lin, L"Mulity Define Start Symbol", std::wstring{Find->second} };
+								}
+								stack.clear();
+								break;
+							}
+							case 2:
+							{
+								assert(stack.size() == 2);
+								last_no_terminal = stack[0];
+								production.push_back(std::move(stack));
+								break;
+							}
+							case 3:
+							{
+								assert(stack.size() == 1);
+								if(last_no_terminal)
+									production.push_back({*last_no_terminal, stack[0]});
+								else
+								{
+									auto Find = index_to_symbol.find(*start_symbol);
+									assert(Find != index_to_symbol.end());
+									throw Error::SBNFError{ lin, L"Miss No Terminal Define", std::wstring{} };
+								}
+								break;
+							}
+							case 4:
+							{
+								assert(stack.size() == 0);
+								if (last_no_terminal)
+									production.push_back({ *last_no_terminal });
+								else
+								{
+									auto Find = index_to_symbol.find(*start_symbol);
+									assert(Find != index_to_symbol.end());
+									throw Error::SBNFError{ lin, L"Miss No Terminal Define", std::wstring{} };
+								}
+								break;
+							}
+							case 5:
+							case 6:
+							case 7:
+							{
+								break;
+							}
+							// todo
+							default:
+								break;
+							}
+						}
+					});
+				}
+				catch (...)
+				{
+					volatile int i = 0;
+				}
+				//lr1_processor pro(imp[k - 1]);
+				//AllAst.push_back(pro.generate_ast(vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }));
+			}
+		}
+
+		volatile int i = 0;
+
+		
+		
+
+
+
+		/*
 		lr1 imp[4] = {
 			lr1::create(*TerSymbol::Statement, {
 		{*TerSymbol::Statement, *TerSymbol::DefineTerminal, *TerSymbol::Equal, *TerSymbol::Rex},
@@ -246,6 +501,7 @@ namespace Potato
 		std::map<std::wstring_view, type> ter_to_index;
 		std::map<type, std::wstring_view> index_to_ter;
 		std::vector<std::tuple<std::wstring, type>> rexs;
+		std::set<type> remove_index;
 		std::set<type> unused_index;
 		type terminal_start = 0;
 		type noterminal_start = lr1::noterminal_start();
@@ -270,8 +526,56 @@ namespace Potato
 			rexs.push_back({ std::wstring{Token2}, Ite.first->second });
 		}
 
-		volatile int i = 0;
+		for (size_t i = SectionStart[1]; i < SectionEnd[1]; ++i)
+		{
+			auto& AST = AllAst[i];
+			const ast* Cur = &AST;
+			std::vector<std::array<std::vector<ast>::const_iterator, 2>> ast_buffer;
+			while (Cur != nullptr)
+			{
+				if (std::holds_alternative<std::vector<ast>>(Cur->index))
+				{
+					auto& ite = std::get<std::vector<ast>>(Cur->index);
+					ast_buffer.push_back({ ite.begin(), ite.end() });
+				}
+				else {
+					size_t index = std::get<size_t>(Cur->index);
+					auto token = std::get<0>(AllToken[i])[index];
+					auto find = ter_to_index.find(std::get<1>(token));
+					if (find != ter_to_index.end())
+						remove_index.insert(find->second);
+					else
+						throw Error::SBNFError{ std::get<std::size_t>(AllToken[i]), L"Removed Terminal Is Not Defined", std::wstring{std::get<1>(token)} };
+				}
+				Cur = nullptr;
+				while (!ast_buffer.empty())
+				{
+					auto& ite = *ast_buffer.rbegin();
+					if (ite[0] != ite[1])
+					{
+						Cur = &*ite[0];
+						++ite[0];
+						break;
+					}
+					else {
+						ast_buffer.pop_back();
+					}
+				}
+			}
+		}
 
+
+		{
+			std::wstring LastInput;
+			for (size_t i = SectionStart[2]; i < SectionEnd[2]; ++i)
+			{
+				auto& AST = AllAst[i];
+
+			}
+		}
+		
+		volatile int i = 0;
+		*/
 
 		/*
 		std::map<std::wstring_view, type> TerminalMapping;

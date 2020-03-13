@@ -24,6 +24,13 @@ namespace Potato
 			std::set<uint32_t> temp_non_terminal,
 			lr1 lr1_imp
 		);
+
+		struct error {
+			std::wstring message;
+			std::wstring tokens;
+			std::size_t line;
+		};
+
 	private:
 		std::wstring table;
 		std::map<std::wstring_view, uint32_t> string_to_symbol;
