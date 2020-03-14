@@ -8,6 +8,7 @@ As := As(?:([^a-zA-Z_0-9]+)|$)
 Define := Define(?=([^a-zA-Z_0-9]+)|$)
 Material := Material(?=([^a-zA-Z_0-9]+)|$)
 Output := Output(?=([^a-zA-Z_0-9]+)|$)
+Setting := Setting(?=([^a-zA-Z_0-9]+)|$)
 
 %%%
 
@@ -37,8 +38,6 @@ $ := <Statement>
 <Statement> := { <ImportStatement> } { <MaterialStatement> }
 
 %%%
-
-['++']  ('x' 'y') ('+' '-')
 
 
 

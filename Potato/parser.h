@@ -15,13 +15,15 @@ namespace Potato
 
 	struct parser 
 	{
+		using storage = lr1::storage_t;
+
 		parser(
 			std::wstring table,
-			std::map<std::wstring_view, uint32_t> string_to_symbol,
-			std::map<uint32_t, std::wstring_view> symbol_to_string,
-			const std::vector<std::tuple<std::wstring, uint32_t>>& token_rex,
-			std::set<uint32_t> remove_set,
-			std::set<uint32_t> temp_non_terminal,
+			std::map<std::wstring_view, storage> string_to_symbol,
+			std::map<storage, std::wstring_view> symbol_to_string,
+			std::vector<std::tuple<std::wstring, storage>> token_rex,
+			std::set<storage> remove_set,
+			std::set<storage> temp_non_terminal,
 			lr1 lr1_imp
 		);
 
@@ -33,12 +35,12 @@ namespace Potato
 
 	private:
 		std::wstring table;
-		std::map<std::wstring_view, uint32_t> string_to_symbol;
-		std::map<uint32_t, std::wstring_view> symbol_to_string;
-		std::map<std::wstring, uint32_t> production_mapping;
-		std::vector<std::tuple<std::wregex, uint32_t>> token_rex;
-		std::set<uint32_t> remove_set;
-		std::set<uint32_t> temp_non_terminal;
+		std::map<std::wstring_view, storage> string_to_symbol;
+		std::map<storage, std::wstring_view> symbol_to_string;
+		std::map<std::wstring, storage> production_mapping;
+		std::vector<std::tuple<std::wregex, storage>> token_rex;
+		std::set<storage> remove_set;
+		std::set<storage> temp_non_terminal;
 		lr1 lr1_imp;
 	};
 

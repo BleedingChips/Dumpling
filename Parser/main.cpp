@@ -11,11 +11,5 @@ int main()
 
 	auto p = std::filesystem::current_path();
 	std::wstring storage;
-	try {
-		auto Re = Potato::LoadSBNFFile(LR"(msc.sbnf)", storage);
-	}
-	catch (Potato::Error::SBNFError error)
-	{
-		volatile int i = 0;
-	}
+	auto Re = Potato::LoadSBNFFile(LR"(msc.sbnf)", storage);
 }
