@@ -561,6 +561,78 @@ namespace Potato
 		return std::move(result);
 	}
 
+	std::vector<storage_t> lr1::serialization()
+	{
+		std::vector<storage_t> data;
+		data.push_back(static_cast<storage_t>(m_production.size()));
+		for (auto& ite : m_production)
+		{
+			auto [i1, i2] = ite;
+			data.push_back(i1);
+			data.push_back(i2);
+		}
+		data.push_back(m_table.size());
+		for (auto& ite : m_table)
+		{
+			data.push_back(ite.m_shift.size());
+			for (auto& ite2 : ite.m_shift)
+			{
+				data.push_back(ite2.first);
+				data.push_back(ite2.second);
+			}
+			data.push_back(ite.m_reduce.size());
+			for (auto& ite2 : ite.m_reduce)
+			{
+				data.push_back(ite2.first);
+				data.push_back(ite2.second);
+			}
+		}
+		return std::move(data);
+	}
+
+	lr1 lr1::unserialization(const storage_t* data, size_t length)
+	{
+		size_t ite = 0;
+		std::vector<std::tuple<storage_t, storage_t>> m_production;
+		{
+			size_t size = data[ite++];
+			for (size_t i = 0; i < size; ++i)
+			{
+				size_t i1 = data[ite + i * 2];
+				size_t i2 = data[ite + i * 2 + 1];
+				m_production.push_back({ i1, i2 });
+			}
+			ite += size * 2;
+		}
+		size_t size = data[ite++];
+		std::vector<table> tab_v;
+		for (size_t x = 0; x < size; ++x)
+		{
+			table tab;
+			{
+				size_t size_2 = data[ite++];
+				for (size_t i = 0; i < size_2; ++i)
+				{
+					std::pair<storage_t, storage_t> i2 = { data[ite + i * 2], data[ite + i * 2 + 1] };
+					tab.m_shift.insert(i2);
+				}
+				ite += size_2 * 2;
+			}
+			{
+				size_t size_2 = data[ite++];
+				for (size_t i = 0; i < size_2; ++i)
+				{
+					std::pair<storage_t, storage_t> i2 = { data[ite + i * 2], data[ite + i * 2 + 1] };
+					tab.m_reduce.insert(i2);
+				}
+				ite += size_2 * 2;
+			}
+			tab_v.push_back(std::move(tab));
+		}
+		
+		return lr1{std::move(m_production), std::move(tab_v)};
+	}
+
 	lr1_processor::unacceptable_error::unacceptable_error(storage_t forward_token, error_state lpes)
 		: std::logic_error("unacceptable token"), m_forward_token(forward_token), error_state(std::move(lpes)) {}
 

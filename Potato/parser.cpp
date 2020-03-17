@@ -2,22 +2,187 @@
 #include <fstream>
 #include "character_encoding.h"
 #include <assert.h>
-
 namespace Potato
 {
 
+	parser_sbnf::parser_sbnf(
+		std::wstring table,
+		std::map<std::tuple<std::size_t, std::size_t>, storage_t> symbol_str_to_index,
+		std::map<storage_t, std::tuple<std::size_t, std::size_t>> symbol_index_to_str,
+		std::vector<std::tuple<std::wstring, storage_t>> terminal_rex,
+		std::set<storage_t> unused_terminal,
+		std::set<storage_t> temporary_noterminal,
+		std::map<storage_t, storage_t> production_mapping,
+		lr1 lr1imp
+	) : table(std::move(table)), symbol_str_to_index(std::move(symbol_str_to_index)), symbol_index_to_str(std::move(symbol_index_to_str)),
+		terminal_rex(std::move(terminal_rex)), unused_terminal(std::move(unused_terminal)), temporary_noterminal(std::move(temporary_noterminal)),
+		production_mapping(std::move(production_mapping)), lr1imp(std::move(lr1imp))
+	{
+		build_rex();
+	}
 
+	void parser_sbnf::build_rex()
+	{
+		auto flag = std::regex::optimize | std::regex::nosubs;
+		terminal_rex_imp.clear();
+		for (auto& ite : terminal_rex)
+		{
+			auto [rex, sym] = ite;
+			std::wregex tem_rex{ rex, flag };
+			terminal_rex_imp.push_back({ std::move(tem_rex), sym });
+		}
+	}
 
+	std::optional<lr1::storage_t> parser_sbnf::token_generator::operator()(std::tuple<const wchar_t*, size_t>& ite)
+	{
+		if (cur_tokens)
+			last_tokens = cur_tokens;
 
+		bool is_continue = true;
+		for (auto& [str, len] = ite; len > 0; )
+		{
+			bool Find = false;
+			for (auto& ite : ref.terminal_rex_imp)
+			{
+				auto& [rex, sym] = ite;
+				std::wcmatch match;
+				if (std::regex_search(str, str + len, match, rex, std::regex_constants::match_continuous))
+				{
+					auto& mat = match[0];
+					str = mat.second;
+					len -= (mat.second - mat.first);
+					auto unused = ref.unused_terminal.find(sym);
+					if (unused == ref.unused_terminal.end())
+					{
+						std::wstring_view str{ mat.first, mat.second - mat.first };
+						cur_tokens = str;
+						return sym;
+					}
+					else
+						Find = true;
+				}
+			}
+			if (!Find)
+				throw Error::SBNFError{ 0, L"Unregenize Tokens", {str, len} };
+		}
+		return std::nullopt;
+	}
 
+	auto parser_sbnf::serialization()->std::vector<storage_t>
+	{
+		std::vector<lr1::storage_t> result;
+		result.push_back(static_cast<storage_t>(table.size()));
+		for (auto& ite : table)
+			result.push_back(ite);
+		result.push_back(static_cast<storage_t>(symbol_str_to_index.size()));
+		for (auto& ite : symbol_str_to_index)
+		{
+			auto [i1, i2] = ite;
+			auto [i11, i12] = i1;
+			result.push_back(static_cast<storage_t>(i11));
+			result.push_back(static_cast<storage_t>(i12));
+			result.push_back(i2);
+		}
+		result.push_back(static_cast<storage_t>(terminal_rex.size()));
+		for (auto& ite : terminal_rex)
+		{
+			auto& [str, index] = ite;
+			result.push_back(static_cast<storage_t>(str.size()));
+			for(auto& ite2 : str)
+				result.push_back(ite2);
+			result.push_back(index);
+		}
+		result.push_back(static_cast<storage_t>(unused_terminal.size()));
+		for (auto& ite : unused_terminal)
+			result.push_back(ite);
+		result.push_back(static_cast<storage_t>(temporary_noterminal.size()));
+		for (auto& ite : temporary_noterminal)
+			result.push_back(ite);
+		result.push_back(static_cast<storage_t>(production_mapping.size()));
+		for (auto& ite : production_mapping)
+		{
+			result.push_back(ite.first);
+			result.push_back(ite.second);
+		}
+		auto lr1ser = lr1imp.serialization();
+		result.insert(result.end(), lr1ser.begin(), lr1ser.end());
+		return std::move(result);
+	}
 
+	parser_sbnf parser_sbnf::unserialization(const storage_t* data, size_t length)
+	{
+		assert(length > 0);
+		size_t ite = 0;
+		std::wstring table;
+		{
+			auto size = data[ite++];
+			table.reserve(size);
+			for (size_t i = 0; i <size; ++i)
+				table.push_back(data[ite+i]);
+			ite += size;
+		}
+		std::map<std::tuple<std::size_t, std::size_t>, storage_t> symbol_str_to_index;
+		std::map<storage_t, std::tuple<std::size_t, std::size_t>> symbol_index_to_str;
+		{
+			auto size = data[ite++];
+			for (size_t i = 0; i < size; ++i)
+			{
+				std::tuple<size_t, size_t> tup = { data[ite + i * 3], data[ite + i * 3 + 1] };
+				storage_t index = data[ite + i * 3 + 2];
+				symbol_str_to_index.insert({ tup, index });
+				symbol_index_to_str.insert({ index, tup });
+			}
+			ite += size * 3;
+		}
+		std::vector<std::tuple<std::wstring, storage_t>> terminal_rex;
+		{
+			auto size = data[ite++];
+			for (size_t i = 0; i < size; ++i)
+			{
+				std::wstring re;
+				size_t str_size = data[ite++];
+				re.reserve(str_size);
+				for (size_t k = 0; k < str_size; ++k)
+					re.push_back(data[ite++]);
+				storage_t index = data[ite++];
+				terminal_rex.push_back({std::move(re), index});
+			}
+		}
+		std::set<storage_t> unused_terminal;
+		{
+			auto size = data[ite++];
+			for (size_t i = 0; i < size; ++i)
+				unused_terminal.insert(data[ite++]);
+		}
+		std::set<storage_t> temporary_noterminal;
+		{
+			auto size = data[ite++];
+			for (size_t i = 0; i < size; ++i)
+				temporary_noterminal.insert(data[ite++]);
+		}
+		std::map<storage_t, storage_t> production_mapping;
+		{
+			auto size = data[ite++];
+			for (size_t i = 0; i < size; ++i)
+			{
+				storage_t i1 = data[ite + i * 2];
+				storage_t i2 = data[ite + i * 2 + 1];
+				production_mapping.insert({i1, i2});
+			}
+			ite += size * 2;
+		}
 
-
-
-
-
-
-
+		lr1 lr1imp = lr1::unserialization(data + ite, length - ite);
+		return parser_sbnf{
+			std::move(table),
+			std::move(symbol_str_to_index),
+			std::move(symbol_index_to_str),
+			std::move(terminal_rex),
+			std::move(unused_terminal),
+			std::move(temporary_noterminal),
+			std::move(lr1imp)
+		};
+	}
 
 
 
@@ -169,7 +334,7 @@ namespace Potato
 		return  { std::move(AllToken), Size };
 	}
 
-	std::optional<parser> LoadSBNFCode(const std::wstring& code)
+	parser_sbnf parser_sbnf(const std::wstring& code)
 	{
 		using type = lr1::storage_t;
 		auto [AllToken,  Size] = DetectCodeToSymbol(code);
@@ -180,8 +345,6 @@ namespace Potato
 			SectionStart[i] = SectionStart[i - 1] + Size[i - 1];
 		for (size_t i = 0; i < 4; ++i)
 			SectionEnd[i] = SectionStart[i] + Size[i];
-
-		
 
 		std::map<std::wstring_view, type> symbol_to_index;
 		std::map<type, std::wstring_view> index_to_symbol;
@@ -210,7 +373,7 @@ namespace Potato
 				auto& [vec_r, lin_r] = AllToken[i];
 				auto& vec = vec_r;
 				auto lin = lin_r;
-				lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.symbol == *TerSymbol::DefineTerminal)
 					{
 						auto& ref = vec[input.terminal_token_index];
@@ -228,7 +391,7 @@ namespace Potato
 						}
 						rexs.push_back({ std::wstring{rex}, re.first->second });
 					}
-				});
+				}, vec.begin(), vec.end());
 			}
 		}
 
@@ -247,7 +410,7 @@ namespace Potato
 				auto& [vec_r, lin_r] = AllToken[i];
 				auto& vec = vec_r;
 				auto lin = lin_r;
-				lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.symbol == *TerSymbol::Terminal)
 					{
 						auto& ref = vec[input.terminal_token_index];
@@ -259,7 +422,7 @@ namespace Potato
 							throw Error::SBNFError{ lin, L"Removed Terminal Is Not Defined", std::wstring{sym_string} };
 
 					}
-				});
+				}, vec.begin(), vec.end());
 			}
 		}
 
@@ -316,7 +479,7 @@ namespace Potato
 				auto& [vec_r, lin_r] = AllToken[i];
 				auto& vec = vec_r;
 				auto lin = lin_r;
-				lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.is_terminal())
 					{
 						auto& ref = vec[input.terminal_token_index];
@@ -502,7 +665,7 @@ namespace Potato
 							break;
 						}
 					}
-				});
+				}, vec.begin(), vec.end());
 
 			}
 
@@ -581,7 +744,7 @@ namespace Potato
 				auto lin = lin_r;
 				// size -> 0 : left; 1 : Right
 				std::vector<type> stack;
-				lr1_process(imp, vec.begin(), vec.end(), [](auto in) {return *std::get<0>(in); }, [&](lr1_processor::travel input) {
+				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.is_terminal())
 					{
 						auto& ref = vec[input.terminal_token_index];
@@ -620,7 +783,7 @@ namespace Potato
 						}
 						}
 					}
-				});
+				}, vec.begin(), vec.end());
 			}
 		}
 
@@ -629,25 +792,18 @@ namespace Potato
 		if (start_symbol)
 		{
 			std::wstring table;
-			std::map<type, std::tuple<std::size_t, std::size_t>> index_to_symbol_temporary;
+			std::map<std::tuple<std::size_t, std::size_t>, type> symbol_str_to_index;
+			std::map<type, std::tuple<std::size_t, std::size_t>> symbol_index_to_str;
+
 			for (auto& ite : index_to_symbol)
 			{
 				auto [index, str] = ite;
 				size_t size = table.size();
 				table.insert(table.end(), str.begin(), str.end());
-				auto re = index_to_symbol_temporary.insert({ index, {size, str.size()} });
+				auto re = symbol_index_to_str.insert({ index, {size, str.size()} });
 				assert(re.second);
-			}
-
-			index_to_symbol.clear();
-			symbol_to_index.clear();
-
-			for (auto& ite : index_to_symbol_temporary)
-			{
-				auto [index, str] = ite;
-				auto [s, e] = str;
-				index_to_symbol.insert({ index, std::wstring_view{table.data() + s, e} });
-				symbol_to_index.insert({ std::wstring_view{table.data() + s, e}, index });
+				auto re2 = symbol_str_to_index.insert({ {size, str.size()}, index });
+				assert(re2.second);
 			}
 
 			lr1 imp(
@@ -656,22 +812,25 @@ namespace Potato
 				std::move(priority)
 			);
 
-			return parser{
+			parser_sbnf sbnf{
 				std::move(table),
-				std::move(symbol_to_index),
-				std::move(index_to_symbol), 
+				std::move(symbol_str_to_index),
+				std::move(symbol_index_to_str),
 				std::move(rexs),
 				std::move(unused_terminal),
 				std::move(temporary_noterminal),
 				std::move(imp)
 			};
+
+			return std::move(sbnf);
 		}
 		else
 			throw Error::SBNFError{ 0, LR"(No Define Start Synbol)", {} };
-		return std::nullopt;
+
+		
 	}
 
-	std::optional<parser> LoadSBNFFile(const std::filesystem::path& Path, std::wstring& storage)
+	std::optional<parser_sbnf> LoadSBNFFile(const std::filesystem::path& Path, std::wstring& storage)
 	{
 		using namespace Potato::Encoding;
 		std::ifstream input(Path, std::ios::binary);

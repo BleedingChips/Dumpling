@@ -90,14 +90,13 @@ namespace Potato
 
 		lr1(lr1&&) = default;
 
-	private:
-
-		lr1() = default;
-
-		friend struct lr1_processor;
+		std::vector<storage_t> serialization();
+		static lr1 unserialization(const storage_t*, size_t length);
 
 		std::vector<std::tuple<storage_t, storage_t>> m_production;
 		std::vector<table> m_table;
+	private:
+		lr1() = default;
 	};
 
 	struct lr1_processor
@@ -155,23 +154,34 @@ namespace Potato
 		}
 		*/
 
-		template<typename Type, typename SymbolFunction, typename RespondFunction>
-		void analyze(Type begin, Type end, SymbolFunction&& SF, RespondFunction&& Function)
+
+		// ForeachFunction : std::optional<terminal> (Ite), RespondFunction: void (lr1_processor::travel)
+		template<typename Ite, typename ForeachFunction, typename RespondFunction>
+		void analyze(ForeachFunction&& sym, RespondFunction&& Func, Ite ite)
 		{
 			auto TransFunc = [](void* Func, travel input) {
 				std::forward<RespondFunction&&>(*reinterpret_cast<std::remove_reference_t<RespondFunction>*>(Func)).operator()(input);
 			};
 			size_t index = 0;
-			for (; true; ++begin)
+			while (true)
 			{
-				if (begin != end)
-					try_reduce(std::forward<SymbolFunction&&>(SF)(*begin), index, TransFunc, &Function);
-				else {
-					try_reduce(lr1::eof_symbol(), index, TransFunc, &Function);
+				std::optional<storage_t> re = std::forward<ForeachFunction&&>(sym)(ite);
+				try_reduce( re ?  (*re) : lr1::eof_symbol(), index, TransFunc, &Func);
+				if (!re.has_value())
 					break;
-				}
 				++index;
 			}
+		}
+
+		template<typename Type, typename SymbolFunction, typename RespondFunction>
+		void analyze(SymbolFunction&& SF, RespondFunction&& Function, Type begin, Type end)
+		{
+			this->analyze([&](Type& ite) -> std::optional<storage_t> {
+				if (ite != end)
+					return std::forward<SymbolFunction&&>(SF)(ite++);
+				else
+					return std::nullopt;
+			}, std::forward<RespondFunction&&>(Function), begin);
 		}
 
 		void clear() { m_state_stack = { 0 }; m_input_buffer.clear(); }
@@ -184,11 +194,18 @@ namespace Potato
 		std::vector<std::tuple<storage_t, std::size_t>> m_input_buffer;
 	};
 
-	template<typename Type, typename SymbolFunction, typename RespondFunction>
-	void lr1_process(const lr1& imp, Type begin, Type end, SymbolFunction&& SF, RespondFunction&& Function)
+	template<typename Ite, typename ForeachFunction, typename RespondFunction>
+	void lr1_process(const lr1& imp, ForeachFunction&& SF, RespondFunction&& Function, Ite begin)
 	{
 		lr1_processor pro(imp);
-		pro.analyze(begin, end, std::forward<SymbolFunction&&>(SF), std::forward<RespondFunction&&>(Function));
+		pro.analyze(std::forward<ForeachFunction&&>(SF), std::forward<RespondFunction&&>(Function), begin);
+	}
+
+	template<typename Type, typename SymbolFunction, typename RespondFunction>
+	void lr1_process(const lr1& imp, SymbolFunction&& SF, RespondFunction&& Function, Type begin, Type end)
+	{
+		lr1_processor pro(imp);
+		pro.analyze(std::forward<SymbolFunction&&>(SF), std::forward<RespondFunction&&>(Function), begin, end);
 	}
 
 	struct lr1_ast {
