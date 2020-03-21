@@ -18,12 +18,11 @@ namespace Potato
 
 		parser_sbnf(
 			std::wstring table,
-			std::map<std::tuple<std::size_t, std::size_t>, storage_t> symbol_str_to_index,
-			std::map<storage_t, std::tuple<std::size_t, std::size_t>> symbol_index_to_str,
+			std::vector<std::tuple<std::size_t, std::size_t>> sym_list,
+			size_t ter_count,
 			std::vector<std::tuple<std::wstring, storage_t>> terminal_rex,
 			std::set<storage_t> unused_terminal,
-			std::set<storage_t> temporary_noterminal,
-			std::map<storage_t, storage_t> production_mapping,
+			size_t temporary_prodution_start,
 			lr1 lr1imp
 		);
 
@@ -36,32 +35,24 @@ namespace Potato
 			storage_t sym;
 			std::wstring_view sym_str;
 			union {
-				std::wstring_view terminal_data;
+				std::wstring_view ter_data;
 				struct {
-					size_t no_terminal_production_index;
-					size_t no_terminal_production_count;
+					size_t noter_pro_index;
+					size_t noter_pro_count;
 				};
 			};
 		};
 
 		template<typename RespondFunction>
-		void analyze(const wchar_t* code, size_t length, RespondFunction&& Function)
+		void analyze(const wchar_t* code, size_t length, RespondFunction&& Function) const
 		{
 			token_generator tokens(*this, {}, {});
 			std::tuple<const wchar_t*, size_t> Ite{code, length};
-			size_t temporary_buffer = 0;
+			int64_t temporary_production_count = 0;
 			lr1_process(lr1imp, tokens, [&](lr1_processor::travel input)  {
-				if (input.is_terminal())
-				{
-					assert(tokens.last_tokens.has_value());
-					travel tra;
-					tra.sym = input.symbol;
-					tra.terminal_data = *tokens.last_tokens;
-					std::forward<RespondFunction&&>(Function)(tra);
-				}
-				else {
-					// todo
-				}
+				auto result = translate(input, tokens, temporary_production_count);
+				if (result)
+					std::forward<RespondFunction&&>(Function)(*result);
 			}, Ite);
 		}
 
@@ -75,16 +66,17 @@ namespace Potato
 			std::optional<lr1::storage_t> operator()(std::tuple<const wchar_t*, size_t>& ite);
 		};
 
+		std::optional<travel> translate(const lr1_processor::travel& input, const token_generator&, int64_t& pro_count) const;
+
 		void build_rex();
 
 		std::wstring table;
-		std::map<std::tuple<std::size_t, std::size_t>, storage_t> symbol_str_to_index;
-		std::map<storage_t, std::tuple<std::size_t, std::size_t>> symbol_index_to_str;
+		std::vector<std::tuple<std::size_t, std::size_t>> sym_list;
+		size_t ter_count;
 		std::vector<std::tuple<std::wstring, storage_t>> terminal_rex;
 		std::set<storage_t> unused_terminal;
-		std::set<storage_t> temporary_noterminal;
+		size_t temporary_prodution_start;
 		std::vector<std::tuple<std::wregex, storage_t>> terminal_rex_imp;
-		std::map<storage_t, storage_t> production_mapping;
 		lr1 lr1imp;
  	};
 

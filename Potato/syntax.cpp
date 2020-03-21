@@ -571,7 +571,7 @@ namespace Potato
 			data.push_back(i1);
 			data.push_back(i2);
 		}
-		data.push_back(m_table.size());
+		data.push_back(static_cast<storage_t>(m_table.size()));
 		for (auto& ite : m_table)
 		{
 			data.push_back(ite.m_shift.size());

@@ -6,6 +6,8 @@
 #include <thread>
 #include <filesystem>
 #include <fstream>
+#include <d3d12shader.h>
+#include <d3dcompiler.h>
 //#include "..//..//..//Dumpling/Gui/Dx12/pipeline.h"
 using namespace Dumpling;
 using Dxgi::FormatPixel;
@@ -41,8 +43,8 @@ int main()
 #endif
 #endif
 
-	Win32::SearchVisualStudioPath();
-	return 0;
+	//Win32::SearchVisualStudioPath();
+	//return 0;
 
 	auto p = fs::current_path();
 
@@ -61,6 +63,35 @@ int main()
 
 	std::vector<std::byte> vs_shader = load_file(U"VertexShader.cso");
 	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
+
+	Dx12::ComPtr<ID3D12ShaderReflection> Ref;
+	HRESULT rer = D3DReflect(ps_shader.data(), ps_shader.size(), __uuidof(ID3D12ShaderReflection), Ref(Dx12::VoidT{}));
+	D3D12_SHADER_DESC Desc;
+	Ref->GetDesc(&Desc);
+	for (size_t i = 0; i < Desc.ConstantBuffers; ++i)
+	{
+		auto Buffer  = Ref->GetConstantBufferByIndex(i);
+		D3D12_SHADER_BUFFER_DESC Desc;
+		Buffer->GetDesc(&Desc);
+		for (size_t k = 0; k < Desc.Variables; ++k)
+		{
+			auto Ref = Buffer->GetVariableByIndex(k);
+			if (Ref != nullptr)
+			{
+				D3D12_SHADER_VARIABLE_DESC Desc2;
+				Ref->GetDesc(&Desc2);
+				volatile int k = 0;
+			}
+			
+		}
+		
+		volatile int k = 0;
+	}
+
+	return 0;
+
+
+	//auto [Reflect, ReR] = D3DReflect(ps_shader.data(), ps_shader.size());
 
 	auto path = resource_path;
 	path.append(U"PixelShader.cso");

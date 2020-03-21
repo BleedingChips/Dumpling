@@ -6,11 +6,6 @@
 namespace Dumpling::Win32
 {
 
-	
-
-
-
-
 	std::list<std::filesystem::path> SearchVisualStudioPath()
 	{
 		wchar_t aa[256];

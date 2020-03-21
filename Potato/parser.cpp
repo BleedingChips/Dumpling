@@ -7,16 +7,15 @@ namespace Potato
 
 	parser_sbnf::parser_sbnf(
 		std::wstring table,
-		std::map<std::tuple<std::size_t, std::size_t>, storage_t> symbol_str_to_index,
-		std::map<storage_t, std::tuple<std::size_t, std::size_t>> symbol_index_to_str,
+		std::vector<std::tuple<std::size_t, std::size_t>> sym_list,
+		size_t ter_count,
 		std::vector<std::tuple<std::wstring, storage_t>> terminal_rex,
 		std::set<storage_t> unused_terminal,
-		std::set<storage_t> temporary_noterminal,
-		std::map<storage_t, storage_t> production_mapping,
+		size_t temporary_prodution_start,
 		lr1 lr1imp
-	) : table(std::move(table)), symbol_str_to_index(std::move(symbol_str_to_index)), symbol_index_to_str(std::move(symbol_index_to_str)),
-		terminal_rex(std::move(terminal_rex)), unused_terminal(std::move(unused_terminal)), temporary_noterminal(std::move(temporary_noterminal)),
-		production_mapping(std::move(production_mapping)), lr1imp(std::move(lr1imp))
+	) : table(std::move(table)), sym_list(std::move(sym_list)), ter_count(ter_count),
+		terminal_rex(std::move(terminal_rex)), unused_terminal(std::move(unused_terminal)),
+		temporary_prodution_start(temporary_prodution_start), lr1imp(std::move(lr1imp))
 	{
 		build_rex();
 	}
@@ -30,6 +29,36 @@ namespace Potato
 			auto [rex, sym] = ite;
 			std::wregex tem_rex{ rex, flag };
 			terminal_rex_imp.push_back({ std::move(tem_rex), sym });
+		}
+	}
+
+	auto parser_sbnf::translate(const lr1_processor::travel& input, const token_generator& tokens, int64_t& pro_count) const -> std::optional<travel>
+	{
+		if (input.is_terminal())
+		{
+			assert(tokens.last_tokens.has_value());
+			auto [s, e] = sym_list[input.symbol];
+			std::wstring_view value = { table.data() + s, e - s };
+			travel tra{ input.symbol, value };
+			tra.ter_data = *tokens.last_tokens;
+			return tra;
+		}
+		else {
+			size_t production_index = input.no_terminal_production_index;
+			if (production_index < temporary_prodution_start)
+			{
+				auto [s, e] = sym_list[input.symbol - lr1::noterminal_start() + ter_count];
+				std::wstring_view value = { table.data() + s, e - s };
+				travel tra{ input.symbol, value };
+				tra.noter_pro_index = production_index;
+				tra.noter_pro_count = static_cast<size_t>(input.no_terminal_production_count + pro_count);
+				pro_count = 0;
+				return tra;
+			}
+			else {
+				pro_count += input.no_terminal_production_count - 1;
+				return std::nullopt;
+			}
 		}
 	}
 
@@ -54,7 +83,7 @@ namespace Potato
 					auto unused = ref.unused_terminal.find(sym);
 					if (unused == ref.unused_terminal.end())
 					{
-						std::wstring_view str{ mat.first, mat.second - mat.first };
+						std::wstring_view str{ mat.first, static_cast<size_t>(mat.second - mat.first) };
 						cur_tokens = str;
 						return sym;
 					}
@@ -74,15 +103,14 @@ namespace Potato
 		result.push_back(static_cast<storage_t>(table.size()));
 		for (auto& ite : table)
 			result.push_back(ite);
-		result.push_back(static_cast<storage_t>(symbol_str_to_index.size()));
-		for (auto& ite : symbol_str_to_index)
+		result.push_back(static_cast<storage_t>(sym_list.size()));
+		for (auto& ite : sym_list)
 		{
 			auto [i1, i2] = ite;
-			auto [i11, i12] = i1;
-			result.push_back(static_cast<storage_t>(i11));
-			result.push_back(static_cast<storage_t>(i12));
-			result.push_back(i2);
+			result.push_back(static_cast<storage_t>(i1));
+			result.push_back(static_cast<storage_t>(i2));
 		}
+		result.push_back(static_cast<storage_t>(ter_count));
 		result.push_back(static_cast<storage_t>(terminal_rex.size()));
 		for (auto& ite : terminal_rex)
 		{
@@ -95,15 +123,7 @@ namespace Potato
 		result.push_back(static_cast<storage_t>(unused_terminal.size()));
 		for (auto& ite : unused_terminal)
 			result.push_back(ite);
-		result.push_back(static_cast<storage_t>(temporary_noterminal.size()));
-		for (auto& ite : temporary_noterminal)
-			result.push_back(ite);
-		result.push_back(static_cast<storage_t>(production_mapping.size()));
-		for (auto& ite : production_mapping)
-		{
-			result.push_back(ite.first);
-			result.push_back(ite.second);
-		}
+		result.push_back(static_cast<storage_t>(temporary_prodution_start));
 		auto lr1ser = lr1imp.serialization();
 		result.insert(result.end(), lr1ser.begin(), lr1ser.end());
 		return std::move(result);
@@ -121,19 +141,18 @@ namespace Potato
 				table.push_back(data[ite+i]);
 			ite += size;
 		}
-		std::map<std::tuple<std::size_t, std::size_t>, storage_t> symbol_str_to_index;
-		std::map<storage_t, std::tuple<std::size_t, std::size_t>> symbol_index_to_str;
+		std::vector<std::tuple<std::size_t, std::size_t>> sym_list;
 		{
 			auto size = data[ite++];
+			sym_list.reserve(size);
 			for (size_t i = 0; i < size; ++i)
 			{
-				std::tuple<size_t, size_t> tup = { data[ite + i * 3], data[ite + i * 3 + 1] };
-				storage_t index = data[ite + i * 3 + 2];
-				symbol_str_to_index.insert({ tup, index });
-				symbol_index_to_str.insert({ index, tup });
+				std::tuple<size_t, size_t> tup = { data[ite + i * 2], data[ite + i * 2 + 1] };
+				sym_list.push_back(tup);
 			}
-			ite += size * 3;
+			ite += size * 2;
 		}
+		size_t ter_count = data[ite++];
 		std::vector<std::tuple<std::wstring, storage_t>> terminal_rex;
 		{
 			auto size = data[ite++];
@@ -154,32 +173,16 @@ namespace Potato
 			for (size_t i = 0; i < size; ++i)
 				unused_terminal.insert(data[ite++]);
 		}
-		std::set<storage_t> temporary_noterminal;
-		{
-			auto size = data[ite++];
-			for (size_t i = 0; i < size; ++i)
-				temporary_noterminal.insert(data[ite++]);
-		}
-		std::map<storage_t, storage_t> production_mapping;
-		{
-			auto size = data[ite++];
-			for (size_t i = 0; i < size; ++i)
-			{
-				storage_t i1 = data[ite + i * 2];
-				storage_t i2 = data[ite + i * 2 + 1];
-				production_mapping.insert({i1, i2});
-			}
-			ite += size * 2;
-		}
+		size_t temporary_prodution_start = data[ite++];
 
 		lr1 lr1imp = lr1::unserialization(data + ite, length - ite);
 		return parser_sbnf{
 			std::move(table),
-			std::move(symbol_str_to_index),
-			std::move(symbol_index_to_str),
+			std::move(sym_list),
+			ter_count,
 			std::move(terminal_rex),
 			std::move(unused_terminal),
-			std::move(temporary_noterminal),
+			temporary_prodution_start,
 			std::move(lr1imp)
 		};
 	}
@@ -334,7 +337,7 @@ namespace Potato
 		return  { std::move(AllToken), Size };
 	}
 
-	parser_sbnf parser_sbnf(const std::wstring& code)
+	parser_sbnf LoadSBNFCode(const std::wstring& code)
 	{
 		using type = lr1::storage_t;
 		auto [AllToken,  Size] = DetectCodeToSymbol(code);
@@ -353,9 +356,12 @@ namespace Potato
 		std::set<type> temporary_noterminal;
 		type terminal_start = 0;
 		type noterminal_start = lr1::noterminal_start();
+		type temporary_noterminal_start = lr1::start_symbol() - 1;
 		std::optional<type> start_symbol;
 		std::vector<std::vector<type>> production;
+		size_t temporary_production_start = 0;
 		std::vector<lr1::ope_priority> priority;
+		
 
 		{
 
@@ -432,6 +438,7 @@ namespace Potato
 				{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::NoTerminal },
 				{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::Terminal },
 				{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal, *TerSymbol::TerList },
+				{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal},
 				{ *TerSymbol::Statement, *TerSymbol::Equal, *TerSymbol::TerList },
 				{ *TerSymbol::Statement, *TerSymbol::Equal },
 				{ *TerSymbol::TerList, *TerSymbol::NoTerminal },
@@ -473,6 +480,7 @@ namespace Potato
 			std::vector<std::vector<type>> stack;
 			std::map<temporary_symbol_pair, type> temporary_noterminal_buffer;
 			std::optional<type> last_no_terminal;
+			std::vector<std::vector<type>> temporary_production;
 
 			for (size_t i = SectionStart[2]; i < SectionEnd[2]; ++i)
 			{
@@ -505,6 +513,7 @@ namespace Potato
 								index_to_symbol.insert({ terminal_start, sym_string });
 								++terminal_start;
 								rex_terminal.push_back({ sym_string, result.first->second });
+								assert(temporary_noterminal_start > noterminal_start);
 							}
 							stack.push_back({ result.first->second });
 							break;
@@ -559,6 +568,14 @@ namespace Potato
 						}
 						case 3:
 						{
+							assert(stack.size() == 1 && stack[0].size() == 1);
+							last_no_terminal = stack[0][0];
+							production.push_back({ *last_no_terminal });
+							stack.clear();
+							break;
+						}
+						case 4:
+						{
 							assert(stack.size() == 1);
 							if (last_no_terminal)
 							{
@@ -571,7 +588,7 @@ namespace Potato
 								throw Error::SBNFError{ lin, L"Miss No Terminal Define", std::wstring{} };
 							break;
 						}
-						case 4:
+						case 5:
 						{
 							assert(stack.size() == 0);
 							if (last_no_terminal)
@@ -580,13 +597,13 @@ namespace Potato
 								throw Error::SBNFError{ lin, L"Miss No Terminal Define", std::wstring{} };
 							break;
 						}
-						case 5:
 						case 6:
 						case 7:
+						case 8:
 						{
 							break;
 						}
-						case 8:
+						case 9:
 						{
 							assert(stack.size() >= 2);
 							auto ite = std::move(*stack.rbegin());
@@ -595,7 +612,7 @@ namespace Potato
 							ite2.insert(ite2.end(), std::move_iterator(ite.begin()), std::move_iterator(ite.end()));
 							break;
 						}
-						case 9: // or
+						case 10: // or
 						{
 							assert(stack.size() >= 2);
 							auto ite = std::move(*stack.rbegin());
@@ -603,59 +620,62 @@ namespace Potato
 							auto ite2 = std::move(*stack.rbegin());
 							stack.pop_back();
 							temporary_symbol_pair pair{ std::move(ite), std::move(ite2), 1 };
-							auto re = temporary_noterminal_buffer.insert({ std::move(pair), noterminal_start });
+							auto re = temporary_noterminal_buffer.insert({ std::move(pair), temporary_noterminal_start });
 							if (re.second)
 							{
 								std::vector<type> tem = { re.first->second };
 								auto& l = re.first->first.left;
 								auto& r = re.first->first.right;
 								tem.insert(tem.end(), l.begin(), l.end());
-								production.push_back(std::move(tem));
+								temporary_production.push_back(std::move(tem));
 								tem = { re.first->second };
 								tem.insert(tem.end(), r.begin(), r.end());
-								production.push_back(std::move(tem));
-								++noterminal_start;
+								temporary_production.push_back(std::move(tem));
+								--temporary_noterminal_start;
+								assert(temporary_noterminal_start > noterminal_start);
 							}
 							stack.push_back({ re.first->second });
 						}
-						case 10: // ()
+						case 11: // ()
 							break;
-						case 11: // []
+						case 12: // []
 						{
 							assert(stack.size() >= 1);
 							auto ite = std::move(*stack.rbegin());
 							stack.pop_back();
 							temporary_symbol_pair pair{ std::move(ite), {}, 1 };
-							auto re = temporary_noterminal_buffer.insert({ std::move(pair), noterminal_start });
+							auto re = temporary_noterminal_buffer.insert({ std::move(pair), temporary_noterminal_start });
 							if (re.second)
 							{
 								std::vector<type> tem = { re.first->second };
 								auto& l = re.first->first.left;
 								tem.insert(tem.end(), l.begin(), l.end());
-								production.push_back(std::move(tem));
+								temporary_production.push_back(std::move(tem));
 								tem = { re.first->second };
-								production.push_back(std::move(tem));
-								++noterminal_start;
+								temporary_production.push_back(std::move(tem));
+								--temporary_noterminal_start;
+								assert(temporary_noterminal_start > noterminal_start);
 							}
 							stack.push_back({ re.first->second });
 							break;
 						}
-						case 12://{}
+						case 13://{}
 						{
 							assert(stack.size() >= 1);
 							auto ite = std::move(*stack.rbegin());
 							stack.pop_back();
 							temporary_symbol_pair pair{ std::move(ite), {}, 2 };
-							auto re = temporary_noterminal_buffer.insert({ std::move(pair), noterminal_start });
+							auto re = temporary_noterminal_buffer.insert({ std::move(pair), temporary_noterminal_start });
 							if (re.second)
 							{
 								std::vector<type> tem = { re.first->second, re.first->second };
 								auto& l = re.first->first.left;
 								tem.insert(tem.end(), l.begin(), l.end());
-								production.push_back(std::move(tem));
+								temporary_production.push_back(std::move(tem));
 								tem = { re.first->second };
-								production.push_back(std::move(tem));
-								++noterminal_start;
+								temporary_production.push_back(std::move(tem));
+								--temporary_noterminal_start;
+								assert(temporary_noterminal_start > noterminal_start);
 							}
 							stack.push_back({ re.first->second });
 							break;
@@ -668,6 +688,9 @@ namespace Potato
 				}, vec.begin(), vec.end());
 
 			}
+
+			temporary_production_start = production.size();
+			production.insert(production.end(), std::move_iterator(temporary_production.begin()), std::move_iterator(temporary_production.end()));
 
 			std::sort(rex_terminal.begin(), rex_terminal.end(), [](const std::tuple<std::wstring_view, type>& l, const std::tuple<std::wstring_view, type>& r) {
 				auto [i1s, typ1] = l;
@@ -792,18 +815,23 @@ namespace Potato
 		if (start_symbol)
 		{
 			std::wstring table;
-			std::map<std::tuple<std::size_t, std::size_t>, type> symbol_str_to_index;
-			std::map<type, std::tuple<std::size_t, std::size_t>> symbol_index_to_str;
-
+			std::vector<std::tuple<size_t, size_t>> sym_list;
+			sym_list.resize(index_to_symbol.size());
 			for (auto& ite : index_to_symbol)
 			{
 				auto [index, str] = ite;
 				size_t size = table.size();
 				table.insert(table.end(), str.begin(), str.end());
-				auto re = symbol_index_to_str.insert({ index, {size, str.size()} });
-				assert(re.second);
-				auto re2 = symbol_str_to_index.insert({ {size, str.size()}, index });
-				assert(re2.second);
+				if (lr1::is_terminal(index))
+				{
+					assert(index < terminal_start);
+					sym_list[index] = { size, str.size() };
+				}
+				else {
+					size_t true_index = index - lr1::noterminal_start() + terminal_start;
+					assert(true_index < sym_list.size());
+					sym_list[true_index] = { size, str.size() };
+				}
 			}
 
 			lr1 imp(
@@ -814,11 +842,11 @@ namespace Potato
 
 			parser_sbnf sbnf{
 				std::move(table),
-				std::move(symbol_str_to_index),
-				std::move(symbol_index_to_str),
+				std::move(sym_list),
+				terminal_start,
 				std::move(rexs),
 				std::move(unused_terminal),
-				std::move(temporary_noterminal),
+				temporary_production_start,
 				std::move(imp)
 			};
 

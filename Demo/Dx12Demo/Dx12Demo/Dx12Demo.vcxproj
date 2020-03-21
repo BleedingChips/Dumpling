@@ -138,6 +138,7 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Mscf\complier_mscf.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Msc\msc_parser.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
     <ClCompile Include="..\..\..\Potato\lexical.cpp" />
     <ClCompile Include="..\..\..\Potato\parser.cpp" />
@@ -154,6 +155,8 @@
     <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h" />
     <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h" />
     <ClInclude Include="..\..\..\Dumpling\Msc\define_msc.h" />
+    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser.h" />
+    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser_target.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
     <ClInclude Include="..\..\..\Potato\character_encoding.h" />
     <ClInclude Include="..\..\..\Potato\lexical.h" />

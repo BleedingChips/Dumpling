@@ -131,30 +131,6 @@ namespace Potato
 		
 		lr1_processor(const lr1& table) : m_table_ref(table) { clear(); }
 
-		/*
-		// SymbolFunction -> Symbol (const Type& Token)
-		template<typename Type, typename SymbolFunction>
-		ast generate_ast(Type begin, Type end, SymbolFunction&& SF)
-		{
-			std::vector<ast> ast_buffer;
-			size_t index = 0;
-			for (; true; ++begin)
-			{
-				if (begin != end)
-					try_reduce(ast_buffer, std::forward<SymbolFunction&&>(SF)(*begin), index);
-				else {
-					try_reduce(ast_buffer, lr1::eof_symbol(), index);
-					assert(ast_buffer.size() == 1);
-					return std::move(ast_buffer[0]);
-				}
-				++index;
-			}
-			assert(false);
-			return {};
-		}
-		*/
-
-
 		// ForeachFunction : std::optional<terminal> (Ite), RespondFunction: void (lr1_processor::travel)
 		template<typename Ite, typename ForeachFunction, typename RespondFunction>
 		void analyze(ForeachFunction&& sym, RespondFunction&& Func, Ite ite)

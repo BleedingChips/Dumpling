@@ -45,9 +45,6 @@
     <ClInclude Include="..\Potato\tool.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="MscParser.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Potato\character_encoding.cpp">
@@ -68,5 +65,10 @@
     <ClCompile Include="..\Potato\parser.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="msc.sbnf">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

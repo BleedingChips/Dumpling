@@ -151,7 +151,6 @@
     <ClInclude Include="..\Potato\tmp.h" />
     <ClInclude Include="..\Potato\tmpcall.h" />
     <ClInclude Include="..\Potato\tool.h" />
-    <ClInclude Include="MscParser.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Potato\character_encoding.cpp" />
@@ -160,6 +159,9 @@
     <ClCompile Include="..\Potato\syntax.cpp" />
     <ClCompile Include="..\Potato\tool.cpp" />
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="msc.sbnf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

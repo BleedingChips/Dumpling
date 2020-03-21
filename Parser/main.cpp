@@ -15,7 +15,24 @@ int main()
 	
 
 	auto Result = Re->serialization();
-	auto re2 = Potato::SBNF_parser::unserialization(Result.data(), Result.size());
+	auto re2 = Potato::parser_sbnf::unserialization(Result.data(), Result.size());
+
+	std::filesystem::path TargetPath = std::filesystem::current_path();
+	TargetPath.append(L".\\..\\Context\\MaterialCode\\Msc.sbnfb");
+	TargetPath = std::filesystem::absolute(TargetPath);
+
+	std::ofstream tem_f(TargetPath, std::ios::binary);
+
+	if (tem_f.is_open())
+	{
+		tem_f.write(reinterpret_cast<const char*>(Result.data()), Result.size() * sizeof(lr1::storage_t));
+		tem_f.close();
+	}
+	else
+		assert(false);
+
+	
+
 
 
 
@@ -25,5 +42,5 @@ int main()
 
 	//tem_f << Result;
 
-	volatile int i = 0;
+	volatile int irr = 0;
 }

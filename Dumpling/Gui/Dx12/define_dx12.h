@@ -28,7 +28,7 @@ namespace Dumpling::Dx12
 	using CommandList = ID3D12CommandList;
 	using Resource = ID3D12Resource;
 	using ResourcePtr = ComPtr<Resource>;
-
+	
 	using DescriptorHeap = ID3D12DescriptorHeap;
 	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
 
