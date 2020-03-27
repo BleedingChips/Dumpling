@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -155,8 +155,8 @@
     <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h" />
     <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h" />
     <ClInclude Include="..\..\..\Dumpling\Msc\define_msc.h" />
+    <ClInclude Include="..\..\..\Dumpling\Msc\msc.h" />
     <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser_target.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
     <ClInclude Include="..\..\..\Potato\character_encoding.h" />
     <ClInclude Include="..\..\..\Potato\lexical.h" />

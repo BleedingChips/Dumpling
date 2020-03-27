@@ -398,6 +398,8 @@ namespace
 
 namespace Potato
 {
+
+
 	lr1::reduce_conflict::reduce_conflict(uint32_t token, uint32_t old_state_index, uint32_t new_state_index, std::vector<std::tuple<uint32_t, std::vector<uint32_t>, std::set<uint32_t>>> state)
 		: std::logic_error("reduce conflict"), m_conflig_token(token), m_old_state_index(old_state_index), m_new_state_index(new_state_index), m_state(std::move(state))
 	{}
@@ -574,13 +576,13 @@ namespace Potato
 		data.push_back(static_cast<storage_t>(m_table.size()));
 		for (auto& ite : m_table)
 		{
-			data.push_back(ite.m_shift.size());
+			data.push_back(static_cast<storage_t>(ite.m_shift.size()));
 			for (auto& ite2 : ite.m_shift)
 			{
 				data.push_back(ite2.first);
 				data.push_back(ite2.second);
 			}
-			data.push_back(ite.m_reduce.size());
+			data.push_back(static_cast<storage_t>(ite.m_reduce.size()));
 			for (auto& ite2 : ite.m_reduce)
 			{
 				data.push_back(ite2.first);

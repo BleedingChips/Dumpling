@@ -88,8 +88,6 @@ int main()
 		volatile int k = 0;
 	}
 
-	return 0;
-
 
 	//auto [Reflect, ReR] = D3DReflect(ps_shader.data(), ps_shader.size());
 

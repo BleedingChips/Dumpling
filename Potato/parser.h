@@ -25,8 +25,10 @@ namespace Potato
 			size_t temporary_prodution_start,
 			lr1 lr1imp
 		);
-
+		parser_sbnf(const parser_sbnf&) = default;
 		parser_sbnf(parser_sbnf&&) = default;
+		parser_sbnf& operator=(const parser_sbnf&) = default;
+		parser_sbnf& operator=(parser_sbnf&&) = default;
 		std::vector<storage_t> serialization();
 		static parser_sbnf unserialization(const storage_t* data, size_t length);
 
@@ -35,7 +37,11 @@ namespace Potato
 			storage_t sym;
 			std::wstring_view sym_str;
 			union {
-				std::wstring_view ter_data;
+				struct {
+					std::wstring_view ter_data;
+					size_t line;
+					size_t charactor_index;
+				};
 				struct {
 					size_t noter_pro_index;
 					size_t noter_pro_count;
@@ -60,9 +66,17 @@ namespace Potato
 
 		struct token_generator
 		{
+			struct element
+			{
+				std::wstring_view token;
+				size_t line = 0;
+				size_t charactor_index = 0;
+			};
 			parser_sbnf& ref;
-			std::optional<std::wstring_view> last_tokens;
-			std::optional<std::wstring_view> cur_tokens;
+			std::optional<element> last_tokens;
+			std::optional<element> cur_tokens;
+			size_t current_line = 0;
+			size_t charactor_index = 0;
 			std::optional<lr1::storage_t> operator()(std::tuple<const wchar_t*, size_t>& ite);
 		};
 

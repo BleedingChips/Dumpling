@@ -140,10 +140,10 @@
     <ClInclude Include="..\..\..\Potato\parser.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser_target.h">
+    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser.h">
       <Filter>Dumpling\Msc</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser.h">
+    <ClInclude Include="..\..\..\Dumpling\Msc\msc.h">
       <Filter>Dumpling\Msc</Filter>
     </ClInclude>
   </ItemGroup>
