@@ -3,6 +3,529 @@
 #include <string>
 #include <iostream>
 
+namespace Potato
+{
+
+	enum class DFASymbol : lr1::storage_t
+	{
+		Char = 0,
+		Backslash, //
+		Min, // -
+		SquareBracketsLeft, //[
+		SquareBracketsRight, // ]
+		ParenthesesLeft, //(
+		ParenthesesRight, //)
+		Mulity, //*
+		Question, // ?
+		Point, //.
+		Or, // |
+		Add, // +
+
+
+		Statement = lr1::noterminal_start(),
+		AvailableChar,
+		AvailableCharList,
+		SpecialCharactor,
+		Repect,
+		OrStatement,
+		Expression,
+	};
+
+	constexpr lr1::storage_t operator*(DFASymbol sym) { return static_cast<lr1::storage_t>(sym); }
+
+	std::tuple<size_t, size_t> nfa::create_single_rex(std::u32string_view Rex)
+	{
+		using SYM = DFASymbol;
+		static lr1 DFALr1 = lr1::create(
+			*DFASymbol::Statement,
+			{
+				{*SYM::Statement, *SYM::Statement, *SYM::Expression},
+				{*SYM::Expression, *SYM::AvailableChar},
+				{*SYM::Expression, *SYM::ParenthesesLeft, *SYM::Expression, *SYM::ParenthesesRight},
+				{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::AvailableCharList, *SYM::SquareBracketsRight},
+				{*SYM::Expression, *SYM::Expression, *SYM::Mulity},
+
+				{*SYM::Expression, *SYM::Expression, *SYM::Question},
+				{*SYM::Expression, *SYM::Expression, *SYM::Add},
+				{*SYM::Expression, *SYM::Expression, *SYM::Or, *SYM::Statement},
+				{*SYM::AvailableChar, *SYM::Char},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Char},
+
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Backslash},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Min},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::SquareBracketsLeft},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::SquareBracketsRight},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::ParenthesesLeft},
+
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::ParenthesesRight},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Mulity},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Question},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Point},
+				{*SYM::AvailableChar, *SYM::Backslash, *SYM::Or},
+
+				{*SYM::AvailableCharList, *SYM::AvailableCharList, *SYM::AvailableChar},
+				{*SYM::AvailableCharList, *SYM::AvailableChar},
+				{*SYM::AvailableCharList, *SYM::AvailableChar, *SYM::Min, *SYM::AvailableChar},
+				{*SYM::Statement, *SYM::Expression},
+			}, {
+				{*SYM::Mulity, *SYM::Question, *SYM::Add}, {*SYM::Or}
+			}
+			);
+		char32_t LastStack;
+
+		std::vector<std::tuple<size_t, size_t>> StateStack;
+		std::vector<Tool::range_set<char32_t>> ScopeStack;
+
+		lr1_process(DFALr1, [&](std::u32string_view::const_iterator& ite) -> std::optional<lr1::storage_t> {
+			if (ite != Rex.end())
+			{
+				char32_t input = *(ite++);
+				switch (input)
+				{
+				case U'\\': return *SYM::Backslash;
+				case U'-':return *SYM::Min;
+				case U'[': return *SYM::SquareBracketsLeft;
+				case U']':return *SYM::SquareBracketsRight;
+				case U'(': return *SYM::ParenthesesLeft;
+				case U')':return *SYM::ParenthesesRight;
+				case U'*': return *SYM::Mulity;
+				case U'?':return *SYM::Question;
+				case U'.': return *SYM::Point;
+				case U'|':return *SYM::Or;
+				case U'+':return *SYM::Add;
+				default: return *SYM::Char;
+				}
+			}
+			else {
+				return std::nullopt;
+			}
+		}, [&](lr1_processor::travel tra) {
+			if (tra.is_terminal())
+				LastStack = char32_t(*(Rex.begin() + tra.terminal_token_index));
+			else {
+				switch (tra.no_terminal_production_index)
+				{
+				case 0:
+				{
+					assert(StateStack.size() >= 2);
+					auto& L1 = *(StateStack.rbegin() + 1);
+					auto L2 = *(StateStack.rbegin());
+					auto re = total_node[std::get<1>(L1)].table_null_shift.insert(std::get<0>(L2));
+					assert(re.second);
+					L1 = { std::get<0>(L1), std::get<1>(L2) };
+					StateStack.pop_back();
+					break;
+				}
+				case 1:
+				case 3:
+				{
+					assert(ScopeStack.size() >= 1);
+					auto Char = std::move(*ScopeStack.rbegin());
+					ScopeStack.pop_back();
+
+					size_t n1_state = total_node.size();
+					size_t n2_state = n1_state + 1;
+					node n1;
+					node n2;
+
+					for (auto& ite : Char)
+					{
+						auto re = n1.table_shift.insert({ n2_state, {} });
+						(re.first)->second.add_range(ite.left, ite.right);
+					}
+					total_node.push_back(std::move(n1));
+					total_node.push_back(std::move(n2));
+					StateStack.push_back({ n1_state, n2_state });
+					break;
+				}
+				case 2: case 21:case 23:break;
+				case 4:
+				{
+					assert(StateStack.size() != 0);
+					auto [s, e] = *StateStack.rbegin();
+					auto& n1 = total_node[s];
+					auto& n2 = total_node[e];
+					n1.table_null_shift.insert({ e });
+					n2.table_null_shift.insert({ s });
+					break;
+				}
+				case 5:
+				{
+					assert(StateStack.size() != 0);
+					auto [s, e] = *StateStack.rbegin();
+					auto& n1 = total_node[s];
+					n1.table_null_shift.insert({ e });
+					break;
+					break;
+				}
+				case 6:
+				{
+					assert(StateStack.size() != 0);
+					auto [s, e] = *StateStack.rbegin();
+					auto& n2 = total_node[e];
+					n2.table_null_shift.insert({ s });
+					break;
+				}
+				case 7:
+				{
+					assert(StateStack.size() >= 2);
+					size_t n1_state = total_node.size();
+					size_t n2_state = n1_state + 1;
+					node n1;
+					node n2;
+					auto [n1s, n1e] = *StateStack.rbegin();
+					auto [n2s, n2e] = *(StateStack.rbegin() + 1);
+					StateStack.resize(StateStack.size() - 2);
+					n1.table_null_shift.insert(n1s);
+					n1.table_null_shift.insert(n2s);
+					total_node[n1e].table_null_shift.insert(n2_state);
+					total_node[n2e].table_null_shift.insert(n2_state);
+					StateStack.push_back({ n1_state, n2_state });
+					total_node.push_back(std::move(n1));
+					total_node.push_back(std::move(n2));
+					break;
+				}
+				case 9:
+				{
+					Tool::range_set<char32_t> Tem;
+					switch (LastStack)
+					{
+					case U'f': Tem.add_range(U'\f'); break;
+					case U'n': Tem.add_range(U'\n'); break;
+					case U'r':Tem.add_range(U'\r'); break;
+					case U't': Tem.add_range(U'\t'); break;
+					case U'v': Tem.add_range(U'\v'); break;
+					case U's':
+					{
+						Tem.add_range(U'\n', U'\r' + 1);
+						Tem.add_range(U'\t');
+						break;
+					}
+					case U'S':
+					{
+						Tem.add_range(U'\n', U'\r' + 1);
+						Tem.add_range(U'\t');
+						Tem = Tem.supplementary(1);
+					}
+					default:break;
+					}
+					ScopeStack.push_back(std::move(Tem));
+					break;
+				}
+				case 8: case 10:case 11:case 12:case 13:case 14:case 15:case 16:case 17:case 18:case 19:
+				{
+					Tool::range_set<char32_t> Tem;
+					Tem.add_range(LastStack);
+					ScopeStack.push_back(std::move(Tem));
+					break;
+				}
+				case 20:
+				{
+					assert(ScopeStack.size() >= 2);
+					auto& ite = *(ScopeStack.rbegin() + 1);
+					auto ite2 = std::move(*ScopeStack.rbegin());
+					ite = ite + ite2;
+					ScopeStack.pop_back();
+					break;
+				}
+				case 22:
+				{
+					assert(ScopeStack.size() >= 2);
+					auto& ite = *(ScopeStack.rbegin() + 1);
+					auto ite2 = std::move(*ScopeStack.rbegin());
+					assert(ite.size() == 1);
+					assert(ite2.size() == 1);
+					auto P = ite[0];
+					auto P2 = ite2[0];
+					Tool::range_set<char32_t> ss;
+					ss.add_range(std::min(P.left, P2.left), std::max(P.right, P2.right));
+					ScopeStack.resize(ScopeStack.size() - 2);
+					ScopeStack.push_back(std::move(ss));
+					break;
+				}
+				default:
+					assert(false);
+					break;
+				}
+			}
+		}, Rex.begin());
+		assert(StateStack.size() == 1);
+		return StateStack[0];
+	}
+
+	nfa nfa::create_from_rex(std::u32string_view const* input, size_t length)
+	{
+		nfa result;
+		result.total_node.push_back(node{});
+		for (size_t index = 0; index < length; ++index)
+		{
+			auto [s, e] = result.create_single_rex(input[index]);
+			result[e].is_accept = index;
+			result[result.start_state()].table_null_shift.insert(s);
+		}
+		result.simplify();
+		return std::move(result);
+	}
+
+	void nfa::simplify()
+	{
+		/*
+		assert(*this);
+		bool Change = true;
+		size_t last_search = total_node.size();
+		assert(last_search > 1);
+		while (Change)
+		{
+			Change = false;
+			for (size_t i = 1; i < last_search; ++i)
+			{
+				auto& ref = total_node[i];
+				if (ref.table_null_shift.size() == 1 && ref.table_shift.size() == 0)
+				{
+					size_t target_shift = *ref.table_null_shift.begin();
+					size_t end = last_search - 1;
+					for (size_t k = 1; k < last_search; ++k)
+					{
+						if (k != i)
+						{
+							auto& ref2 = total_node[k];
+							size_t count = ref2.table_null_shift.erase(target_shift);
+							if (count != 0)
+								ref2.table_null_shift.insert(i);
+
+							auto re = ref2.table_shift.find(target_shift);
+							if (re != ref2.table_shift.end())
+							{
+								auto set = std::move(re->second);
+								ref2.table_shift.erase(re);
+								auto re2 = ref2.table_shift.insert({ i, std::move(set) });
+								if (!re2.second)
+									re2.first->second += set;
+							}
+						}
+					}
+					std::swap(total_node[i], total_node[target_shift]);
+					std::swap(total_node[target_shift], total_node[end]);
+					Change = true;
+					last_search -= 1;
+					break;
+				}
+			}
+		}
+		total_node.resize(last_search);
+		*/
+	}
+
+	std::set<size_t> nfa::search_null_state_set(size_t start) const
+	{
+		std::set<size_t> current_set;
+		std::vector<size_t> stack;
+		stack.push_back(start);
+		while (!stack.empty())
+		{
+			size_t cur = *stack.rbegin();
+			stack.pop_back();
+			current_set.insert(cur);
+			for (auto& ite : total_node[cur].table_null_shift)
+			{
+				auto re = current_set.insert(ite);
+				if (re.second)
+					stack.push_back(ite);
+			}
+		}
+		return current_set;
+	}
+
+	struct nfa_null_set_search
+	{
+		nfa& ref;
+		nfa_null_set_search(nfa& ref) : ref(ref) {}
+		using set_iterator_t = std::set<std::set<size_t>>::const_iterator;
+		std::set<std::set<size_t>>::const_iterator search(size_t head)
+		{
+			auto find = nfa_null_set_head_to_set.find(head);
+			if (find != nfa_null_set_head_to_set.end())
+				return find->second;
+			else {
+				std::set<size_t> result;
+				result.insert(head);
+				std::vector<size_t> search_stack;
+				search_stack.push_back(head);
+				while (!search_stack.empty())
+				{
+					size_t s = *search_stack.begin();
+					search_stack.pop_back();
+					auto ite = nfa_null_set_head_to_set.find(head);
+					if (ite != nfa_null_set_head_to_set.end())
+						result.insert((*ite->second).begin(), (*ite->second).end());
+					else {
+						auto re = ref.search_null_state_set(s);
+						for (auto& ite : re)
+							search_stack.push_back(ite);
+						result.insert(re.begin(), re.end());
+					}
+				}
+				auto ite = nfa_null_set.insert(result);
+				auto re = nfa_null_set_head_to_set.insert({ head, ite.first });
+				assert(re.second);
+				return re.first->second;
+			}
+		}
+		std::set<std::set<size_t>> nfa_null_set;
+		std::map<size_t, decltype(nfa_null_set)::const_iterator> nfa_null_set_head_to_set;
+	};
+
+	dfa dfa::create_from_rexs(std::u32string_view const* rexs, size_t length)
+	{
+		nfa nfa_result = nfa::create_from_rex(rexs, length);
+
+		std::map<std::set<size_t>, size_t> nfa_set_to_dfa;
+		std::set<std::set<size_t>> nfa_null_set;
+		std::map<size_t, std::set<size_t>::const_iterator> nfa_null_set_head_to_set;
+
+		dfa dfa_result;
+		nfa_null_set_search null_search(nfa_result);
+		dfa_result.nodes.push_back(node{});
+		std::set<std::set<size_t>> nfa_state_set;
+		std::vector<std::set<std::set<size_t>>::const_iterator> mapping;
+		auto re = null_search.search(0);
+		auto re2 = nfa_state_set.insert(*re);
+		mapping.push_back(re2.first);
+		std::vector<size_t> stack;
+		stack.push_back(0);
+		while (!stack.empty())
+		{
+			size_t cur = *stack.rbegin();
+			stack.pop_back();
+			std::map<size_t, Tool::range_set<char32_t>> tem_shift;
+			auto ite = mapping[cur];
+			for (auto ite2 : *ite)
+			{
+				for (auto const& ite3 : static_cast<const nfa&>(nfa_result)[ite2].table_shift)
+				{
+					auto re = tem_shift.insert({ ite3.first, ite3.second });
+					if (!re.second)
+						re.first->second += ite3.second;
+				}
+			}
+
+		}
+
+		return dfa_result;
+
+
+
+		/*
+		using SYM = DFASymbol;
+		
+		std::u32string Table;
+		std::map<size_t, std::tuple<size_t, size_t>> AcceptMapping;
+		std::vector<std::tuple<size_t, size_t>> NfaStateMapping;
+		std::vector<nfa> TotalNode;
+		TotalNode.push_back(nfa{});
+
+		for (size_t i = 0; i < length; ++i)
+		{
+			auto [Id, Rex] = rexs[i];
+			auto [rs, re] = create_nfa_from_rex(TotalNode, Rex);
+			NfaStateMapping.push_back({ rs, re });
+			TotalNode[0].NullShift.insert(rs);
+			size_t s = Table.size();
+			Table.insert(Table.end(), Id.begin(), Id.end());
+			size_t e = Table.size();
+			AcceptMapping.insert({ re, {s, e} });
+		}
+
+		struct dfa_node
+		{
+			std::vector<std::tuple<scope_set, size_t>> Shift;
+		};
+
+		std::map<std::set<size_t>, size_t> TotalNullSet;
+		std::vector<dfa_node> TotalDFANode;
+		using ite_ptr = std::map<std::set<size_t>, size_t>::iterator;
+		std::map<size_t, ite_ptr> nfa_to_pointer;
+		std::vector<ite_ptr> search_stack;
+		{
+			auto result = search_null_set(0, TotalNode);
+			auto re = TotalNullSet.insert({ std::move(result), 0 });
+			TotalDFANode.push_back(dfa_node{});
+			assert(re.second);
+			nfa_to_pointer.insert({ 0, re.first });
+			search_stack.push_back(re.first);
+		}
+
+		while (!search_stack.empty())
+		{
+			auto ite = *search_stack.rbegin();
+			search_stack.pop_back();
+			std::vector<std::tuple<scope, size_t>> Shift;
+			for (auto nfaIndex : ite->first)
+			{
+				for (auto [scope, index] : TotalNode[nfaIndex].Shift)
+				{
+					size_t target_dfa = 0;
+					auto re = nfa_to_pointer.find(index);
+					if (re == nfa_to_pointer.end())
+					{
+						auto set = search_null_set(index, TotalNode);
+						auto re = TotalNullSet.insert({ std::move(set), TotalNullSet.size() });
+						if (re.second)
+						{
+							TotalDFANode.push_back(dfa_node{});
+							nfa_to_pointer.insert({ index, re.first});
+							search_stack.push_back(re.first);
+						}
+						target_dfa = re.second;
+					}
+					else
+						target_dfa = re->second->second;
+
+					Shift.push_back({scope, index});
+				}
+			}
+		}
+
+
+		std::map<std::set<size_t>, size_t> nfa_to_dfa;
+		std::map<size_t, size_t> NFAAccept;
+
+		std::set<size_t> current_set;
+		std::vector<size_t> stack;
+		stack.push_back(0);
+
+
+		bool NewSet = false;
+
+		while (!stack.empty())
+		{
+			size_t cur = *stack.rbegin();
+			current_set.insert(cur);
+			for (auto& ite : TotalNode[cur].NullShift)
+			{
+				auto re = current_set.insert(ite);
+				if (re.second)
+					stack.push_back(ite);
+			}
+		}
+
+		return dfa{};
+		*/
+		
+
+
+		/*
+		static lr1 lr1 = lr1::create(
+			{}
+		);
+		*/
+	}
+
+
+}
+
+
+
 namespace
 {
 	using namespace Potato;
@@ -600,8 +1123,8 @@ namespace Potato
 			size_t size = data[ite++];
 			for (size_t i = 0; i < size; ++i)
 			{
-				size_t i1 = data[ite + i * 2];
-				size_t i2 = data[ite + i * 2 + 1];
+				storage_t i1 = data[ite + i * 2];
+				storage_t i2 = data[ite + i * 2 + 1];
 				m_production.push_back({ i1, i2 });
 			}
 			ite += size * 2;

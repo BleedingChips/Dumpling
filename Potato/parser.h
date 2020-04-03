@@ -12,6 +12,7 @@
 
 namespace Potato
 {
+
 	struct parser_sbnf
 	{
 		using storage_t = lr1::storage_t;

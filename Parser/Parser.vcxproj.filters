@@ -45,6 +45,9 @@
     <ClInclude Include="..\Potato\tool.h">
       <Filter>Potato</Filter>
     </ClInclude>
+    <ClInclude Include="..\Potato\range_set.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Potato\character_encoding.cpp">

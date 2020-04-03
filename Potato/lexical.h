@@ -2,6 +2,31 @@
 #include <regex>
 namespace Potato::Lexical
 {
+	struct lex
+	{
+		using storage_t = uint32_t;
+		struct node {
+			node(storage_t input) : start(input), end(0) {}
+			node(std::tuple<storage_t, storage_t> input) : start(std::get<0>(input)), end(std::get<1>(input)) {}
+			storage_t start;
+			storage_t end;
+		};
+
+		lex(std::vector<std::vector<node>> WTF);
+
+	};
+
+
+
+
+
+
+
+
+
+
+
+
 
 	template<typename Token, typename CharT, typename regex_traits = std::regex_traits<CharT>>
 	struct regex_token

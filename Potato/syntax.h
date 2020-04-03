@@ -11,9 +11,50 @@
 #include <deque>
 #include <assert.h>
 #include <variant>
-
+#include "range_set.h"
 namespace Potato
 {
+
+	struct nfa
+	{
+		struct node
+		{
+			std::optional<size_t> is_accept;
+			std::map<size_t, Tool::range_set<char32_t>> table_shift;
+			std::set<size_t> table_null_shift;
+		};
+		static nfa create_from_rex(std::u32string_view const* input, size_t length);
+		const node& operator[](size_t index) const { return total_node[index]; }
+		operator bool() const noexcept { return !total_node.empty(); }
+		size_t start_state() const noexcept { return 0; }
+		std::set<size_t> search_null_state_set(size_t head) const;
+		nfa(const nfa&) = default;
+		nfa(nfa&&) = default;
+		nfa& operator=(const nfa&) = default;
+		nfa& operator=(nfa&&) = default;
+		nfa() = default;
+	private:
+		node& operator[](size_t index) { return total_node[index]; }
+		std::tuple<size_t, size_t> create_single_rex(std::u32string_view Rex);
+		void simplify();
+		std::vector<node> total_node; 
+	};
+
+
+	struct dfa
+	{
+		static dfa create_from_rexs(std::u32string_view const* rexs, size_t length);
+		struct node
+		{
+			std::optional<size_t> is_accept;
+			std::map<size_t, Tool::range_set<char32_t>> shift;
+		};
+	private:
+		node& operator[](size_t index) { return nodes[index]; }
+		std::vector<node> nodes;
+	};
+
+
 
 	struct lr1
 	{
@@ -27,8 +68,11 @@ namespace Potato
 
 		struct ope_priority
 		{
-			ope_priority(std::vector<storage_t> sym, bool lp = true) : sym(std::move(sym)), left_priority(lp) {}
-			ope_priority(storage_t sym, bool lp = true) : sym({ sym }), left_priority(lp) {}
+			ope_priority(std::initializer_list<storage_t> sym) : ope_priority(std::move(sym), true) {}
+			ope_priority(std::vector<storage_t> sym) : ope_priority(std::move(sym), true) {}
+			ope_priority(std::vector<storage_t> sym, bool lp) : sym(std::move(sym)), left_priority(lp) {}
+			ope_priority(storage_t sym) : ope_priority(std::vector<storage_t>{ sym }, true) {}
+			ope_priority(storage_t sym, bool lp) : ope_priority(std::vector<storage_t>{ sym }, lp) {}
 			std::vector<storage_t> sym;
 			bool left_priority;
 		};

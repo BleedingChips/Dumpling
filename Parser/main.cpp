@@ -3,10 +3,17 @@
 #include <filesystem>
 #include <fstream>
 #include "../Potato/parser.h"
+#include "../Potato/lexical.h"
 #include <fstream>
 int main()
 {
 	using namespace Potato;
+
+	std::u32string_view Rexs[] = {
+		U"ab|c",
+	};
+
+	auto tem = dfa::create_from_rexs(Rexs, 1);
 
 
 	auto p = std::filesystem::current_path();
