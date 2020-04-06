@@ -36,6 +36,7 @@ namespace Potato
 	private:
 		node& operator[](size_t index) { return total_node[index]; }
 		std::tuple<size_t, size_t> create_single_rex(std::u32string_view Rex);
+		std::tuple<size_t, size_t> create_from_sequence_expression(std::u32string_view Rex);
 		void simplify();
 		std::vector<node> total_node; 
 	};
@@ -175,10 +176,18 @@ namespace Potato
 			storage_t symbol;
 			union 
 			{
-				std::size_t no_terminal_production_index;
-				std::size_t terminal_token_index;
+				struct noterminal_t
+				{
+					std::size_t production_index;
+					std::size_t production_count;
+					storage_t const* symbol_array;
+				}noterminal;
+
+				struct terminal_t
+				{
+					std::size_t token_index;
+				}terminal;			
 			};
-			std::size_t no_terminal_production_count;
 			bool is_terminal() const noexcept { return lr1::is_terminal(symbol); }
 		};
 		
