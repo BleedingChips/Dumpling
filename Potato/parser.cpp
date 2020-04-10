@@ -47,19 +47,19 @@ namespace Potato
 			return tra;
 		}
 		else {
-			size_t production_index = input.no_terminal_production_index;
+			size_t production_index = input.noterminal.production_index;
 			if (production_index < temporary_prodution_start)
 			{
 				auto [s, e] = sym_list[input.symbol - lr1::noterminal_start() + ter_count];
 				std::wstring_view value = { table.data() + s, e - s };
 				travel tra{ input.symbol, value };
 				tra.noter_pro_index = production_index;
-				tra.noter_pro_count = static_cast<size_t>(input.no_terminal_production_count + pro_count);
+				tra.noter_pro_count = static_cast<size_t>(input.noterminal.production_count + pro_count);
 				pro_count = 0;
 				return tra;
 			}
 			else {
-				pro_count += input.no_terminal_production_count - 1;
+				pro_count += input.noterminal.production_count - 1;
 				return std::nullopt;
 			}
 		}
@@ -407,13 +407,13 @@ namespace Potato
 				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.symbol == *TerSymbol::Terminal)
 					{
-						auto& ref = vec[input.terminal_token_index];
-						back_buffer = std::get<1>(vec[input.terminal_token_index]);
+						auto& ref = vec[input.terminal.token_index];
+						back_buffer = std::get<1>(vec[input.terminal.token_index]);
 					}
 					else if (input.symbol == *TerSymbol::Rex || input.symbol == *TerSymbol::Terminal)
 					{
-						auto& ref = vec[input.terminal_token_index];
-						auto rex = std::get<1>(vec[input.terminal_token_index]);
+						auto& ref = vec[input.terminal.token_index];
+						auto rex = std::get<1>(vec[input.terminal.token_index]);
 						auto re = symbol_to_index.insert({ back_buffer, terminal_start });
 						if (re.second)
 						{
@@ -444,8 +444,8 @@ namespace Potato
 				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.symbol == *TerSymbol::Terminal)
 					{
-						auto& ref = vec[input.terminal_token_index];
-						auto sym_string = std::get<1>(vec[input.terminal_token_index]);
+						auto& ref = vec[input.terminal.token_index];
+						auto sym_string = std::get<1>(vec[input.terminal.token_index]);
 						auto find = symbol_to_index.find(sym_string);
 						if (find != symbol_to_index.end())
 							unused_terminal.insert(find->second);
@@ -514,7 +514,7 @@ namespace Potato
 				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.is_terminal())
 					{
-						auto& ref = vec[input.terminal_token_index];
+						auto& ref = vec[input.terminal.token_index];
 						auto sym_string = std::get<1>(ref);
 						switch (input.symbol)
 						{
@@ -577,7 +577,7 @@ namespace Potato
 						}
 					}
 					else {
-						switch (input.no_terminal_production_index)
+						switch (input.noterminal.production_index)
 						{
 						case 0:
 						case 1:
@@ -760,7 +760,7 @@ namespace Potato
 				lr1_process(imp, [](auto in) {return *std::get<0>(*in); }, [&](lr1_processor::travel input) {
 					if (input.is_terminal())
 					{
-						auto& ref = vec[input.terminal_token_index];
+						auto& ref = vec[input.terminal.token_index];
 						auto [type, sym_string] = (ref);
 						if (type == TerSymbol::RexTerminal || type == TerSymbol::Terminal)
 						{
@@ -772,7 +772,7 @@ namespace Potato
 						}
 					}
 					else {
-						switch (input.no_terminal_production_index)
+						switch (input.noterminal.production_index)
 						{
 						case 0:case 1: case 2:case 7:break;
 						case 3: case 4:

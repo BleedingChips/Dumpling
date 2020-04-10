@@ -6,103 +6,177 @@
 namespace Potato
 {
 
+	using range_set = Tool::range_set<char32_t>;
+
+	enum class DFASymbol : lr1::storage_t
+	{
+		Char = 0,
+		Min, // -
+		SquareBracketsLeft, //[
+		SquareBracketsRight, // ]
+		ParenthesesLeft, //(
+		ParenthesesRight, //)
+		Mulity, //*
+		Question, // ?
+		Point, //.
+		Or, // |
+		Add, // +
+		Not, // ^
 
 
+		Statement = lr1::noterminal_start(),
+		CharListStart,
+		CharList,
+		Expression,
+	};
+
+	constexpr lr1::storage_t operator*(DFASymbol sym) { return static_cast<lr1::storage_t>(sym); }
+
+	using SYM = DFASymbol;
 
 
-
-
+	std::variant<Tool::range_set<char32_t>, SYM> HandleSingleChar(std::u32string_view::const_iterator& begin, std::u32string_view::const_iterator end)
+	{
+		assert(begin != end);
+		char32_t input = *(begin++);
+		switch (input)
+		{
+		case U'-':return SYM::Min;
+		case U'[': return SYM::SquareBracketsLeft;
+		case U']':return  SYM::SquareBracketsRight;
+		case U'(': return  SYM::ParenthesesLeft;
+		case U')':return SYM::ParenthesesRight;
+		case U'*': return SYM::Mulity;
+		case U'?':return SYM::Question;
+		case U'.': return SYM::Point;
+		case U'|':return SYM::Or;
+		case U'+':return SYM::Add;
+		case U'^':return SYM::Not;
+		case U'\\':
+		{
+			assert(begin != end);
+			input = *(begin++);
+			switch (input)
+			{
+			case U'd': return range_set({U'0', U'9' + 1});
+			case U'D': { range_set Tem({ U'0', U'9' + 1 }); Tem = Tem.supplementary({ 1, std::numeric_limits<char32_t>::max() });  return Tem;  };
+			case U'f': return range_set({ U'\f' });
+			case U'n': return range_set({ U'\n' });
+			case U'r': return range_set({ U'\r' });
+			case U't': return range_set({ U'\t'});
+			case U'v': return range_set({U'\v'});
+			case U's': 
+			{
+				range_set tem({U'\f', U'\r' + 1});
+				tem |= U'\t';
+				return tem;
+			}
+			case U'S':
+			{
+				range_set tem({ U'\f', U'\r' + 1 });
+				tem |= U'\t';
+				tem = tem.supplementary({ 1, std::numeric_limits<char32_t>::max() });
+				return tem;
+			}
+			case U'w':
+			{
+				range_set tem({ U'a', U'z' + 1 });
+				tem |= range_set({ U'A', U'Z' + 1 });
+				tem |= range_set({ U'_', U'_' + 1 });
+				return tem;
+			}
+			case U'W':
+			{
+				range_set tem({ U'a', U'z' + 1 });
+				tem |= range_set({ U'A', U'Z' + 1 });
+				tem |= range_set({ U'_', U'_' + 1 });
+				tem = tem.supplementary({ 1, std::numeric_limits<char32_t>::max() });
+				return tem;
+			}
+			case U'u':
+			{
+				assert(begin + 4 <= end);
+				size_t index = 0;
+				for (size_t i = 0; i < 4; ++i)
+				{
+					char32_t in = *(begin++);
+					index *= 16;
+					if (in >= U'0' && in <= U'9')
+						index += in - U'0';
+					else if (in >= U'a' && in <= U'f')
+						index += in - U'a' + 10;
+					else if (in >= U'A' && in <= U'F')
+						index += in - U'A' + 10;
+					else
+						assert(false);
+				}
+				return range_set({ static_cast<char32_t>(index), static_cast<char32_t>(index) + 1 });
+			}
+			default:
+				range_set tem({ input,input + 1 });
+				return tem;
+				break;
+			}
+			break;
+		}
+			
+		default:
+			return range_set(input);
+			break;
+		}
+	}
 
 	std::tuple<size_t, size_t> nfa::create_single_rex(std::u32string_view Rex)
 	{
-		if (!Rex.empty())
-		{
 
-		}
-		else {
-			size_t n1_state = total_node.size();
-			size_t n2_state = n1_state + 1;
-			node n1;
-			node n2;
-			n1.table_null_shift.insert(n2_state);
-			total_node.push_back(std::move(n1));
-			total_node.push_back(std::move(n2));
-			return { n1_state, n2_state };
-		}
+		static lr1 DFALr1 = lr1::create(
+			*DFASymbol::Statement,
+			{
+				{*SYM::Statement, *SYM::Statement, *SYM::Expression},
+				{*SYM::Expression, *SYM::ParenthesesLeft, *SYM::Expression, *SYM::ParenthesesRight},
+				{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::CharList, *SYM::SquareBracketsRight},
+				{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::Not, *SYM::CharList, *SYM::SquareBracketsRight},
+				{*SYM::Expression, *SYM::Expression, *SYM::Mulity},
 
-		char32_t LastStack;
-		std::u32string SequencerExpressStack;
+				{*SYM::Expression, *SYM::Expression, *SYM::Question},
+				{*SYM::Expression, *SYM::Expression, *SYM::Add},
+				{*SYM::Expression, *SYM::Expression, *SYM::Or, *SYM::Statement},
+				{*SYM::Expression, *SYM::Char},
+				{*SYM::CharListStart, *SYM::Min},
+
+				{*SYM::CharListStart},
+				{*SYM::CharListStart, *SYM::CharListStart, *SYM::Char, *SYM::Min, *SYM::Char},
+				{*SYM::CharListStart, *SYM::CharListStart, *SYM::Char},
+				{*SYM::CharList, *SYM::CharListStart},
+				{*SYM::CharList, *SYM::CharListStart, *SYM::Min},
+
+				{*SYM::Statement, *SYM::Expression},
+			}, {
+				{*SYM::Mulity, *SYM::Question, *SYM::Add}, {*SYM::Or}
+			}
+			);
+
 		std::vector<std::tuple<size_t, size_t>> StateStack;
 		std::vector<Tool::range_set<char32_t>> ScopeStack;
-
-		auto InsertChar = [](size_t index, char32_t LastStack, lr1::storage_t const* symbols) -> Tool::range_set<char32_t> {
-			Tool::range_set<char32_t> Tem;
-			switch (index)
-			{
-			case 0: Tem |= LastStack; break;
-			case 1:
-				switch (LastStack)
-				{
-				case U'f': Tem |= U'\f'; break;
-				case U'n': Tem |= U'\n'; break;
-				case U'r':Tem |= U'\r'; break;
-				case U't': Tem |= U'\t'; break;
-				case U'v': Tem |= U'\v'; break;
-				case U's':
-				{
-					Tem |= (U'\n', U'\r' + 1);
-					Tem |= U'\t';
-					break;
-				}
-				case U'S':
-				{
-					Tem |= (U'\n', U'\r' + 1);
-					Tem |= U'\t';
-					Tem = Tem.supplementary({ 1, std::numeric_limits<char32_t>::max() });
-				}
-				}
-				break;
-			case 2:
-			{
-				Tem |= Tool::range_set<char32_t>::range{ U'\x1', U'\n' };
-				Tem |= Tool::range_set<char32_t>::range{ U'\n' + 1, std::numeric_limits<char32_t>::max() };
-				break;
-			}
-			default:
-				Tem |= char32_t(symbols[1]);
-				break;
-			}
-			return Tem;
-		};
 
 		lr1_process(DFALr1, [&](std::u32string_view::const_iterator& ite) -> std::optional<lr1::storage_t> {
 			if (ite != Rex.end())
 			{
-				char32_t input = *(ite++);
-				switch (input)
+				auto Re = HandleSingleChar(ite, Rex.end());
+				if (std::holds_alternative<range_set>(Re))
 				{
-				case U'\\': return *SYM::Backslash;
-				case U'-':return *SYM::Min;
-				case U'[': return *SYM::SquareBracketsLeft;
-				case U']':return *SYM::SquareBracketsRight;
-				case U'(': return *SYM::ParenthesesLeft;
-				case U')':return *SYM::ParenthesesRight;
-				case U'*': return *SYM::Mulity;
-				case U'?':return *SYM::Question;
-				case U'.': return *SYM::Point;
-				case U'|':return *SYM::Or;
-				case U'+':return *SYM::Add;
-				default:
+					ScopeStack.push_back(std::move(std::get<range_set>(Re)));
 					return *SYM::Char;
 				}
+				else
+					return *std::get<SYM>(Re);
 			}
 			else {
 				return std::nullopt;
 			}
 		}, [&](lr1_processor::travel tra) {
-			if (tra.is_terminal() && tra.symbol == *SYM::Char)
-				LastStack = char32_t(*(Rex.begin() + tra.terminal.token_index));
-			else {
+			if (!tra.is_terminal())
+			{
 				switch (tra.noterminal.production_index)
 				{
 				case 0:
@@ -122,7 +196,6 @@ namespace Potato
 					assert(ScopeStack.size() >= 1);
 					auto Char = std::move(*ScopeStack.rbegin());
 					ScopeStack.pop_back();
-
 					size_t n1_state = total_node.size();
 					size_t n2_state = n1_state + 1;
 					node n1;
@@ -136,12 +209,19 @@ namespace Potato
 				}
 				case 3:
 				{
-					assert(StateStack.size() != 0);
-					auto [s, e] = *StateStack.rbegin();
-					auto& n1 = total_node[s];
-					auto& n2 = total_node[e];
-					n1.table_null_shift.insert({ e });
-					n2.table_null_shift.insert({ s });
+					assert(ScopeStack.size() >= 1);
+					auto Char = std::move(*ScopeStack.rbegin());
+					Char.supplementary({ 1, std::numeric_limits<char32_t>::max() });
+					ScopeStack.pop_back();
+					size_t n1_state = total_node.size();
+					size_t n2_state = n1_state + 1;
+					node n1;
+					node n2;
+					auto re = n1.table_shift.insert({ n2_state, {} });
+					re.first->second |= Char;
+					total_node.push_back(std::move(n1));
+					total_node.push_back(std::move(n2));
+					StateStack.push_back({ n1_state, n2_state });
 					break;
 				}
 				case 4:
@@ -149,11 +229,20 @@ namespace Potato
 					assert(StateStack.size() != 0);
 					auto [s, e] = *StateStack.rbegin();
 					auto& n1 = total_node[s];
+					auto& n2 = total_node[e];
 					n1.table_null_shift.insert({ e });
-					break;
+					n2.table_null_shift.insert({ s });
 					break;
 				}
 				case 5:
+				{
+					assert(StateStack.size() != 0);
+					auto [s, e] = *StateStack.rbegin();
+					auto& n1 = total_node[s];
+					n1.table_null_shift.insert({ e });
+					break;
+				}
+				case 6:
 				{
 					assert(StateStack.size() != 0);
 					auto [s, e] = *StateStack.rbegin();
@@ -161,70 +250,80 @@ namespace Potato
 					n2.table_null_shift.insert({ s });
 					break;
 				}
-				case 6:
+				case 7:
 				{
 					assert(StateStack.size() >= 2);
+					auto [s1, e1] = *(StateStack.rbegin()+1);
+					auto [s2, e2] = *(StateStack.rbegin());
+					StateStack.resize(StateStack.size() - 2);
 					size_t n1_state = total_node.size();
 					size_t n2_state = n1_state + 1;
-					node n1;
-					node n2;
-					auto [n1s, n1e] = *StateStack.rbegin();
-					auto [n2s, n2e] = *(StateStack.rbegin() + 1);
-					StateStack.resize(StateStack.size() - 2);
-					n1.table_null_shift.insert(n1s);
-					n1.table_null_shift.insert(n2s);
-					total_node[n1e].table_null_shift.insert(n2_state);
-					total_node[n2e].table_null_shift.insert(n2_state);
-					StateStack.push_back({ n1_state, n2_state });
+					node n1; node n2;
+					n1.table_null_shift.insert({ s1 });
+					n1.table_null_shift.insert({ s2 });
+					total_node[e1].table_null_shift.insert({ n2_state });
+					total_node[e2].table_null_shift.insert({ n2_state });
 					total_node.push_back(std::move(n1));
 					total_node.push_back(std::move(n2));
-					break;
-				}
-				case 7: case 8: case 9: case 10: case 11: case 12:case 13:case 14:case 15:case 16:case 17:
-				{
-					size_t n1_state = total_node.size();
-					size_t n2_state = n1_state + 1;
-					node n1;
-					node n2;
-					Tool::range_set<char32_t> Set = InsertChar(tra.noterminal.production_index - 7, LastStack, tra.noterminal.symbol_array);
-					n1.table_shift.insert({ n1_state, std::move(Set) });
-					total_node.push_back(n1);
-					total_node.push_back(n2);
 					StateStack.push_back({ n1_state, n2_state });
 					break;
 				}
-				case 8: case 10:case 11:case 12:case 13:case 14:case 15:case 16:case 17:case 18:case 19:
+				case 8:
 				{
-					Tool::range_set<char32_t> Tem;
-					Tem |= LastStack;
-					ScopeStack.push_back(std::move(Tem));
+					assert(ScopeStack.size() >= 1);
+					auto re = std::move(*ScopeStack.rbegin());
+					ScopeStack.pop_back();
+					size_t n1_state = total_node.size();
+					size_t n2_state = n1_state + 1;
+					node n1; node n2;
+					n1.table_shift.insert({ n1_state, std::move(re) });
+					total_node.push_back(std::move(n1));
+					total_node.push_back(std::move(n2));
+					StateStack.push_back({ n1_state, n2_state });
 					break;
 				}
-				case 20:
+				case 9:
+				{
+					ScopeStack.push_back({U'-'});
+					break;
+				}
+				case 10:
+				{
+					ScopeStack.push_back({});
+					break;
+				}
+				case 11:
+				{
+					assert(ScopeStack.size() >=3);
+					auto i1 = std::move(*(ScopeStack.rbegin() + 1));
+					auto i2 = std::move(*(ScopeStack.rbegin()));
+					assert(i1.size() >= 1 && i2.size() >= 1);
+					auto min = i1[0].left;
+					auto big = i2[i2.size() - 1].right;
+					assert(min > big);
+					auto& i3 = *(ScopeStack.rbegin() + 2);
+					i3 |= range_set::range{ min, big };
+					ScopeStack.resize(ScopeStack.size() - 2);
+					break;
+				}
+				case 12:
 				{
 					assert(ScopeStack.size() >= 2);
-					auto& ite = *(ScopeStack.rbegin() + 1);
-					auto ite2 = std::move(*ScopeStack.rbegin());
-					ite |= ite2;
+					auto& i1 = *(ScopeStack.rbegin() + 1);
+					auto i2 = std::move(*(ScopeStack.rbegin()));
+					i1 |= i2;
 					ScopeStack.pop_back();
 					break;
 				}
-				case 22:
+				case 13: break;
+				case 14:
 				{
-					assert(ScopeStack.size() >= 2);
-					auto& ite = *(ScopeStack.rbegin() + 1);
-					auto ite2 = std::move(*ScopeStack.rbegin());
-					assert(ite.size() == 1);
-					assert(ite2.size() == 1);
-					auto P = ite[0];
-					auto P2 = ite2[0];
-					range total = 
-					Tool::range_set<char32_t> ss;
-					ss |= (std::min(P.left, P2.left), std::max(P.right, P2.right));
-					ScopeStack.resize(ScopeStack.size() - 2);
-					ScopeStack.push_back(std::move(ss));
+					assert(ScopeStack.size() >= 1);
+					auto& i1 = *(ScopeStack.rbegin());
+					i1 |= range_set::range{U'-'};
 					break;
 				}
+				case 15: break;
 				default:
 					assert(false);
 					break;
@@ -320,38 +419,39 @@ namespace Potato
 
 	struct nfa_null_set_search
 	{
-		nfa& ref;
-		nfa_null_set_search(nfa& ref) : ref(ref) {}
+		const nfa& ref;
+		nfa_null_set_search(const nfa& ref) : ref(ref) {}
 		using set_iterator_t = std::set<std::set<size_t>>::const_iterator;
 		std::set<std::set<size_t>>::const_iterator search(size_t head)
 		{
-			auto find = nfa_null_set_head_to_set.find(head);
-			if (find != nfa_null_set_head_to_set.end())
-				return find->second;
-			else {
-				std::set<size_t> result;
-				result.insert(head);
-				std::vector<size_t> search_stack;
-				search_stack.push_back(head);
-				while (!search_stack.empty())
+			std::set<size_t> result;
+			result.insert(head);
+			std::vector<size_t> search_stack;
+			search_stack.push_back(head);
+			while (!search_stack.empty())
+			{
+				size_t s = *search_stack.begin();
+				search_stack.pop_back();
+				auto ite = nfa_null_set_head_to_set.find(s);
+				if (ite != nfa_null_set_head_to_set.end())
 				{
-					size_t s = *search_stack.begin();
-					search_stack.pop_back();
-					auto ite = nfa_null_set_head_to_set.find(head);
-					if (ite != nfa_null_set_head_to_set.end())
-						result.insert((*ite->second).begin(), (*ite->second).end());
-					else {
-						auto re = ref.search_null_state_set(s);
-						for (auto& ite : re)
+					for (auto& ite : *(ite->second))
+						result.insert(ite);
+				}
+				else {
+					auto& node = ref[s];
+					for (auto& ite : node.table_null_shift)
+					{
+						auto re = result.insert(ite);
+						if (re.second)
 							search_stack.push_back(ite);
-						result.insert(re.begin(), re.end());
 					}
 				}
-				auto ite = nfa_null_set.insert(result);
-				auto re = nfa_null_set_head_to_set.insert({ head, ite.first });
-				assert(re.second);
-				return re.first->second;
 			}
+			auto re = nfa_null_set.insert(std::move(result));
+			if (re.second)
+				nfa_null_set_head_to_set.insert({ head, re.first });
+			return re.first;
 		}
 		std::set<std::set<size_t>> nfa_null_set;
 		std::map<size_t, decltype(nfa_null_set)::const_iterator> nfa_null_set_head_to_set;
@@ -359,16 +459,105 @@ namespace Potato
 
 	dfa dfa::create_from_rexs(std::u32string_view const* rexs, size_t length)
 	{
-		nfa nfa_result = nfa::create_from_rex(rexs, length);
 
-		std::map<std::set<size_t>, size_t> nfa_set_to_dfa;
-		std::set<std::set<size_t>> nfa_null_set;
-		std::map<size_t, std::set<size_t>::const_iterator> nfa_null_set_head_to_set;
+		using Tool::RangeLocation;
+
+		nfa nfa_result = nfa::create_from_rex(rexs, length);
+		nfa_null_set_search null_search(nfa_result);
 
 		dfa dfa_result;
-		nfa_null_set_search null_search(nfa_result);
-		dfa_result.nodes.push_back(node{});
-		std::set<std::set<size_t>> nfa_state_set;
+		auto& ref = dfa_result.nodes;
+
+		std::map<std::set<size_t>, size_t> nfa_set_to_dfa;
+		std::vector<std::set<size_t>> dfa_state_to_nfa;
+		auto ite = null_search.search(nfa_result.start_state());
+		dfa_state_to_nfa.push_back(*ite);
+		std::vector<size_t> search_stack;
+		search_stack.push_back(0);
+		while (!search_stack.empty())
+		{
+			size_t cur_state = *search_stack.rbegin();
+			search_stack.pop_back();
+			const auto& TargetSet = dfa_state_to_nfa[cur_state];
+			std::map<std::set<size_t>, range_set> mapping;
+
+			for (auto& ite : TargetSet)
+			{
+				for (auto& ite2 : nfa_result[ite].table_shift)
+				{
+					auto re = mapping.insert({ {ite2.first}, ite2.second });
+					if (!re.second)
+						re.first->second |= ite2.second;
+				}
+			}
+
+			{
+				std::vector<decltype(mapping)::iterator> search_back;
+
+				for (auto ite = mapping.begin(); ite != mapping.end(); ++ite)
+					search_back.push_back(ite);
+
+				while (!search_back.empty())
+				{
+					auto ite = *search_back.rbegin();
+					search_back.pop_back();
+					if (ite != mapping.end())
+					{
+						size_t start = 0;
+						size_t end = search_back.size();
+						while (start < end)
+						{
+							auto tar_ite = search_back[start];
+							if (tar_ite != mapping.end())
+							{
+								auto& ref = tar_ite->second;
+								auto res = ite->second.intersection_cull(ref);
+								if (!res.empty())
+								{
+									std::set<size_t> tar = ite->first;
+									tar.insert(tar_ite->first.begin(), tar_ite->first.end());
+									auto re = mapping.insert({ std::move(tar), std::move(res) });
+									assert(re.second);
+									search_back.push_back(re.first);
+									if (ref.empty())
+									{
+										mapping.erase(tar_ite);
+										search_back[start] = mapping.end();
+									}
+									if (ite->second.empty())
+									{
+										mapping.erase(ite);
+										break;
+									}
+								}
+							}
+							++start;
+						}
+					}
+				}
+			}
+
+			{
+				decltype(mapping) tem = std::move(mapping);
+				for (auto& ite : tem)
+				{
+					std::set<size_t> tar = ite.first;
+					for (auto& ite2 : ite.first)
+					{
+						auto ite3 = null_search.search(ite2);
+						tar.insert(ite3->begin(), ite3->end());
+					}
+					auto re = mapping.emplace(std::move(tar), std::move(ite.second));
+					if (!re.second)
+						re.first->second |= ite.second;
+				}
+
+				//todo
+			}
+
+
+		}
+
 		std::vector<std::set<std::set<size_t>>::const_iterator> mapping;
 		auto re = null_search.search(0);
 		auto re2 = nfa_state_set.insert(*re);
@@ -387,7 +576,7 @@ namespace Potato
 				{
 					auto re = tem_shift.insert({ ite3.first, ite3.second });
 					if (!re.second)
-						re.first->second += ite3.second;
+						re.first->second |= ite3.second;
 				}
 			}
 

@@ -33,8 +33,8 @@ namespace Potato
 		nfa& operator=(const nfa&) = default;
 		nfa& operator=(nfa&&) = default;
 		nfa() = default;
-	private:
 		node& operator[](size_t index) { return total_node[index]; }
+	private:
 		std::tuple<size_t, size_t> create_single_rex(std::u32string_view Rex);
 		std::tuple<size_t, size_t> create_from_sequence_expression(std::u32string_view Rex);
 		void simplify();

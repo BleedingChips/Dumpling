@@ -24,7 +24,7 @@ namespace Potato::Tool
 			Storage left;
 			Storage right;
 			bool operator<(const range& input) { return Less{}(left, input.left); }
-			std::tuple<RangeLocation, std::optional<range>> union_set(const range& input)
+			std::tuple<RangeLocation, std::optional<range>> union_set(const range& input) const
 			{
 				if (Less{}(right, input.left)) // right < input.left
 					return { RangeLocation::Left, std::nullopt };
@@ -51,17 +51,17 @@ namespace Potato::Tool
 						if (!Less{}(input.right, right)) // right <= input.right;
 							return { RangeLocation::BeInclude, range{input.left, right} };
 						else // right > input.right
-							return { RangeLocation::RightIntersect, range{input.left, input.righ} };
+							return { RangeLocation::RightIntersect, range{input.left, input.right} };
 					}
 				}
 			}
-			auto operator|(const range& include) { return union_set(include); }
+			auto operator|(const range& include) const { return union_set(include); }
 
-			std::tuple<RangeLocation, std::optional<range>> intersection_set(const range& input)
+			std::tuple<RangeLocation, std::optional<range>> intersection_set(const range& input) const
 			{
-				if (Less{}(right, input.left)) // right < input.left
+				if (!Less{}(input.left, right)) // right <= input.left
 					return { RangeLocation::Left, std::nullopt };
-				else if (Less{}(input.right, left)) // left > input.right
+				else if (!Less{}(left, input.right)) // left >= input.right
 					return { RangeLocation::Right, std::nullopt };
 				else {
 					if (Less{}(left, input.left)) // left < input.left
@@ -89,7 +89,7 @@ namespace Potato::Tool
 				}
 			}
 
-			auto operator*(const range& include) { return intersection_set(include); }
+			auto operator&(const range& include) const { return intersection_set(include); }
 		};
 
 		range_set(const range_set&) = default;
@@ -113,7 +113,8 @@ namespace Potato::Tool
 		range_set supplementary(const range& re = range{ std::numeric_limits<Storage>::min(), std::numeric_limits<Storage>::max() }) const;
 		range_set operator-(const range_set& input) const;
 		range_set& operator-=(const range_set& input) { auto tem = std::move(*this); *this = tem - input; return *this; }
-		
+		range_set intersection_cull(range_set& input);
+		std::vector<range, Allocator<range>>& storage() { return m_set; }
 	private:
 		std::vector<range, Allocator<range>> m_set;
 	};
@@ -121,8 +122,8 @@ namespace Potato::Tool
 	template<typename Storage, typename Less, template<typename Type> class Allocator>
 	auto range_set<Storage, Less, Allocator>::operator|(const range_set& input) const->range_set
 	{
-		range_set result;
-		auto& ref = result.m_set;
+		range_set Temporary_result;
+		auto& ref = Temporary_result.m_set;
 		ref.reserve(m_set.size() + input.m_set.size());
 		auto ite = m_set.begin();
 		auto ite2 = input.m_set.begin();
@@ -169,7 +170,7 @@ namespace Potato::Tool
 		}
 		ref.insert(ref.end(), ite, m_set.end());
 		ref.insert(ref.end(), ite2, input.m_set.end());
-		return result;
+		return Temporary_result;
 	}
 
 	template<typename Storage, typename Less, template<typename Type> class Allocator>
@@ -199,6 +200,54 @@ namespace Potato::Tool
 				break;
 			}
 		}
+	}
+
+	template<typename Storage, typename Less, template<typename Type> class Allocator>
+	auto range_set<Storage, Less, Allocator>::intersection_cull(range_set& input) -> range_set
+	{
+		range_set result;
+		auto& ref = result.m_set;
+		auto set1 = std::move(m_set);
+		auto set2 = std::move(input.m_set);
+		auto i1 = set1.begin();
+		auto i2 = set2.m_set.begin();
+		while (i1 != set1.end() && i2 != set2.end())
+		{
+			auto [lo, re] = *i1 & *i2;
+			switch (lo)
+			{
+			case RangeLocation::Left: m_set.push_back(*i1); ++i1; break;
+			case RangeLocation::BeInclude:
+				input.m_set.push_back({i2->left, i1->left});
+				ref.push_back(*re);
+				i2->left = i1->right;
+				++i1;
+				break;
+			case RangeLocation::LeftIntersect:
+				m_set.push_back({ i1->left, i2->left });
+				ref.push_back({ i2->left, i1->right }); 
+				i2->left = i1->right;
+				++i1;
+				break;
+			case RangeLocation::RightIntersect:
+				input.m_set.push_back({i2->left, i1->left});
+				ref.push_back(*re);
+				i1->left = i2->right;
+				++i2;
+				break;
+			case RangeLocation::Include:
+				m_set.push_back({ i1->left, i2->left });
+				ref.push_back(*re);
+				i1->left = i2->right;
+				++i2;
+				break;
+			case RangeLocation::Equal:
+				ref.push_back(*i1); ++i2; ++i1; break;
+			default: assert(false) break;
+			}
+		}
+		m_set.insert(m_set.end(), i1, set1.end());
+		input.m_set.insert(input.m_set.end(), i2, set2.end());
 	}
 
 	template<typename Storage, typename Less, template<typename Type> class Allocator>
@@ -252,7 +301,7 @@ namespace Potato::Tool
 	template<typename Storage, typename Less, template<typename Type> class Allocator>
 	auto range_set<Storage, Less, Allocator>::supplementary(const range& input) const -> range_set
 	{
-		assert(Less{}(input.Left, input.Right));
+		assert(Less{}(input.left, input.right));
 		range_set result;
 		auto& ref = result.m_set;
 		ref.reserve(m_set.size() + 1);
