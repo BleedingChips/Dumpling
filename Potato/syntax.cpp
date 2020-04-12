@@ -473,6 +473,7 @@ namespace Potato
 		auto ite = null_search.search(nfa_result.start_state());
 		dfa_state_to_nfa.push_back(*ite);
 		std::vector<size_t> search_stack;
+		ref.push_back(node{});
 		search_stack.push_back(0);
 		while (!search_stack.empty())
 		{
@@ -552,34 +553,35 @@ namespace Potato
 						re.first->second |= ite.second;
 				}
 
-				//todo
-			}
-
-
-		}
-
-		std::vector<std::set<std::set<size_t>>::const_iterator> mapping;
-		auto re = null_search.search(0);
-		auto re2 = nfa_state_set.insert(*re);
-		mapping.push_back(re2.first);
-		std::vector<size_t> stack;
-		stack.push_back(0);
-		while (!stack.empty())
-		{
-			size_t cur = *stack.rbegin();
-			stack.pop_back();
-			std::map<size_t, Tool::range_set<char32_t>> tem_shift;
-			auto ite = mapping[cur];
-			for (auto ite2 : *ite)
-			{
-				for (auto const& ite3 : static_cast<const nfa&>(nfa_result)[ite2].table_shift)
+				for (auto& ite : mapping)
 				{
-					auto re = tem_shift.insert({ ite3.first, ite3.second });
-					if (!re.second)
-						re.first->second |= ite3.second;
+					size_t state = ref.size();
+					auto re = nfa_set_to_dfa.emplace(ite.first, state);
+					if (re.second)
+					{
+						ref.push_back(node{});
+						search_stack.push_back(state);
+						dfa_state_to_nfa.push_back(ite.first);
+					}
+					ref[cur_state].shift.emplace(state, std::move(ite.second));
 				}
 			}
+		}
 
+		for (size_t i = 0; i < dfa_state_to_nfa.size(); ++i)
+		{
+			std::optional<size_t> accept;
+			for (auto ite : dfa_state_to_nfa[i])
+			{
+				if (nfa_result[ite].is_accept.has_value())
+				{
+					if (accept.has_value())
+						accept = std::max(*nfa_result[ite].is_accept, *accept);
+					else
+						accept = *nfa_result[ite].is_accept;
+				}
+			}
+			dfa_result[i].is_accept = accept;
 		}
 
 		return dfa_result;

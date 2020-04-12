@@ -10,10 +10,12 @@ int main()
 	using namespace Potato;
 
 	std::u32string_view Rexs[] = {
-		U"ab|c",
+		U"abb|c",
+		U"adc*",
+		U"cd[1-9][0-9][a-z]"
 	};
 
-	auto tem = dfa::create_from_rexs(Rexs, 1);
+	auto tem = dfa::create_from_rexs(Rexs, 2);
 
 
 	auto p = std::filesystem::current_path();

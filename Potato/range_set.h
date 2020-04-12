@@ -188,6 +188,7 @@ namespace Potato::Tool
 			{
 			case RangeLocation::Left: 
 				++i1; break;
+			case RangeLocation::Right: ++i2; break;
 			case RangeLocation::BeInclude: 
 			case RangeLocation::LeftIntersect: 
 				ref.push_back(*re); ++i1; break;
@@ -210,13 +211,14 @@ namespace Potato::Tool
 		auto set1 = std::move(m_set);
 		auto set2 = std::move(input.m_set);
 		auto i1 = set1.begin();
-		auto i2 = set2.m_set.begin();
+		auto i2 = set2.begin();
 		while (i1 != set1.end() && i2 != set2.end())
 		{
 			auto [lo, re] = *i1 & *i2;
 			switch (lo)
 			{
 			case RangeLocation::Left: m_set.push_back(*i1); ++i1; break;
+			case RangeLocation::Right: input.m_set.push_back(*i2); ++i2; break;
 			case RangeLocation::BeInclude:
 				input.m_set.push_back({i2->left, i1->left});
 				ref.push_back(*re);
@@ -243,11 +245,12 @@ namespace Potato::Tool
 				break;
 			case RangeLocation::Equal:
 				ref.push_back(*i1); ++i2; ++i1; break;
-			default: assert(false) break;
+			default: assert(false); break;
 			}
 		}
 		m_set.insert(m_set.end(), i1, set1.end());
 		input.m_set.insert(input.m_set.end(), i2, set2.end());
+		return std::move(result);
 	}
 
 	template<typename Storage, typename Less, template<typename Type> class Allocator>
@@ -271,6 +274,9 @@ namespace Potato::Tool
 						ref.push_back(*tem);
 						++i1;
 						tem = std::nullopt;
+						break;
+					case RangeLocation::Right:
+						++i2;
 						break;
 					case RangeLocation::LeftIntersect:
 						ref.push_back(range{ tem->left, i2.left });
