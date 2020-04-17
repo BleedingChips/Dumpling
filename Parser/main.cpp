@@ -3,19 +3,19 @@
 #include <filesystem>
 #include <fstream>
 #include "../Potato/parser.h"
-#include "../Potato/lexical.h"
+#include "../Potato/regular_expression.h"
 #include <fstream>
 int main()
 {
 	using namespace Potato;
 
 	std::u32string_view Rexs[] = {
-		U"abb|c",
-		U"adc*",
-		U"cd[1-9][0-9][a-z]"
+		U"[ab]*?ab[ab]*"
 	};
 
-	auto tem = dfa::create_from_rexs(Rexs, 2);
+	auto tem = Rex::nfa::create_from_rex(Rexs[0], 0);
+
+	//auto re = dfa_processer::comsume_analyze(tem, U"51cdsd");
 
 
 	auto p = std::filesystem::current_path();

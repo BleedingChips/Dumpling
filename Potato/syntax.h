@@ -14,6 +14,40 @@
 #include "range_set.h"
 namespace Potato
 {
+	/*
+	enum class EdgeType
+	{
+		Epsilon,
+		FirstEpsilon,
+		Comsume,
+		//FirstEpsilon,
+		LookAheadPositiveAssert,
+		LookAheadNegativeAssert,
+		LookBehindPositiveAssert,
+		LookBehindNegativeAssert,
+		CaptureStart,
+		Storage,
+	};
+
+	struct nfa
+	{
+		
+
+		struct node
+		{
+			std::optional<size_t> is_accept;
+			std::vector<std::variant<Epsilon, FirstEpsilon, LookAheadPositiveAssert, Comsume>> shift_table;
+		};
+	};
+
+
+
+
+
+
+
+
+
 
 	struct nfa
 	{
@@ -36,8 +70,6 @@ namespace Potato
 		node& operator[](size_t index) { return total_node[index]; }
 	private:
 		std::tuple<size_t, size_t> create_single_rex(std::u32string_view Rex);
-		std::tuple<size_t, size_t> create_from_sequence_expression(std::u32string_view Rex);
-		void simplify();
 		std::vector<node> total_node; 
 	};
 
@@ -50,10 +82,35 @@ namespace Potato
 			std::optional<size_t> is_accept;
 			std::map<size_t, Tool::range_set<char32_t>> shift;
 		};
+		const node& operator[](size_t index) const { return nodes[index]; }
+		size_t size() const noexcept { return nodes.size(); }
+		size_t start_symbol() const noexcept { return 0; }
+		operator bool() const noexcept { return !nodes.empty(); }
 	private:
 		node& operator[](size_t index) { return nodes[index]; }
 		std::vector<node> nodes;
 	};
+
+	struct dfa_processer
+	{
+		struct travel
+		{
+			size_t acception;
+			std::u32string_view token;
+		};
+		template<typename Function> 
+		void analyze(const dfa& dfa, std::u32string_view code, Function&& function)
+		{
+			auto Func = [](void* Data, travel tra) {
+				static_cast<Function&&>(*Data)(tra);
+			};
+			analyze_imp(dfa, code, Func, &function);
+		}
+		static std::optional<travel> comsume_analyze(const dfa& table, std::u32string_view input);
+	private:
+		void analyze_imp(const dfa& dfa, std::u32string_view code, void(*Func)(void*, travel), void* Data);
+	};
+	*/
 
 
 
@@ -78,9 +135,24 @@ namespace Potato
 			bool left_priority;
 		};
 
+		struct UnacceableProduction {};
+
+		struct production_input
+		{
+			std::vector<storage_t> production;
+			storage_t function_state;
+			std::vector<storage_t> remove_forward;
+			production_input(std::vector<storage_t> input, storage_t function_enmu = 0, std::vector<storage_t> remove = {})
+				: production(std::move(input)), function_state(function_enmu), remove_forward(std::move(remove)) {
+				if (production.size() > 0 && production.size() < std::numeric_limits<uint32_t>::max() && !is_terminal(production[0]));
+				else
+					throw UnacceableProduction{};
+			}
+		};
+
 		static lr1 create(
 			storage_t start_symbol,
-			std::vector<std::vector<storage_t>> production,
+			std::vector<production_input> production,
 			std::vector<ope_priority> priority
 		);
 
@@ -132,13 +204,7 @@ namespace Potato
 		};
 
 		lr1(
-			storage_t start_symbol,
-			std::vector<std::vector<storage_t>> production,
-			std::vector<ope_priority> priority
-		) : lr1(create(start_symbol, std::move(production), std::move(priority))) {}
-
-		lr1(
-			std::vector<std::tuple<storage_t, storage_t>> production,
+			std::vector<std::tuple<storage_t, storage_t, storage_t>> production,
 			std::vector<table> table
 		) : m_production(std::move(production)), m_table(std::move(table)) {}
 
@@ -147,7 +213,7 @@ namespace Potato
 		std::vector<storage_t> serialization();
 		static lr1 unserialization(const storage_t*, size_t length);
 
-		std::vector<std::tuple<storage_t, storage_t>> m_production;
+		std::vector<std::tuple<storage_t, storage_t, storage_t>> m_production;
 		std::vector<table> m_table;
 	private:
 		lr1() = default;
@@ -181,6 +247,7 @@ namespace Potato
 					std::size_t production_index;
 					std::size_t production_count;
 					storage_t const* symbol_array;
+					std::size_t function_enum;
 				}noterminal;
 
 				struct terminal_t

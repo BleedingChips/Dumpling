@@ -383,16 +383,16 @@ namespace Potato
 		type noterminal_start = lr1::noterminal_start();
 		type temporary_noterminal_start = lr1::start_symbol() - 1;
 		std::optional<type> start_symbol;
-		std::vector<std::vector<type>> production;
+		std::vector<lr1::production_input> production;
 		size_t temporary_production_start = 0;
 		std::vector<lr1::ope_priority> priority;
 		
 
 		{
 
-			static lr1 imp(*TerSymbol::Statement, {
-				{*TerSymbol::Statement, *TerSymbol::Terminal, *TerSymbol::Equal, *TerSymbol::Rex},
-				{*TerSymbol::Statement, *TerSymbol::Terminal, *TerSymbol::Equal, *TerSymbol::Terminal},
+			static lr1 imp = lr1::create(*TerSymbol::Statement, {
+				{{*TerSymbol::Statement, *TerSymbol::Terminal, *TerSymbol::Equal, *TerSymbol::Rex}},
+				{{*TerSymbol::Statement, *TerSymbol::Terminal, *TerSymbol::Equal, *TerSymbol::Terminal}},
 				},
 				{}
 			);
@@ -429,9 +429,9 @@ namespace Potato
 		{
 
 
-			static lr1 imp(*TerSymbol::Statement, {
-			{*TerSymbol::Statement, *TerSymbol::Terminal},
-			{*TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Terminal},
+			static lr1 imp = lr1::create(*TerSymbol::Statement, {
+				{{*TerSymbol::Statement, *TerSymbol::Terminal}},
+				{{*TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Terminal}},
 				},
 				{}
 			);
@@ -458,22 +458,22 @@ namespace Potato
 		}
 
 		{
-			static lr1 imp(
+			static lr1 imp = lr1::create(
 				*TerSymbol::Statement, {
-				{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::NoTerminal },
-				{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::Terminal },
-				{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal, *TerSymbol::TerList },
-				{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal},
-				{ *TerSymbol::Statement, *TerSymbol::Equal, *TerSymbol::TerList },
-				{ *TerSymbol::Statement, *TerSymbol::Equal },
-				{ *TerSymbol::TerList, *TerSymbol::NoTerminal },
-				{ *TerSymbol::TerList, *TerSymbol::Terminal },
-				{ *TerSymbol::TerList, *TerSymbol::RexTerminal },
-				{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::TerList},
-				{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::Or, *TerSymbol::TerList },
-				{ *TerSymbol::TerList, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace },
-				{ *TerSymbol::TerList, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace },
-				{ *TerSymbol::TerList, *TerSymbol::LB_Brace, *TerSymbol::TerList, *TerSymbol::RB_Brace },
+					{{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::NoTerminal }},
+				{{ *TerSymbol::Statement, *TerSymbol::StartSymbol, *TerSymbol::Equal, *TerSymbol::Terminal }},
+				{{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal, *TerSymbol::TerList }},
+				{{ *TerSymbol::Statement, *TerSymbol::NoTerminal, *TerSymbol::Equal}},
+				{{ *TerSymbol::Statement, *TerSymbol::Equal, *TerSymbol::TerList }},
+				{{ *TerSymbol::Statement, *TerSymbol::Equal }},
+				{{ *TerSymbol::TerList, *TerSymbol::NoTerminal }},
+				{{ *TerSymbol::TerList, *TerSymbol::Terminal }},
+				{{ *TerSymbol::TerList, *TerSymbol::RexTerminal }},
+				{{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::TerList}},
+				{{ *TerSymbol::TerList, *TerSymbol::TerList, *TerSymbol::Or, *TerSymbol::TerList }},
+				{{ *TerSymbol::TerList, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace }},
+				{{ *TerSymbol::TerList, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace }},
+				{{ *TerSymbol::TerList, *TerSymbol::LB_Brace, *TerSymbol::TerList, *TerSymbol::RB_Brace }},
 				},
 				{}
 			);
@@ -609,7 +609,7 @@ namespace Potato
 						{
 							assert(stack.size() == 1 && stack[0].size() == 1);
 							last_no_terminal = stack[0][0];
-							production.push_back({ *last_no_terminal });
+							production.push_back({ { *last_no_terminal }, 0, {} });
 							stack.clear();
 							break;
 						}
@@ -620,7 +620,7 @@ namespace Potato
 							{
 								std::vector<type> pre = { *last_no_terminal };
 								pre.insert(pre.end(), stack[0].begin(), stack[0].end());
-								production.push_back(std::move(pre));
+								production.push_back({ std::move(pre), 0 , {} });
 								stack.clear();
 							}
 							else
@@ -631,7 +631,7 @@ namespace Potato
 						{
 							assert(stack.size() == 0);
 							if (last_no_terminal)
-								production.push_back({ *last_no_terminal });
+								production.push_back({ { *last_no_terminal }, 0, {} });
 							else
 								throw Error::SBNFError{ lin, L"Miss No Terminal Define", std::wstring{} };
 							break;
@@ -729,23 +729,24 @@ namespace Potato
 			}
 
 			temporary_production_start = production.size();
-			production.insert(production.end(), std::move_iterator(temporary_production.begin()), std::move_iterator(temporary_production.end()));
+			for (auto& ite : temporary_production)
+				production.push_back({ std::move(ite), 0, {} });
 
 			for (auto& ite : temporary_noterminal_buffer)
 				temporary_noterminal.insert(std::get<1>(ite));
 
 		}
 		{
-			lr1 imp(
+			lr1 imp = lr1::create(
 				*TerSymbol::Statement, {
-				{ *TerSymbol::TerList, *TerSymbol::RexTerminal },
-				{ *TerSymbol::TerList, *TerSymbol::Terminal },
-				{ *TerSymbol::TerList, *TerSymbol::TerList,  *TerSymbol::TerList},
-				{ *TerSymbol::Statement, *TerSymbol::RexTerminal },
-				{ *TerSymbol::Statement, *TerSymbol::Terminal },
-				{ *TerSymbol::Statement, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace },
-				{ *TerSymbol::Statement, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace },
-				{ *TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Statement },
+					{{ *TerSymbol::TerList, *TerSymbol::RexTerminal }},
+				{{ *TerSymbol::TerList, *TerSymbol::Terminal }},
+				{{ *TerSymbol::TerList, *TerSymbol::TerList,  *TerSymbol::TerList}},
+				{{ *TerSymbol::Statement, *TerSymbol::RexTerminal }},
+				{{ *TerSymbol::Statement, *TerSymbol::Terminal }},
+				{{ *TerSymbol::Statement, *TerSymbol::LS_Brace, *TerSymbol::TerList, *TerSymbol::RS_Brace }},
+				{{ *TerSymbol::Statement, *TerSymbol::LM_Brace, *TerSymbol::TerList, *TerSymbol::RM_Brace }},
+				{{ *TerSymbol::Statement, *TerSymbol::Statement, *TerSymbol::Statement }},
 				},
 				{}
 			);
@@ -824,7 +825,7 @@ namespace Potato
 				}
 			}
 
-			lr1 imp(
+			lr1 imp = lr1::create(
 				*start_symbol, 
 				std::move(production),
 				std::move(priority)

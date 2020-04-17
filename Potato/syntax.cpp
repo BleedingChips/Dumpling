@@ -3,9 +3,45 @@
 #include <string>
 #include <iostream>
 
+struct generated_epsilon_nfa
+{
+	using range_set = Potato::Tool::range_set<char32_t>;
+	struct Epsilon { size_t state; };
+	struct FirstEpsilon { size_t state; };
+	struct LookAheadPositiveAssert { size_t state; };
+	struct Comsume { size_t state; range_set set; };
+};
+
+
+
+struct  epsilon_nfa_generated
+{
+	struct node
+	{
+
+	};
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 namespace Potato
 {
 
+	/*
 	using range_set = Tool::range_set<char32_t>;
 
 	enum class DFASymbol : lr1::storage_t
@@ -132,40 +168,47 @@ namespace Potato
 		static lr1 DFALr1 = lr1::create(
 			*DFASymbol::Statement,
 			{
-				{*SYM::Statement, *SYM::Statement, *SYM::Expression},
-				{*SYM::Expression, *SYM::ParenthesesLeft, *SYM::Expression, *SYM::ParenthesesRight},
-				{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::CharList, *SYM::SquareBracketsRight},
-				{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::Not, *SYM::CharList, *SYM::SquareBracketsRight},
-				{*SYM::Expression, *SYM::Expression, *SYM::Mulity},
+				{{*SYM::Statement, *SYM::Statement, *SYM::Expression}, 0},
+				{{*SYM::Expression, *SYM::ParenthesesLeft, *SYM::Expression, *SYM::ParenthesesRight}, 1},
+				{{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::CharList, *SYM::SquareBracketsRight}, 2},
+				{{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::Not, *SYM::CharList, *SYM::SquareBracketsRight}, 3},
+				{{*SYM::Expression, *SYM::Expression, *SYM::Mulity}, 4},
 
-				{*SYM::Expression, *SYM::Expression, *SYM::Question},
-				{*SYM::Expression, *SYM::Expression, *SYM::Add},
-				{*SYM::Expression, *SYM::Expression, *SYM::Or, *SYM::Statement},
-				{*SYM::Expression, *SYM::Char},
-				{*SYM::CharListStart, *SYM::Min},
+				{{*SYM::Expression, *SYM::Expression, *SYM::Question}, 5},
+				{{*SYM::Expression, *SYM::Expression, *SYM::Add}, 6},
+				{{*SYM::Expression, *SYM::Expression, *SYM::Or, *SYM::Expression}, 7},
+				{{*SYM::Expression, *SYM::Char}, 8},
+				{{*SYM::Expression, *SYM::Min}, 15},
+				{{*SYM::CharListStart, *SYM::Min}, 9},
 
-				{*SYM::CharListStart},
-				{*SYM::CharListStart, *SYM::CharListStart, *SYM::Char, *SYM::Min, *SYM::Char},
-				{*SYM::CharListStart, *SYM::CharListStart, *SYM::Char},
-				{*SYM::CharList, *SYM::CharListStart},
-				{*SYM::CharList, *SYM::CharListStart, *SYM::Min},
+				{{*SYM::CharListStart}, 10},
+				{{*SYM::CharListStart, *SYM::CharListStart, *SYM::Char, *SYM::Min, *SYM::Char}, 11},
+				{{*SYM::CharListStart,* SYM::CharListStart,* SYM::Char}, 12},
+				{ {*SYM::CharList,* SYM::CharListStart}, 13},
 
-				{*SYM::Statement, *SYM::Expression},
+				{{*SYM::Statement, *SYM::Expression}, 14}
 			}, {
 				{*SYM::Mulity, *SYM::Question, *SYM::Add}, {*SYM::Or}
 			}
 			);
 
 		std::vector<std::tuple<size_t, size_t>> StateStack;
+		std::optional<Tool::range_set<char32_t>> TemporaryRange;
 		std::vector<Tool::range_set<char32_t>> ScopeStack;
 
 		lr1_process(DFALr1, [&](std::u32string_view::const_iterator& ite) -> std::optional<lr1::storage_t> {
+			if (TemporaryRange)
+			{
+				ScopeStack.push_back(std::move(*TemporaryRange));
+				TemporaryRange = std::nullopt;
+			}
+				
 			if (ite != Rex.end())
 			{
 				auto Re = HandleSingleChar(ite, Rex.end());
 				if (std::holds_alternative<range_set>(Re))
 				{
-					ScopeStack.push_back(std::move(std::get<range_set>(Re)));
+					TemporaryRange = std::move(std::get<range_set>(Re));
 					return *SYM::Char;
 				}
 				else
@@ -177,7 +220,7 @@ namespace Potato
 		}, [&](lr1_processor::travel tra) {
 			if (!tra.is_terminal())
 			{
-				switch (tra.noterminal.production_index)
+				switch (tra.noterminal.function_enum)
 				{
 				case 0:
 				{
@@ -190,7 +233,7 @@ namespace Potato
 					StateStack.pop_back();
 					break;
 				}
-				case 1:
+				case 1: break;
 				case 2:
 				{
 					assert(ScopeStack.size() >= 1);
@@ -268,6 +311,8 @@ namespace Potato
 					StateStack.push_back({ n1_state, n2_state });
 					break;
 				}
+				case 15:
+					ScopeStack.push_back({ U'-' });
 				case 8:
 				{
 					assert(ScopeStack.size() >= 1);
@@ -276,7 +321,7 @@ namespace Potato
 					size_t n1_state = total_node.size();
 					size_t n2_state = n1_state + 1;
 					node n1; node n2;
-					n1.table_shift.insert({ n1_state, std::move(re) });
+					n1.table_shift.insert({ n2_state, std::move(re) });
 					total_node.push_back(std::move(n1));
 					total_node.push_back(std::move(n2));
 					StateStack.push_back({ n1_state, n2_state });
@@ -300,7 +345,7 @@ namespace Potato
 					assert(i1.size() >= 1 && i2.size() >= 1);
 					auto min = i1[0].left;
 					auto big = i2[i2.size() - 1].right;
-					assert(min > big);
+					assert(min < big);
 					auto& i3 = *(ScopeStack.rbegin() + 2);
 					i3 |= range_set::range{ min, big };
 					ScopeStack.resize(ScopeStack.size() - 2);
@@ -315,15 +360,7 @@ namespace Potato
 					ScopeStack.pop_back();
 					break;
 				}
-				case 13: break;
-				case 14:
-				{
-					assert(ScopeStack.size() >= 1);
-					auto& i1 = *(ScopeStack.rbegin());
-					i1 |= range_set::range{U'-'};
-					break;
-				}
-				case 15: break;
+				case 13: case 14: break;
 				default:
 					assert(false);
 					break;
@@ -344,57 +381,7 @@ namespace Potato
 			result[e].is_accept = index;
 			result[result.start_state()].table_null_shift.insert(s);
 		}
-		result.simplify();
 		return std::move(result);
-	}
-
-	void nfa::simplify()
-	{
-		/*
-		assert(*this);
-		bool Change = true;
-		size_t last_search = total_node.size();
-		assert(last_search > 1);
-		while (Change)
-		{
-			Change = false;
-			for (size_t i = 1; i < last_search; ++i)
-			{
-				auto& ref = total_node[i];
-				if (ref.table_null_shift.size() == 1 && ref.table_shift.size() == 0)
-				{
-					size_t target_shift = *ref.table_null_shift.begin();
-					size_t end = last_search - 1;
-					for (size_t k = 1; k < last_search; ++k)
-					{
-						if (k != i)
-						{
-							auto& ref2 = total_node[k];
-							size_t count = ref2.table_null_shift.erase(target_shift);
-							if (count != 0)
-								ref2.table_null_shift.insert(i);
-
-							auto re = ref2.table_shift.find(target_shift);
-							if (re != ref2.table_shift.end())
-							{
-								auto set = std::move(re->second);
-								ref2.table_shift.erase(re);
-								auto re2 = ref2.table_shift.insert({ i, std::move(set) });
-								if (!re2.second)
-									re2.first->second += set;
-							}
-						}
-					}
-					std::swap(total_node[i], total_node[target_shift]);
-					std::swap(total_node[target_shift], total_node[end]);
-					Change = true;
-					last_search -= 1;
-					break;
-				}
-			}
-		}
-		total_node.resize(last_search);
-		*/
 	}
 
 	std::set<size_t> nfa::search_null_state_set(size_t start) const
@@ -500,7 +487,7 @@ namespace Potato
 
 				while (!search_back.empty())
 				{
-					auto ite = *search_back.rbegin();
+					auto ite = std::move(*search_back.rbegin());
 					search_back.pop_back();
 					if (ite != mapping.end())
 					{
@@ -563,11 +550,12 @@ namespace Potato
 						search_stack.push_back(state);
 						dfa_state_to_nfa.push_back(ite.first);
 					}
-					ref[cur_state].shift.emplace(state, std::move(ite.second));
+					auto re2 = ref[cur_state].shift.emplace(re.first->second, std::move(ite.second));
+					assert(re2.second);
 				}
 			}
 		}
-
+		
 		for (size_t i = 0; i < dfa_state_to_nfa.size(); ++i)
 		{
 			std::optional<size_t> accept;
@@ -584,116 +572,169 @@ namespace Potato
 			dfa_result[i].is_accept = accept;
 		}
 
-		return dfa_result;
 
-
-
-		/*
-		using SYM = DFASymbol;
-		
-		std::u32string Table;
-		std::map<size_t, std::tuple<size_t, size_t>> AcceptMapping;
-		std::vector<std::tuple<size_t, size_t>> NfaStateMapping;
-		std::vector<nfa> TotalNode;
-		TotalNode.push_back(nfa{});
-
-		for (size_t i = 0; i < length; ++i)
 		{
-			auto [Id, Rex] = rexs[i];
-			auto [rs, re] = create_nfa_from_rex(TotalNode, Rex);
-			NfaStateMapping.push_back({ rs, re });
-			TotalNode[0].NullShift.insert(rs);
-			size_t s = Table.size();
-			Table.insert(Table.end(), Id.begin(), Id.end());
-			size_t e = Table.size();
-			AcceptMapping.insert({ re, {s, e} });
-		}
-
-		struct dfa_node
-		{
-			std::vector<std::tuple<scope_set, size_t>> Shift;
-		};
-
-		std::map<std::set<size_t>, size_t> TotalNullSet;
-		std::vector<dfa_node> TotalDFANode;
-		using ite_ptr = std::map<std::set<size_t>, size_t>::iterator;
-		std::map<size_t, ite_ptr> nfa_to_pointer;
-		std::vector<ite_ptr> search_stack;
-		{
-			auto result = search_null_set(0, TotalNode);
-			auto re = TotalNullSet.insert({ std::move(result), 0 });
-			TotalDFANode.push_back(dfa_node{});
-			assert(re.second);
-			nfa_to_pointer.insert({ 0, re.first });
-			search_stack.push_back(re.first);
-		}
-
-		while (!search_stack.empty())
-		{
-			auto ite = *search_stack.rbegin();
-			search_stack.pop_back();
-			std::vector<std::tuple<scope, size_t>> Shift;
-			for (auto nfaIndex : ite->first)
+			std::map<size_t, std::set<size_t>> accept_state_map;
+			for (size_t i = 0; i < dfa_result.size(); ++i)
 			{
-				for (auto [scope, index] : TotalNode[nfaIndex].Shift)
+				auto& ref = dfa_result[i];
+				if (ref.shift.empty())
 				{
-					size_t target_dfa = 0;
-					auto re = nfa_to_pointer.find(index);
-					if (re == nfa_to_pointer.end())
-					{
-						auto set = search_null_set(index, TotalNode);
-						auto re = TotalNullSet.insert({ std::move(set), TotalNullSet.size() });
-						if (re.second)
-						{
-							TotalDFANode.push_back(dfa_node{});
-							nfa_to_pointer.insert({ index, re.first});
-							search_stack.push_back(re.first);
-						}
-						target_dfa = re.second;
-					}
-					else
-						target_dfa = re->second->second;
+					assert(ref.is_accept);
+					auto re = accept_state_map.insert({ *ref.is_accept, {} });
+					re.first->second.insert(i);
+				}
+			}
 
-					Shift.push_back({scope, index});
+			std::vector<std::tuple<std::set<size_t>, std::optional<size_t>, size_t>> search_stack;
+			for (auto& ite : accept_state_map)
+				search_stack.push_back({ std::move(ite.second), ite.first, 0 });
+
+			struct OptionalLess
+			{
+				bool operator()(const std::optional<size_t>& i1, const std::optional<size_t>& i2) const noexcept
+				{
+					return !i1 && i2 || (i1 && i2 && *i1 < *i2);
+				}
+			};
+
+			while (!search_stack.empty())
+			{
+				auto [tar_stack, accept, tar_index] = std::move(*search_stack.rbegin());
+				search_stack.pop_back();
+				if (tar_stack.size() >= 2)
+				{
+					std::map<std::optional<size_t>, std::set<size_t>, OptionalLess> stack;
+					size_t tar_state = ref.size();
+					for (size_t i = 0; i < ref.size(); ++i)
+					{
+						auto& ref_node = ref[i];
+						std::optional<range_set> shift_range;
+						for (auto ite = ref_node.shift.begin(); ite != ref_node.shift.end();)
+						{
+							auto re = tar_stack.find(ite->first);
+							if (re != tar_stack.end())
+							{
+								if (shift_range)
+									*shift_range |= ite->second;
+								else
+									shift_range = std::move(ite->second);
+								ite = ref_node.shift.erase(ite);
+							}
+							else
+								++ite;
+						}
+						if (shift_range)
+						{
+							ref_node.shift.insert({ tar_state , std::move(*shift_range) });
+							if (ref_node.shift.size() == 1)
+							{
+								auto re = stack.insert({ ref_node.is_accept, {} });
+								re.first->second.insert(i);
+							}
+						}
+					}
+					node cur;
+					cur.is_accept = accept;
+					std::optional<range_set> shift_range;
+					for (auto& ite : tar_stack)
+					{
+						auto& ref_node = ref[ite];
+						if (ref_node.shift.size() == 1)
+						{
+							if (shift_range)
+								*shift_range |= ref_node.shift.begin()->second;
+							else
+								shift_range = std::move(ref_node.shift.begin()->second);
+						}
+						else if (ref_node.shift.size() > 1)
+							assert(false);
+						ref_node.is_accept = std::nullopt;
+						ref_node.shift.clear();
+					}
+
+					if (shift_range)
+						cur.shift.insert({ tar_index, std::move(*shift_range) });
+					ref.push_back(std::move(cur));
+					for (auto& ite : stack)
+					{
+						if (ite.second.size() >= 2)
+							search_stack.push_back({ std::move(ite.second), ite.first, tar_state });
+					}
+				}
+			}
+
+			auto ite = ref.begin();
+			for (auto ite = ref.begin();  ite != ref.end(); ++ite)
+			{
+				if (!ite->is_accept.has_value() && ite->shift.empty())
+				{
+					auto ite2 = ite + 1;
+					bool Swap = false;
+					for (auto ite2 = ite + 1; ite2 != ref.end(); ++ite2)
+					{
+						if (ite2->is_accept || !ite2->shift.empty())
+						{
+							std::swap(*ite, *ite2);
+							size_t cur_index = ite2 - ref.begin();
+							size_t swap_index = ite - ref.begin();
+							for (auto& ite3 : ref)
+							{
+								auto find = ite3.shift.find(cur_index);
+								if (find != ite3.shift.end())
+								{
+									auto range = std::move(find->second);
+									ite3.shift.erase(find);
+									auto re = ite3.shift.insert({ swap_index, std::move(range) });
+									assert(re.second);
+								}
+							}
+							Swap = true;
+							break;
+						}
+					}
+					if (!Swap){
+						ref.erase(ite, ref.end());
+						break;
+					}
 				}
 			}
 		}
-
-
-		std::map<std::set<size_t>, size_t> nfa_to_dfa;
-		std::map<size_t, size_t> NFAAccept;
-
-		std::set<size_t> current_set;
-		std::vector<size_t> stack;
-		stack.push_back(0);
-
-
-		bool NewSet = false;
-
-		while (!stack.empty())
-		{
-			size_t cur = *stack.rbegin();
-			current_set.insert(cur);
-			for (auto& ite : TotalNode[cur].NullShift)
-			{
-				auto re = current_set.insert(ite);
-				if (re.second)
-					stack.push_back(ite);
-			}
-		}
-
-		return dfa{};
-		*/
-		
-
-
-		/*
-		static lr1 lr1 = lr1::create(
-			{}
-		);
-		*/
+		return dfa_result;
 	}
 
+	auto dfa_processer::comsume_analyze(const dfa& table, std::u32string_view input) ->std::optional<travel>
+	{
+		std::optional<travel> result;
+		size_t state = table.start_symbol();
+		auto ite_length = 0;
+		do
+		{
+			auto& dfa_node = table[state];
+			if (dfa_node.is_accept)
+				result = travel{ *dfa_node.is_accept, std::u32string_view(input.data(), ite_length) };
+			if (ite_length < input.size())
+			{
+				bool Change = false;
+				for (auto& ite2 : dfa_node.shift)
+				{
+					if (ite2.second.intersection_find({ input[ite_length], input[ite_length] + 1 }))
+					{
+						state = ite2.first;
+						++ite_length;
+						Change = true;
+						break;
+					}
+				}
+				if (!Change)
+					break;
+			}
+			else
+				break;
+		} while (true);
+		return result;
+	}
+	*/
 
 }
 
@@ -703,7 +744,7 @@ namespace
 {
 	using namespace Potato;
 	using storage_t = lr1::storage_t;
-	std::set<storage_t> calculate_nullable_set(const std::vector<std::vector<storage_t>>& production)
+	std::set<storage_t> calculate_nullable_set(const std::vector<lr1::production_input>& production)
 	{
 		std::set<storage_t> result;
 		bool set_change = true;
@@ -712,16 +753,16 @@ namespace
 			set_change = false;
 			for (auto& ite : production)
 			{
-				assert(ite.size() >= 1);
-				if (ite.size() == 1)
+				assert(ite.production.size() >= 1);
+				if (ite.production.size() == 1)
 				{
-					set_change |= result.insert(ite[0]).second;
+					set_change |= result.insert(ite.production[0]).second;
 				}
 				else {
 					bool nullable_set = true;
-					for (size_t index = 1; index < ite.size(); ++index)
+					for (size_t index = 1; index < ite.production.size(); ++index)
 					{
-						storage_t symbol = ite[index];
+						storage_t symbol = ite.production[index];
 						if (lr1::is_terminal(symbol) || result.find(symbol) == result.end())
 						{
 							nullable_set = false;
@@ -729,7 +770,7 @@ namespace
 						}
 					}
 					if (nullable_set)
-						set_change |= result.insert(ite[0]).second;
+						set_change |= result.insert(ite.production[0]).second;
 				}
 			}
 		}
@@ -737,7 +778,7 @@ namespace
 	}
 
 	std::map<storage_t, std::set<storage_t>> calculate_noterminal_first_set(
-		const std::vector<std::vector<storage_t>>& production,
+		const std::vector<lr1::production_input>& production,
 		const std::set<storage_t>& nullable_set
 	)
 	{
@@ -748,11 +789,11 @@ namespace
 			set_change = false;
 			for (auto& ite : production)
 			{
-				assert(ite.size() >= 1);
-				for (size_t index = 1; index < ite.size(); ++index)
+				assert(ite.production.size() >= 1);
+				for (size_t index = 1; index < ite.production.size(); ++index)
 				{
-					auto head = ite[0];
-					auto target = ite[index];
+					auto head = ite.production[0];
+					auto target = ite.production[index];
 					if (lr1::is_terminal(target))
 					{
 						set_change |= result[head].insert(target).second;
@@ -915,7 +956,7 @@ namespace
 		temporary_state_map handled,
 		std::set<std::set<storage_t>>& total_forward,
 		const std::map<storage_t, std::set<storage_t>>& production_map,
-		const std::vector<std::vector<storage_t>>& production,
+		const std::vector<lr1::production_input>& production,
 		const std::set<storage_t>& nullable_set,
 		const std::map<storage_t, std::set<storage_t>>& symbol_first_set,
 		const std::vector<std::set<storage_t>>& remove_forward
@@ -940,17 +981,17 @@ namespace
 			assert(production.size() > pi.m_production_index);
 			auto& prod = production[static_cast<size_t>(pi.m_production_index)];
 			storage_t ei = pi.m_production_element_index + 1;
-			assert(prod.size() >= ei);
-			if (prod.size() > ei)
+			assert(prod.production.size() >= ei);
+			if (prod.production.size() > ei)
 			{
-				storage_t target_symbol = prod[static_cast<size_t>(ei)];
+				storage_t target_symbol = prod.production[static_cast<size_t>(ei)];
 				if (!lr1::is_terminal(target_symbol))
 				{
 					auto find_re2 = production_map.find(target_symbol);
 					if (find_re2 != production_map.end())
 					{
 						assert(!find_re2->second.empty());
-						auto forward_set = calculate_production_first_set_forward(prod.begin() + ei + 1, prod.end(), nullable_set, symbol_first_set, *(find_re->second));
+						auto forward_set = calculate_production_first_set_forward(prod.production.begin() + ei + 1, prod.production.end(), nullable_set, symbol_first_set, *(find_re->second));
 						if (!forward_set.empty())
 						{
 							auto forward_set_ite = total_forward.insert(std::move(forward_set)).first;
@@ -990,7 +1031,7 @@ namespace
 		const std::set<production_element>& input,
 		std::set<std::set<storage_t>>& total_forward,
 		const std::map<storage_t, std::set<storage_t>>& production_map,
-		const std::vector<std::vector<storage_t>>& production,
+		const std::vector<lr1::production_input>& production,
 		const std::set<storage_t>& nullable_set,
 		const std::map<storage_t, std::set<storage_t>>& symbol_first_set,
 		const std::vector<std::set<storage_t>>& remove_forward
@@ -1003,7 +1044,7 @@ namespace
 		{
 			storage_t pi = ite.m_index.m_production_index;
 			assert(production.size() > pi);
-			auto& prod = production[ite.m_index.m_production_index];
+			auto& prod = production[ite.m_index.m_production_index].production;
 			storage_t ei = ite.m_index.m_production_element_index + 1;
 			assert(prod.size() >= ei);
 			if (ei == prod.size())
@@ -1023,7 +1064,7 @@ namespace
 								old_state = static_cast<storage_t>(state.size());
 							else if (pi == ite.m_index.m_production_index)
 								new_state = static_cast<storage_t>(state.size());
-							state.push_back({ ite.m_index.m_production_element_index, production[ite.m_index.m_production_index], *ite.m_forward_set });
+							state.push_back({ ite.m_index.m_production_element_index, production[ite.m_index.m_production_index].production, *ite.m_forward_set });
 						}
 						throw lr1::reduce_conflict{ ite2, old_state, new_state, std::move(state) };
 					}
@@ -1110,30 +1151,16 @@ namespace Potato
 
 	lr1 lr1::create(
 		uint32_t start_symbol,
-		std::vector<std::vector<storage_t>> production,
+		std::vector<production_input> production,
 		std::vector<ope_priority> priority
 	)
 	{
-		std::vector<std::tuple<storage_t, storage_t>> m_production;
+		std::vector<std::tuple<storage_t, storage_t, storage_t>> m_production;
 		std::vector<table> m_table;
-		for (auto& ite : production)
-		{
-			assert(ite.size() <= std::numeric_limits<uint32_t>::max());
-			if(is_terminal(ite[0]))
-				throw unavailable_symbol{};
-			for (auto& ite2 : ite)
-			{
-				if (ite2 == lr1::start_symbol() || ite2 == lr1::eof_symbol())
-					throw unavailable_symbol{};
-			}
-		}
-		production.push_back({ lr1::start_symbol(), start_symbol });
+		production.push_back({ { lr1::start_symbol(), start_symbol }, 0, {} });
 		m_production.reserve(production.size() + 1);
 		for (auto& ite : production)
-		{
-			assert(ite.size() <= std::numeric_limits<uint32_t>::max());
-			m_production.push_back({ ite[0], static_cast<uint32_t>(ite.size()) - 1 });
-		}
+			m_production.push_back({ ite.production[0], static_cast<uint32_t>(ite.production.size()) - 1, ite.function_state });
 
 		auto null_set = calculate_nullable_set(production);
 		auto first_set = calculate_noterminal_first_set(production, null_set);
@@ -1158,11 +1185,27 @@ namespace Potato
 			for (uint32_t x = 0; x < production.size(); ++x)
 			{
 				auto& ref = production[x];
-				assert(!ref.empty());
+				assert(!ref.production.empty());
 
-				if (ref.size() >= 2)
 				{
-					auto symbol = *(ref.rbegin() + 1);
+					auto& ref = production[x].remove_forward;
+					auto& tar = remove[x];
+					for (auto& ite : ref)
+					{
+						if (is_terminal(ite))
+							tar.insert(ite);
+						else {
+							auto find = first_set.find(ite);
+							assert(find != first_set.end());
+							tar.insert(find->second.begin(), find->second.end());
+						}
+					}
+				}
+				
+
+				if (ref.production.size() >= 2)
+				{
+					auto symbol = *(ref.production.rbegin() + 1);
 					auto ite = remove_map.find(symbol);
 					if (ite != remove_map.end())
 						remove[x].insert(ite->second.begin(), ite->second.end());
@@ -1171,23 +1214,23 @@ namespace Potato
 				for (uint32_t y = x + 1; y < production.size(); ++y)
 				{
 					auto& ref2 = production[y];
-					assert(!ref.empty());
-					if (ref[0] == ref2[0])
+					assert(!ref.production.empty());
+					if (ref.production[0] == ref2.production[0])
 					{
-						uint32_t index = diff(ref, ref2);
-						if (index < ref.size() && index < ref2.size())
+						uint32_t index = diff(ref.production, ref2.production);
+						if (index < ref.production.size() && index < ref2.production.size())
 							continue;
-						else if (index == ref.size() && index == ref2.size())
-							throw same_production{ x, y, production[x] };
+						else if (index == ref.production.size() && index == ref2.production.size())
+							throw same_production{ x, y, production[x].production };
 						else {
-							if (index < ref.size())
+							if (index < ref.production.size())
 							{
-								if (ref[index] != ref[0])
-									insert_set(remove[x], first_set, ref[index]);
+								if (ref.production[index] != ref.production[0])
+									insert_set(remove[x], first_set, ref.production[index]);
 							}
 							else {
-								if (ref2[index] != ref2[0])
-									insert_set(remove[y], first_set, ref2[index]);
+								if (ref2.production[index] != ref2.production[0])
+									insert_set(remove[y], first_set, ref2.production[index]);
 							}
 						}
 					}
@@ -1204,8 +1247,8 @@ namespace Potato
 			for (uint32_t index = 0; index < production.size(); ++index)
 			{
 				auto& ref = production[index];
-				assert(ref.size() >= 1);
-				production_map[ref[0]].insert(index);
+				assert(ref.production.size() >= 1);
+				production_map[ref.production[0]].insert(index);
 			}
 		}
 
@@ -1265,9 +1308,10 @@ namespace Potato
 		data.push_back(static_cast<storage_t>(m_production.size()));
 		for (auto& ite : m_production)
 		{
-			auto [i1, i2] = ite;
+			auto [i1, i2, i3] = ite;
 			data.push_back(i1);
 			data.push_back(i2);
+			data.push_back(i3);
 		}
 		data.push_back(static_cast<storage_t>(m_table.size()));
 		for (auto& ite : m_table)
@@ -1291,16 +1335,17 @@ namespace Potato
 	lr1 lr1::unserialization(const storage_t* data, size_t length)
 	{
 		size_t ite = 0;
-		std::vector<std::tuple<storage_t, storage_t>> m_production;
+		std::vector<std::tuple<storage_t, storage_t, storage_t>> m_production;
 		{
 			size_t size = data[ite++];
 			for (size_t i = 0; i < size; ++i)
 			{
-				storage_t i1 = data[ite + i * 2];
-				storage_t i2 = data[ite + i * 2 + 1];
-				m_production.push_back({ i1, i2 });
+				storage_t i1 = data[ite + i * 3];
+				storage_t i2 = data[ite + i * 3 + 1];
+				storage_t i3 = data[ite + i * 3 + 2];
+				m_production.push_back({ i1, i2, i3 });
 			}
-			ite += size * 2;
+			ite += size * 3;
 		}
 		size_t size = data[ite++];
 		std::vector<table> tab_v;
@@ -1352,7 +1397,8 @@ namespace Potato
 				assert(production_index < m_table_ref.m_production.size());
 				storage_t head_symbol;
 				storage_t production_count;
-				std::tie(head_symbol, production_count) = m_table_ref.m_production[production_index];
+				storage_t function_state;
+				std::tie(head_symbol, production_count, function_state) = m_table_ref.m_production[production_index];
 				assert(m_state_stack.size() >= production_count);
 				
 				if (head_symbol != lr1::start_symbol())
@@ -1363,6 +1409,7 @@ namespace Potato
 					input.noterminal.production_index = production_index;
 					input.noterminal.production_count = production_count;
 					input.noterminal.symbol_array = m_state_stack.data() + m_state_stack.size() - production_count;
+					input.noterminal.function_enum = function_state;
 					(*Function)(data, input);
 					m_state_stack.resize(m_state_stack.size() - production_count);
 					m_input_buffer.push_back({ head_symbol, 0 });

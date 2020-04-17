@@ -48,6 +48,9 @@
     <ClInclude Include="..\Potato\range_set.h">
       <Filter>Potato</Filter>
     </ClInclude>
+    <ClInclude Include="..\Potato\regular_expression.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Potato\character_encoding.cpp">
@@ -66,6 +69,9 @@
       <Filter>头文件</Filter>
     </ClCompile>
     <ClCompile Include="..\Potato\parser.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\regular_expression.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
   </ItemGroup>
