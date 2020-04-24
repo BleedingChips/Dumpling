@@ -1,37 +1,463 @@
 #include "parser.h"
-#include <fstream>
-#include "character_encoding.h"
 #include <assert.h>
-namespace Potato
+#include <vector>
+
+namespace
 {
 
-	parser_sbnf::parser_sbnf(
-		std::wstring table,
-		std::vector<std::tuple<std::size_t, std::size_t>> sym_list,
-		size_t ter_count,
-		std::vector<std::tuple<std::wstring, storage_t>> terminal_rex,
-		std::set<storage_t> unused_terminal,
-		size_t temporary_prodution_start,
-		lr1 lr1imp
-	) : table(std::move(table)), sym_list(std::move(sym_list)), ter_count(ter_count),
-		terminal_rex(std::move(terminal_rex)), unused_terminal(std::move(unused_terminal)),
-		temporary_prodution_start(temporary_prodution_start), lr1imp(std::move(lr1imp))
+	using namespace Potato::Lexical;
+	using namespace Potato::Syntax;
+
+	enum class SYM : lr1_storage::storage_t
 	{
-		build_rex();
+		Empty = 0,
+		Line,
+		Terminal,
+		Equal,
+		Mask,
+		Rex,
+		NoTerminal,
+		StartSymbol,
+		LB_Brace,
+		RB_Brace,
+		LM_Brace,
+		RM_Brace,
+		LS_Brace,
+		RS_Brace,
+		Or,
+		Number,
+		Colon,
+		TokenMax,
+		Command,
+
+		Statement = lr1::noterminal_start(),
+		FunctionEnum,
+		ProductionHead,
+		RemoveElement,
+		RemoveExpression,
+		Expression,
+	};
+
+	std::map<SYM, std::u32string_view> Rexs = {
+		{SYM::Empty, UR"(\s)" },
+		{SYM::Line, U"\r\n|\n"},
+		{SYM::Terminal, UR"([a-zA-Z_][a-zA-Z_0-9]*)"},
+		{SYM::Equal, UR"(:=)"},
+		{SYM::Mask, UR"(\%\%\%)"},
+		{SYM::Rex, UR"('.*?[^\\]')"},
+		{SYM::NoTerminal, UR"(\<[_a-zA-Z][_a-zA-Z0-9]*\>)"},
+		{SYM::StartSymbol, UR"(\$)"},
+		{SYM::LB_Brace, UR"(\{)"},
+		{SYM::RB_Brace, UR"(\})"},
+		{SYM::LM_Brace, UR"(\[)"},
+		{SYM::RM_Brace, UR"(\])"},
+		{SYM::LS_Brace, UR"(\()"},
+		{SYM::RS_Brace, UR"(\))"},
+		{SYM::Colon, UR"(:)"},
+		{SYM::Or, UR"(\|)"},
+		{SYM::Number, UR"([1-9][0-9]*)"},
+		{SYM::Command, UR"(/\*[.\n]*?\*/|//.*?\n)"},
+	};
+	constexpr lr1::storage_t operator*(SYM i) { return static_cast<size_t>(i); }
+
+}
+
+namespace Potato::Parser
+{
+	void sbnf_processer::analyze_imp(std::u32string_view code, void(*Func)(void* data, travel), void* data)
+	{
+		Lexical::nfa_comsumer nfa(ref.nfa_s, code);
+		Syntax::lr1_processor lp(ref.lr1_s);
+		Lexical::nfa_comsumer::travel current_token;
+		Lexical::nfa_comsumer::travel next_token;
+		lp.analyze([&]()  -> std::optional<storage_t> {
+			while (true)
+			{
+				if (nfa)
+				{
+					auto re = nfa.comsume();
+					if (re.acception_state != ref.unused_terminal)
+					{
+						std::swap(next_token, current_token);
+						next_token = nfa.comsume();
+						return static_cast<storage_t>(next_token.acception_state);
+					}
+
+				}
+				else
+					return std::nullopt;
+			}
+		}, [=](Syntax::lr1_processor::travel tra) {
+			travel re;
+			re.sym = tra.symbol;
+			if (tra.is_terminal())
+			{
+				auto [s, e] = ref.sym_list[tra.symbol];
+				re.sym_str = std::u32string_view(ref.table.data() + s, e);
+				re.token_data = current_token.capture_string;
+				re.terminal = {current_token.start_line_count, current_token.start_charactor_index};
+			}
+			else {
+				auto [s, e] = ref.sym_list[tra.symbol + ref.ter_count];
+				re.sym_str = std::u32string_view(ref.table.data() + s, e);
+				re.noterminal = {tra.noterminal.function_enum, tra.noterminal.production_index, tra.noterminal.symbol_array, tra.noterminal.production_count};
+			}
+			Func(data, re);
+		});
 	}
 
-	void parser_sbnf::build_rex()
+	struct TokenGenerator
 	{
-		auto flag = std::regex::optimize | std::regex::nosubs;
-		terminal_rex_imp.clear();
-		for (auto& ite : terminal_rex)
+		TokenGenerator(nfa_storage const& ref, std::u32string_view code) : comsumer(ref, code) {}
+		nfa_comsumer::travel input;
+		nfa_comsumer comsumer;
+		std::optional<lr1::storage_t> operator()()
 		{
-			auto [rex, sym] = ite;
-			std::wregex tem_rex{ rex, flag };
-			terminal_rex_imp.push_back({ std::move(tem_rex), sym });
+			while (true)
+			{
+				if (comsumer)
+				{
+					auto re = comsumer.comsume();
+					if (re.acception_state != *SYM::Empty && re.acception_state != *SYM::Command)
+					{
+						input = re;
+						return static_cast<lr1::storage_t>(input.acception_state);
+					}
+				}
+				else
+					return std::nullopt;
+			}
 		}
+	};
+
+
+	sbnf sbnf::create(std::u32string_view code)
+	{
+		using namespace Lexical;
+		using namespace Syntax;
+		auto CurrentCode = code;
+		using storage_t = lr1::storage_t;
+
+		sbnf result;
+
+		std::map<std::u32string_view, storage_t> symbol_to_index;
+		std::vector<std::tuple<std::u32string, storage_t>> symbol_rex;
+		lr1_storage::storage_t unused_terminal = std::numeric_limits<lr1_storage::storage_t>::max();
+
+		// step1
+		{
+			static nfa_storage nfa_instance = ([]() -> nfa_storage {
+				std::vector<SYM> RequireList = { SYM::Terminal, SYM::Equal, SYM::Mask, SYM::Rex, SYM::Line, SYM::Command, SYM::Empty };
+				nfa tem;
+				for (auto& ite : RequireList)
+					tem.append_rex(Rexs[ite], *ite);
+				return tem.simplify();
+			}());
+
+			static lr1_storage lr1_instance = lr1::create(
+				*SYM::Statement, {
+					{{*SYM::Statement, *SYM::Statement, *SYM::Terminal, *SYM::Equal, *SYM::Rex, *SYM::Line}, 1},
+					{{*SYM::Statement}, 3},
+					{{*SYM::Statement, *SYM::Statement, *SYM::Mask, *SYM::Line}, 4},
+					{{*SYM::Statement,*SYM::Statement,*SYM::Line}, 5}
+				}, {}
+			);
+
+
+			std::u32string_view Token;
+			std::u32string_view Rex;
+			TokenGenerator Generator(nfa_instance, CurrentCode);
+			lr1_processor lp(lr1_instance);
+			lp.controlable_analyze(Generator, [&](lr1_processor::travel input) {
+				if (input.is_terminal())
+				{
+					switch (input.symbol)
+					{
+					case* SYM::Terminal: {
+						Token = Generator.input.capture_string;
+					}break;
+					case* SYM::Rex: {
+						auto re = Generator.input.capture_string;
+						Rex = { re.data() + 1, re.size() -2 };
+					}break;
+					default:break;
+					}
+				}
+				else {
+					switch (input.noterminal.function_enum)
+					{
+					case 1: {
+						auto re = symbol_to_index.insert({ Token, static_cast<storage_t>(symbol_to_index.size()) });
+						symbol_rex.push_back({ std::u32string(Rex) , re.first->second});
+					}break;
+					case 4:
+						return false;
+						break;
+					default: break;
+					}
+				}
+				return true;
+			});
+			auto Find = symbol_to_index.find(U"_IGNORE");
+			if (Find != symbol_to_index.end())
+				unused_terminal = static_cast<lr1::storage_t>(Find->second);
+			CurrentCode = Generator.comsumer.last();
+		}
+
+		std::map<std::u32string_view, storage_t> noterminal_symbol_to_index;
+		std::vector<lr1::production_input> productions;
+		std::optional<storage_t> start_symbol;
+		storage_t noterminal_temporary = lr1::start_symbol() - 1;
+
+		// step2
+		{
+
+			static nfa_storage nfa_instance = ([]() -> nfa_storage {
+				std::vector<SYM> RequireList = {
+					SYM::StartSymbol, SYM::Colon, SYM::Terminal, SYM::Equal, SYM::Number, SYM::NoTerminal, SYM::Mask, SYM::Rex, SYM::Line, 
+					SYM::LS_Brace, SYM::RS_Brace, SYM::LM_Brace, SYM::RM_Brace, SYM::LB_Brace, SYM::RB_Brace, SYM::Command, SYM::Empty 
+				};
+				nfa tem;
+				for (auto& ite : RequireList)
+					tem.append_rex(Rexs[ite], *ite);
+				return tem.simplify();
+			}());
+
+
+			static lr1_storage imp = lr1::create(
+				*SYM::Statement, {
+				{{*SYM::Expression, *SYM::NoTerminal }, 1},
+				{{*SYM::Expression, *SYM::Terminal }, 2},
+				{{*SYM::Expression, *SYM::Rex }, 3},
+				{{*SYM::Expression, *SYM::Expression, *SYM::Expression }, 4},
+				{{*SYM::Expression, *SYM::LS_Brace, *SYM::Expression, *SYM::RS_Brace}},
+				{{*SYM::Expression, *SYM::LB_Brace, *SYM::Expression, *SYM::RB_Brace}, 5},
+				{{*SYM::Expression, *SYM::LM_Brace, *SYM::Expression, *SYM::RM_Brace}, 6},
+				{{*SYM::Expression, *SYM::Expression, *SYM::Or, *SYM::Expression}, {*SYM::Expression}, 7},
+
+				{{*SYM::FunctionEnum}},
+				{{*SYM::FunctionEnum, *SYM::LM_Brace, *SYM::Number, *SYM::RM_Brace}},
+
+				{{*SYM::ProductionHead}},
+				{{*SYM::ProductionHead, *SYM::NoTerminal}, 9},
+
+				{{*SYM::RemoveElement, *SYM::Terminal}, 10},
+				{{*SYM::RemoveElement, *SYM::NoTerminal}, 10},
+				{{*SYM::RemoveElement, *SYM::Rex}, 10},
+				{{*SYM::RemoveElement, *SYM::RemoveElement, *SYM::RemoveElement}, 11},
+
+				{{*SYM::RemoveExpression, *SYM::Colon, *SYM::RemoveElement}},
+				{{*SYM::RemoveExpression}},
+
+				{{*SYM::Statement, *SYM::Statement, *SYM::StartSymbol, *SYM::Equal, *SYM::NoTerminal, *SYM::Line }, 12},
+				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::Expression, *SYM::RemoveExpression, *SYM::FunctionEnum, *SYM::Line}, 13},
+				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::RemoveExpression, *SYM::FunctionEnum, *SYM::Line}, 13},
+				{{*SYM::Statement, *SYM::Statement, *SYM::Mask, *SYM::Line}, 14},
+				{{*SYM::Statement}},
+				{{*SYM::Statement, *SYM::Statement, *SYM::Line}},
+				},
+				{}
+			);
+
+			std::optional<storage_t> LastHead;
+			storage_t Input;
+			std::vector<storage_t> Tokens;
+			std::optional<storage_t> FunctionEnum;
+			//std::map<std::u32string_view, storage_t> Mapping;
+			std::vector<std::vector<storage_t>> tem_production;
+			std::vector<std::vector<storage_t>> tem_remove;
+
+			TokenGenerator Generator(nfa_instance, CurrentCode);
+			lr1_processor lp(imp);
+			auto& InPutString = Generator.input.capture_string;
+			lp.controlable_analyze(Generator, [&](lr1_processor::travel tra) {
+				if (tra.is_terminal())
+				{
+					switch (tra.symbol)
+					{
+					case* SYM::NoTerminal: {
+						auto Find = noterminal_symbol_to_index.insert({ InPutString, static_cast<storage_t>(noterminal_symbol_to_index.size() + lr1::noterminal_start()) });
+						Input = Find.first->second;
+					}break;
+					case* SYM::Terminal: {
+						auto Find = symbol_to_index.find(InPutString);
+						if (Find != symbol_to_index.end())
+							Input = Find->second;
+						else
+							throw error{ std::u32string(U"Undefined Terminal : ") + std::u32string(InPutString), Generator.input.start_line_count, Generator.input.start_charactor_index };
+					}break;
+					case* SYM::Rex: {
+						static const std::u32string SpecialChar = UR"($()*+.[]?\^{}|,\)";
+						assert(InPutString.size() >= 2);
+						auto re = symbol_to_index.insert({ InPutString, static_cast<storage_t>(symbol_to_index.size()) });
+						if (re.second)
+						{
+							std::u32string rex;
+							for (size_t i = 1; i < InPutString.size() - 1; ++i)
+							{
+								for (auto& ite : SpecialChar)
+									if (ite == InPutString[i])
+									{
+										rex.push_back(U'\\');
+										break;
+									}
+								rex.push_back(InPutString[i]);
+							}
+							symbol_rex.push_back({ std::move(rex), re.first->second });
+						}
+						Input = re.first->second;
+					}break;
+					case* SYM::Number: {
+						storage_t Number = 0;
+						for (auto ite : InPutString)
+							Number = Number * 10 + ite - U'0';
+						FunctionEnum = Number;
+					}break;
+					default: break;
+					}
+				}
+				else
+				{
+					switch (tra.noterminal.function_enum)
+					{
+					case 1: case 2: case 3:{
+						tem_production.push_back({ Input });
+					}break;
+					case 4: {
+						assert(tem_production.size() >=2);
+						auto& Ref = *(tem_production.rbegin() + 1);
+						auto& Ref2 = *(tem_production.rbegin());
+						Ref.insert(Ref.end(), Ref2.begin(), Ref2.end());
+						tem_production.pop_back();
+					}break;
+					case 5: {
+						assert(tem_production.size() >= 1);
+						storage_t TemProduction = noterminal_temporary--;
+						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
+						std::vector<storage_t> Pro = { TemProduction };
+						productions.push_back(lr1::production_input{ Pro });
+						auto& ref = *tem_production.rbegin();
+						Pro.push_back(TemProduction);
+						Pro.insert(Pro.end(), ref.begin(), ref.end());
+						ref = { TemProduction };
+						productions.push_back(lr1::production_input{ std::move(Pro) });
+					} break;
+					case 8:
+					case 6: {
+						assert(tem_production.size() >= 1);
+						storage_t TemProduction = noterminal_temporary--;
+						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
+						std::vector<storage_t> Pro = { TemProduction };
+						productions.push_back(lr1::production_input{ Pro });
+						auto& ref = *tem_production.rbegin();
+						Pro.insert(Pro.end(), ref.begin(), ref.end());
+						ref = { TemProduction };
+						productions.push_back(lr1::production_input{ std::move(Pro) });
+					}break;
+					case 7: {
+						assert(tem_production.size() >= 2);
+						auto& Ref = *tem_production.rbegin();
+						auto& Ref2 = *(tem_production.rbegin() + 1);
+						storage_t TemProduction = noterminal_temporary--;
+						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
+						std::vector<storage_t> Pro = { TemProduction };
+						Pro.insert(Pro.end(), Ref.begin(), Ref.end());
+						productions.push_back(lr1::production_input{ std::move(Pro) });
+						std::vector<storage_t> Pro2 = { TemProduction };
+						Pro2.insert(Pro2.end(), Ref2.begin(), Ref2.end());
+						productions.push_back(lr1::production_input{ std::move(Pro2) });
+						Ref2 = { TemProduction };
+						tem_production.pop_back();
+					}break;
+					case 9: {
+						LastHead = Input;
+					}break;
+					case 10: {tem_remove.push_back({ Input }); } break;
+					case 11: {
+						assert(tem_remove.size() >= 2);
+						auto& Ref = *tem_production.rbegin();
+						auto& Ref2 = *(tem_production.rbegin() + 1);
+						Ref2.insert(Ref2.end(), Ref.begin(), Ref.end());
+						tem_production.pop_back();
+					}break;
+					case 12: {
+						if (!start_symbol)
+						{
+							start_symbol = Input;
+							LastHead = std::nullopt;
+						}
+						else
+							throw error{ U"Start Symbol Is Already Seted!", Generator.comsumer.lines(), 0 };
+					}break;
+					case 13: {
+						if (LastHead)
+						{
+							assert(tem_production.size() <= 1);
+							assert(tem_remove.size() <= 1);
+							std::vector<storage_t> Productions{ *LastHead };
+							if (!tem_production.empty())
+							{
+								Productions.insert(Productions.end(), tem_production[0].begin(), tem_production[0].end());
+								tem_production.clear();
+							}
+							std::vector<storage_t> RemoveSet;
+							if (!tem_remove.empty())
+							{
+								RemoveSet = std::move(std::move(tem_remove[0]));
+								tem_remove.clear();
+							}
+							storage_t TargetFunctionEnum = lr1::no_function_enum();
+							if (FunctionEnum)
+							{
+								TargetFunctionEnum = *FunctionEnum;
+								FunctionEnum = std::nullopt;
+							}
+							productions.push_back({std::move(Productions), std::move(RemoveSet), TargetFunctionEnum });
+						}
+						else
+							throw error{ U"Production Head Symbol Is Missing", Generator.comsumer.lines(), 0 };
+					}break;
+					case 14: {return false; };
+					default:
+						break;
+					}
+				}
+				return true;
+			});
+		}
+
+		return result;
 	}
 
+	/*
+	std::tuple<std::wstring::const_iterator, std::wstring::const_iterator> read_lind(std::wstring::const_iterator begin, std::wstring::const_iterator end)
+	{
+		auto search_ite = begin;
+		bool FindLine = false;
+		for (; search_ite != end; ++search_ite)
+		{
+			if (*search_ite != L'\n')
+				continue;
+			else
+			{
+				auto Available = search_ite;
+				if (Available != begin && *(Available - 1) == L'\r')
+					Available = Available - 1;
+				return { Available, search_ite + 1 };
+			}
+		}
+		return { end, end };
+	}
+
+
+	sbnf translate_sbnf(std::u32string_view code)
+	{
+		sbnf result;
+		return result;
+	}
+	*/
+
+	/*
 	auto parser_sbnf::translate(const lr1_processor::travel& input, const token_generator& tokens, int64_t& pro_count) const -> std::optional<travel>
 	{
 		if (input.is_terminal())
@@ -261,6 +687,7 @@ namespace Potato
 		assert(s <= e);
 		return std::wstring_view{&*s, static_cast<size_t>(e -s)};
 	}
+	*/
 	
 	/*
 	token 的正则表达式
@@ -269,6 +696,7 @@ namespace Potato
 	产生式
 	运算符优先级
 	*/
+	/*
 	std::tuple<
 		std::vector<std::tuple<std::vector<std::tuple<TerSymbol, std::wstring_view>>, std::size_t>>,
 		std::array<std::size_t, 4>
@@ -883,4 +1311,5 @@ namespace Potato
 		}
 		return std::nullopt;
 	}
+	*/
 }

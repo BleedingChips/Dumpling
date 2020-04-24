@@ -3,43 +3,39 @@
 #include <filesystem>
 #include <fstream>
 #include "../Potato/parser.h"
-#include "../Potato/regular_expression.h"
+#include "../Potato/lexical.h"
 #include <fstream>
 int main()
 {
 	using namespace Potato;
 
-	std::u32string_view Rexs[] = {
-		U"[ab]*?ab[ab]*"
-	};
-
-	auto tem = Rex::nfa::create_from_rex(Rexs[0], 0);
-
-	//auto re = dfa_processer::comsume_analyze(tem, U"51cdsd");
-
+	Lexical::nfa n = Lexical::nfa::create_from_rex(UR"(/\*[.\n]*?\*/|//.*?\n)", 1);
 
 	auto p = std::filesystem::current_path();
-	std::wstring storage;
-	auto Re = Potato::LoadSBNFFile(LR"(msc.sbnf)", storage);
-	
-
-	auto Result = Re->serialization();
-	auto re2 = Potato::parser_sbnf::unserialization(Result.data(), Result.size());
-
-	std::filesystem::path TargetPath = std::filesystem::current_path();
-	TargetPath.append(L".\\..\\Context\\MaterialCode\\Msc.sbnfb");
-	TargetPath = std::filesystem::absolute(TargetPath);
-
-	std::ofstream tem_f(TargetPath, std::ios::binary);
-
-	if (tem_f.is_open())
+	p += "/msc.sbnf";
+	std::ifstream file(p);
+	if (file.is_open())
 	{
-		tem_f.write(reinterpret_cast<const char*>(Result.data()), Result.size() * sizeof(lr1::storage_t));
-		tem_f.close();
+		size_t file_size = std::filesystem::file_size(p);
+		std::byte* data = new std::byte[file_size];
+		file.read(reinterpret_cast<char*>(data), file_size);
+		auto [Type, size] = Encoding::translate_binary_to_bomtype(data, file_size);
+		std::byte* ite = data;
+		ite += size;
+		std::u32string Code;
+		switch (Type)
+		{
+		case Encoding::BomType::UTF8:
+		case Encoding::BomType::None:{
+			Encoding::string_encoding<char> se(reinterpret_cast<char*>(ite), file_size - size);
+			Code = se.to_string<char32_t>();
+		}	break;
+		default: assert(false);
+			break;
+		}
+		auto Ref = Parser::sbnf::create(Code);
 	}
-	else
-		assert(false);
-
+	else assert(false);
 	
 
 

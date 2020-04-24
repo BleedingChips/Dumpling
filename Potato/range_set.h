@@ -130,9 +130,16 @@ namespace Potato::Tool
 		range_set& operator|=(const range_set& input) { auto tem = std::move(*this); *this = (tem | input); return *this; }
 		range_set operator&(const range_set&) const;
 		range_set operator&=(const range_set& input) { auto tem = std::move(*this); *this = (tem & input); return *this; }
-		range_set supplementary(const range& re = range{ std::numeric_limits<Storage>::min(), std::numeric_limits<Storage>::max() }) const;
-		range_set operator-(const range_set& input) const;
-		range_set& operator-=(const range_set& input) { auto tem = std::move(*this); *this = tem - input; return *this; }
+		range_set operator-(const range_set& input) const {
+			auto cur = *this;
+			cur -= input;
+			return std::move(cur);
+		};
+		range_set& operator-=(const range_set& input) {
+			auto input_c = input;
+			auto re = intersection_cull(input_c);
+			return *this;
+		}
 		range_set intersection_cull(range_set& input);
 		std::vector<range, Allocator<range>>& storage() { return m_set; }
 		bool intersection_find(const range& input) const;
@@ -322,93 +329,6 @@ namespace Potato::Tool
 		}
 		m_set.insert(m_set.end(), i1, set1.end());
 		input.m_set.insert(input.m_set.end(), i2, set2.end());
-		return std::move(result);
-	}
-
-	template<typename Storage, typename Less, template<typename Type> class Allocator>
-	auto range_set<Storage, Less, Allocator>::operator-(const range_set& input) const -> range_set
-	{
-		range_set result;
-		auto& ref = result.m_set();
-		auto i2 = input.m_set.begin();
-		for (auto i1 : m_set)
-		{
-			std::optional<range> tem = i1;
-			if (i2 != input.m_set.end())
-			{
-				do
-				{
-					auto [lo, re] = *tem & *i2;
-					switch (lo)
-					{
-					case RangeLocation::Left:
-						ref.push_back(*tem);
-						++i1;
-						tem = std::nullopt;
-						break;
-					case RangeLocation::Right:
-						++i2;
-						break;
-					case RangeLocation::LeftIntersect:
-						ref.push_back(range{ tem->left, i2.left });
-					case RangeLocation::Equal:
-					case RangeLocation::BeInclude:
-						++i1;
-						tem = std::nullopt;
-						break;
-					case RangeLocation::Include:
-						ref.push_back(tem->left, i2.left);
-						tem = range{i2.right, tem->left};
-						++i2;
-						break;
-					case RangeLocation::RightIntersect:
-						tem = range{ i2.right, tem->left };
-						++i2;
-						break;
-					default: assert(false); break;
-					}
-				} while (i2 != input.m_set.end() && tem);
-			}
-			if (tem)
-				ref.push_back(*tem);
-		}
-		return result;
-	}
-
-	template<typename Storage, typename Less, template<typename Type> class Allocator>
-	auto range_set<Storage, Less, Allocator>::supplementary(const range& input) const -> range_set
-	{
-		assert(Less{}(input.left, input.right));
-		range_set result;
-		auto& ref = result.m_set;
-		ref.reserve(m_set.size() + 1);
-		range last_state = input;
-		for (auto& ite : m_set)
-		{
-			auto [lo, re] = last_state & ite;
-			if (re)
-			{
-				switch (lo)
-				{
-				case RangeLocation::LeftIntersect:
-					ref.push_back(range{ last_state.left, re->left });
-					return result;
-				case RangeLocation::Include:
-					ref.push_back(range{ last_state.left, re->left });
-					last_state = range{ re->right, last_state.right };
-					break;
-				case RangeLocation::RightIntersect:
-					last_state = range{ re->right, last_state.right };
-					break;
-				case RangeLocation::BeInclude:
-				case RangeLocation::Equal:
-					assert(ref.empty());
-					return result;
-				default: assert(false);
-				}
-			}
-		}
-		ref.push_back(last_state);
 		return std::move(result);
 	}
 

@@ -24,9 +24,6 @@
     <ClInclude Include="..\Potato\character_encoding.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\Potato\lexical.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
     <ClInclude Include="..\Potato\parser.h">
       <Filter>Potato</Filter>
     </ClInclude>
@@ -48,15 +45,12 @@
     <ClInclude Include="..\Potato\range_set.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\Potato\regular_expression.h">
+    <ClInclude Include="..\Potato\lexical.h">
       <Filter>Potato</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Potato\character_encoding.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\lexical.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
     <ClCompile Include="..\Potato\syntax.cpp">
@@ -71,7 +65,7 @@
     <ClCompile Include="..\Potato\parser.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
-    <ClCompile Include="..\Potato\regular_expression.cpp">
+    <ClCompile Include="..\Potato\lexical.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
   </ItemGroup>

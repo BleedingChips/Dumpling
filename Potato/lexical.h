@@ -1,125 +1,155 @@
 #pragma once
-#include <regex>
+#include "range_set.h"
+#include <string_view>
+#include <variant>
+#include <set>
 namespace Potato::Lexical
 {
-	struct lex
+
+	struct nfa_storage
 	{
-		using storage_t = uint32_t;
-		struct node {
-			node(storage_t input) : start(input), end(0) {}
-			node(std::tuple<storage_t, storage_t> input) : start(std::get<0>(input)), end(std::get<1>(input)) {}
-			storage_t start;
-			storage_t end;
+		using range_set = Tool::range_set<char32_t>;
+		enum class EdgeType
+		{
+			Acception,
+			Comsume,
+		};
+		std::vector<range_set> ComsumeEdge;
+		std::vector<std::tuple<EdgeType, size_t, size_t>> Edges;
+		std::vector<std::tuple<size_t, size_t>> Nodes;
+	private:
+	};
+
+	struct nfa_comsumer
+	{
+		struct travel
+		{
+			size_t acception_state;
+			std::u32string_view capture_string;
+			size_t start_line_count;
+			size_t start_charactor_index;
 		};
 
-		lex(std::vector<std::vector<node>> WTF);
-
-	};
-
-
-
-
-
-
-
-
-
-
-
-
-
-	template<typename Token, typename CharT, typename regex_traits = std::regex_traits<CharT>>
-	struct regex_token
-	{
-		regex_token(std::initializer_list<std::tuple<const CharT*, Token>> list)
-		{
-			m_tokens.reserve(list.size());
-			for (auto& ite : list)
-				m_tokens.push_back({ std::basic_regex<CharT, regex_traits>{std::get<0>(ite), std::regex::optimize }, std::get<1>(ite) });
-		}
+		struct error {
+			char32_t const* code_start = nullptr;
+			size_t charactor_index;
+			size_t line_count;
+		};
+		travel comsume();
+		nfa_comsumer(nfa_storage const& ref, std::u32string_view code) : ref(ref), ite(code.data()), code(code.data()), length(code.size()), code_length(code.size()) {}
+		//nfa_comsumer(nfa_storage const& ref, char32_t const* input) : nfa_comsumer(ref, std::u32string_view(input)) {}
+		operator bool() const noexcept { return length != 0; }
+		size_t lines() const noexcept { return line_count; };
+		size_t line_charactor_index() const noexcept { return charactor_index; };
+		size_t last_charactor() const noexcept { return length; }
+		std::u32string_view last() const noexcept { return { ite, length }; }
 	private:
-		//Implement::
-		std::vector<std::tuple< std::basic_regex<CharT, regex_traits>, Token>> m_tokens;
-		friend struct regex_token_wrapper;
+		nfa_storage const& ref;
+		char32_t const* code = nullptr;
+		size_t code_length = 0;
+		char32_t const* ite = nullptr;
+		size_t length = 0;
+		size_t used = 0;
+		size_t charactor_index = 0;
+		size_t line_count = 0;
 	};
 
-#ifdef _WIN32
-	template<typename Token>
-	struct regex_token<Token, char16_t, std::regex_traits<char16_t>>
+	struct nfa
 	{
-		regex_token(std::initializer_list<std::tuple<const char16_t*, Token>> list)
-		{
-			m_tokens.reserve(list.size());
-			for (auto& ite : list)
-				m_tokens.push_back({ std::wregex{ reinterpret_cast<const wchar_t*>(std::get<0>(ite)), std::regex::optimize }, std::get<1>(ite) });
-		}
+
+		using range_set = nfa_storage::range_set;
+
+		struct epsilon { size_t state; };
+		struct comsume { size_t state; range_set require; };
+		struct acception { size_t state; size_t acception_state;  };
+
+		using edge_t = std::variant<epsilon, comsume, acception>;
+
+		static constexpr size_t no_accepted = std::numeric_limits<size_t>::max();
+
+		struct node { std::vector<edge_t> edge; };
+
+		nfa& append_rex(std::u32string_view rex, size_t accept_state);
+		static nfa create_from_rexs(std::u32string_view const* input, size_t length = 0);
+		static nfa create_from_rex(std::u32string_view Rex, size_t);
+		const node& operator[](size_t index) const { return nodes[index]; }
+		operator bool() const noexcept { return !nodes.empty(); }
+		size_t start_state() const noexcept { return 0; }
+		std::set<size_t> search_null_state_set(size_t head) const;
+		nfa(const nfa&) = default;
+		nfa(nfa&&) = default;
+		nfa& operator=(const nfa&) = default;
+		nfa& operator=(nfa&&) = default;
+		nfa() = default;
+		node& operator[](size_t index) { return nodes[index]; }
+		void link(nfa&& input);
+		nfa_storage simplify() const;
+		size_t back_construction(node&& n);
+		size_t size() const noexcept { return nodes.size(); }
 	private:
-		//Implement::
-		std::vector<std::tuple<std::wregex, Token>> m_tokens;
-		friend struct regex_token_wrapper;
-	};
-#endif
-
-	enum class EscapeSequence
-	{
-		SingleQuote,
-		BackSlash,
-		CarriageReturn,
-		HorizontalTab,
-		DoubleQuote,
-		QuestionMark,
-		AudibleBell,
-		BackSpace,
-		FormFeed,
-		LineFeed,
-		VerticalTab,
-		ArbitraryOctalValue,
-		ArbitraryHexadecimalValue,
-		UniversalCharacterName,
-		NormalString,
+		void move_state(size_t from, size_t to);
+		std::vector<node> nodes;
 	};
 
-	const regex_token<EscapeSequence, wchar_t>& escape_sequence_cpp_wchar() noexcept;
-	size_t translate(EscapeSequence, const wchar_t* input, size_t input_size, wchar_t* output, size_t output_size) noexcept;
+	
 
-	struct regex_token_wrapper
+
+
+
+
+
+
+
+
+
+
+
+
+	/*
+	struct nfa
 	{
-		// Handler -> bool(Token, Ite, Ite) , UnTokenHandler -> bool(Ite, Ite);
-		template<typename CharT, typename Ite, typename Token, typename Traits, typename Handler, typename UnTokenHandler>
-		static bool generate(Ite begin, Ite end, const regex_token<Token, CharT, Traits>& regex, Handler&& H, UnTokenHandler&& UH)
+		using storage_t = size_t;
+		using range_set = Tool::range_set<char32_t>;
+		constexpr storage_t no_accepted_state() { return std::numeric_limits<storage_t>::max(); }
+
+		enum class EdgeType : uint8_t
 		{
-			if (begin != end)
-			{
-				while (true)
-				{
-					std::match_results<Ite> match;
-					bool is_match = false;
-					for (auto& ite : regex.m_tokens)
-					{
-						if (std::regex_search(begin, end, match, std::get<0>(ite), std::regex_constants::match_flag_type::match_continuous))
-						{
-							auto b = match[0].first;
-							auto e = match[0].second;
-							if (H(std::get<1>(ite), b, e) && e != end)
-							{
-								begin = e;
-								is_match = true;
-								break;
-							}
-							else
-								return false;
-						}
-					}
-					if (is_match || UH(begin, end));
-					else
-						break;
+			Epsilon,
+			FirstEpsilon,
+			Comsume,
+			//FirstEpsilon,
+			LookAheadPositiveAssert,
+			LookAheadNegativeAssert,
+			LookBehindPositiveAssert,
+			LookBehindNegativeAssert,
+			CaptureStart,
+			Storage,
+		};
 
-				}
-				return true;
-			}
-			return false;
-		}
+		struct edge
+		{
+			EdgeType type;
+			size_t index;
+			storage_t shift_state;
+		};
 
+		struct node
+		{
+			storage_t is_acception;
+			size_t edge_start;
+			size_t edge_end;
+		};
+
+		
+		std::vector<range_set> consume_edges;
+		std::vector<edge> edges;
+		std::vector<node> nodes;
+
+		static nfa create_from_rex(std::u32string_view code, storage_t acception = 0);
 	};
 
+	
+	nfa link(const nfa& i1, const nfa& i2);
+	void simplify(nfa& input);
+	*/
 }
