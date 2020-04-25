@@ -7,20 +7,20 @@ namespace Potato::Lexical
 {
 	using namespace Potato::Syntax;
 
-	auto nfa_comsumer::comsume() -> travel
+	auto nfa_processer::operator()()-> std::optional<travel>
 	{
 		assert(*this);
-		std::vector<std::tuple<size_t, size_t, size_t>> search_stack;
-		search_stack.push_back({ 0,0, 0 });
-		std::optional<std::tuple<size_t, size_t>> Acception;
+		std::vector<std::tuple<size_t, size_t, std::u32string_view>> search_stack;
+		search_stack.push_back({ 0,0, LastCode});
+		std::optional<travel> Acception;
 		while (!search_stack.empty())
 		{
-			auto& [state, index, ite_shift] = *search_stack.rbegin();
+			auto& [state, index, code] = *search_stack.rbegin();
 			char32_t Input;
-			if (ite_shift == length)
+			if (code.empty())
 				Input = 0;
 			else
-				Input = ite[ite_shift];
+				Input = *code.begin();
 			auto [s, c] = ref.Nodes[state];
 			bool ForceBreak = false;
 			while (!ForceBreak && index < c)
@@ -33,14 +33,14 @@ namespace Potato::Lexical
 					auto& edge_ref = ref.ComsumeEdge[i1];
 					if (edge_ref.intersection_find({ Input, Input + 1 }))
 					{
-						search_stack.push_back({ i2, 0, ite_shift + 1 });
+						search_stack.push_back({ i2, 0, {code.data() + 1, code.size() - 1} });
 						ForceBreak = true;
 					}
 				} break;
 				case nfa_storage::EdgeType::Acception: {
 					search_stack.clear();
-					search_stack.push_back({ i2, 0, ite_shift });
-					Acception = { i1, ite_shift };
+					search_stack.push_back({ i2, 0, code });
+					Acception = { i1, {LastCode.data(), LastCode.size() - code.size()} };
 					ForceBreak = true;
 				} break;
 				default: {assert(false); } break;
@@ -51,25 +51,40 @@ namespace Potato::Lexical
 		}
 		if (Acception)
 		{
-			auto [i1, i2] = *Acception;
-			travel result{ i1, std::u32string_view(ite,  i2), charactor_index,  line_count };
-			auto count = i2;
-			assert(count <= length);
-			ite += count;
-			length -= count;
-			used += count;
-			for(auto ite : result.capture_string)
+			auto Used = Acception->capture.size();
+			LastCode = { LastCode.data() + Used, LastCode.size() - Used };
+		}
+		return Acception;
+	}
+
+	void nfa_lexer::reset_nfa(nfa_storage const& ref) 
+	{
+		if (processer)
+			last_code = processer->LastCode;
+		processer.emplace(ref, last_code);
+	}
+
+	auto nfa_lexer::operator()() noexcept -> std::optional<size_t>
+	{
+		assert(*this);
+		auto re = processer->operator()();
+		if (re)
+		{
+			processer_stack = travel( *re, line, index, total_index );
+			total_index += re->capture.size();
+			for (auto& ite : re->capture)
+			{
 				if (ite == U'\n')
 				{
-					charactor_index = 0;
-					++line_count;
+					index = 0;
+					++line;
 				}
 				else
-					++charactor_index;
-			return result;
+					++index;
+			}
+			return re->acception;
 		}
-		else
-			throw error{ ite, charactor_index, line_count };
+		return std::nullopt;
 	}
 
 	enum class DFASymbol : lr1::storage_t
@@ -89,6 +104,7 @@ namespace Potato::Lexical
 
 
 		Statement = lr1::noterminal_start(),
+		OrStatement,
 		CharListStart,
 		CharList,
 		Expression,
@@ -113,9 +129,8 @@ namespace Potato::Lexical
 				{{*SYM::Statement, *SYM::Statement, *SYM::Statement}, 0},
 				{{*SYM::Statement, *SYM::Statement, *SYM::Or, *SYM::Statement},{*SYM::Expression}, 7},
 				{{*SYM::Statement, *SYM::Expression}, 14},
-
+				{{*SYM::Expression, *SYM::ParenthesesLeft, *SYM::Statement, *SYM::ParenthesesRight}},
 				{{*SYM::Expression, *SYM::ParenthesesLeft, *SYM::Expression, *SYM::ParenthesesRight}, 1},
-
 				{{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::CharList}, 2},
 				{{*SYM::Expression, *SYM::SquareBracketsLeft, *SYM::Not, *SYM::CharList}, 3},
 
@@ -435,6 +450,7 @@ namespace Potato::Lexical
 					*ScopeStack.rbegin() |= R;
 				}break;
 				case 13: {} break;
+				case lr1::no_function_enum(): {} break;
 				default: assert(false); break;
 				}
 			}
@@ -443,7 +459,8 @@ namespace Potato::Lexical
 		auto end = result.back_construction({});
 		auto [s1, s2] = *StateStack.rbegin();
 		result[s2].edge.push_back(acception{ end, accept_state});
-		result[0].edge.push_back(epsilon{ s1 });
+		auto& TopNode = result[0];
+		TopNode.edge.push_back(epsilon{ s1 });
 		return *this;
 	}
 
@@ -458,14 +475,8 @@ namespace Potato::Lexical
 	nfa nfa::create_from_rexs(std::u32string_view const* code, size_t count)
 	{
 		nfa result;
-		if (count > 0)
-		{
-			do
-			{
-				--count;
-				result.append_rex(code[count], count);
-			} while (count != 0);
-		}
+		for (size_t i = 0; i < count; ++i)
+			result.append_rex(code[i], i);
 		return std::move(result);
 	}
 

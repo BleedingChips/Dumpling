@@ -9,7 +9,12 @@ int main()
 {
 	using namespace Potato;
 
-	Lexical::nfa n = Lexical::nfa::create_from_rex(UR"(/\*[.\n]*?\*/|//.*?\n)", 1);
+	Lexical::nfa n = Lexical::nfa::create_from_rex(UR"(\-?[1-9][0-9]*(\.[0-9]+)?)", 1);
+	auto storage = n.simplify();
+
+	Lexical::nfa_processer np(storage, U"-21344.34");
+
+	auto tra = np();
 
 	auto p = std::filesystem::current_path();
 	p += "/msc.sbnf";
@@ -34,6 +39,7 @@ int main()
 			break;
 		}
 		auto Ref = Parser::sbnf::create(Code);
+		delete[](data);
 	}
 	else assert(false);
 	

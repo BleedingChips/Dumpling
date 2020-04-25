@@ -24,7 +24,7 @@ namespace Potato::Parser
 		};
 
 		std::u32string table;
-		std::vector<std::tuple<std::size_t, std::size_t>> sym_list;
+		std::vector<std::tuple<std::size_t, std::size_t>> symbol_map;
 		size_t ter_count;
 		storage_t unused_terminal;
 		size_t temporary_prodution_start;

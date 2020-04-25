@@ -2,6 +2,7 @@
 #include "range_set.h"
 #include <string_view>
 #include <variant>
+#include <optional>
 #include <set>
 namespace Potato::Lexical
 {
@@ -20,6 +21,50 @@ namespace Potato::Lexical
 	private:
 	};
 
+	struct nfa_processer
+	{
+		struct travel {
+			size_t acception;
+			std::u32string_view capture;
+		};
+		nfa_processer(nfa_storage const& ref, std::u32string_view LastCode) : ref(ref), LastCode(LastCode) {}
+		nfa_processer(const nfa_processer&) = default;
+		nfa_processer& operator=(nfa_processer const&) = default;
+		std::optional<travel> operator()();
+		operator bool() const noexcept { return !LastCode.empty(); }
+		nfa_storage const& ref;
+		std::u32string_view LastCode;
+	};
+
+	struct nfa_lexer
+	{
+		struct travel : nfa_processer::travel
+		{
+			size_t line =0;
+			size_t index = 0;
+			size_t total_index = 0;
+			travel(nfa_processer::travel tra, size_t line, size_t index, size_t total_index) :nfa_processer::travel(tra), line(line), index(index), total_index(total_index){}
+			travel() = default;
+			travel& operator=(travel const&) = default;
+		};
+		travel stack() { return processer_stack; }
+		nfa_lexer(std::u32string_view code) : last_code(code) {}
+		nfa_lexer(nfa_storage const& ref, std::u32string_view code) : last_code(code) { reset_nfa(ref); }
+		void reset_nfa(nfa_storage const& ref);
+		operator bool() const noexcept { return !last_code.empty() && processer && *processer; }
+		std::optional<size_t> operator ()() noexcept;
+		size_t current_line() const noexcept { return line; }
+		size_t current_index() const noexcept { return index; }
+	private:
+		std::optional<nfa_processer> processer;
+		travel processer_stack;
+		std::u32string_view last_code;
+		size_t line;
+		size_t index;
+		size_t total_index;
+	};
+
+	/*
 	struct nfa_comsumer
 	{
 		struct travel
@@ -35,6 +80,7 @@ namespace Potato::Lexical
 			size_t charactor_index;
 			size_t line_count;
 		};
+
 		travel comsume();
 		nfa_comsumer(nfa_storage const& ref, std::u32string_view code) : ref(ref), ite(code.data()), code(code.data()), length(code.size()), code_length(code.size()) {}
 		//nfa_comsumer(nfa_storage const& ref, char32_t const* input) : nfa_comsumer(ref, std::u32string_view(input)) {}
@@ -53,6 +99,7 @@ namespace Potato::Lexical
 		size_t charactor_index = 0;
 		size_t line_count = 0;
 	};
+	*/
 
 	struct nfa
 	{
@@ -74,20 +121,18 @@ namespace Potato::Lexical
 		static nfa create_from_rex(std::u32string_view Rex, size_t);
 		const node& operator[](size_t index) const { return nodes[index]; }
 		operator bool() const noexcept { return !nodes.empty(); }
+		operator nfa_storage() const { return simplify(); }
 		size_t start_state() const noexcept { return 0; }
-		std::set<size_t> search_null_state_set(size_t head) const;
 		nfa(const nfa&) = default;
 		nfa(nfa&&) = default;
 		nfa& operator=(const nfa&) = default;
 		nfa& operator=(nfa&&) = default;
 		nfa() = default;
 		node& operator[](size_t index) { return nodes[index]; }
-		void link(nfa&& input);
 		nfa_storage simplify() const;
 		size_t back_construction(node&& n);
 		size_t size() const noexcept { return nodes.size(); }
 	private:
-		void move_state(size_t from, size_t to);
 		std::vector<node> nodes;
 	};
 

@@ -64,6 +64,7 @@ namespace
 
 namespace Potato::Parser
 {
+	/*
 	void sbnf_processer::analyze_imp(std::u32string_view code, void(*Func)(void* data, travel), void* data)
 	{
 		Lexical::nfa_comsumer nfa(ref.nfa_s, code);
@@ -105,29 +106,38 @@ namespace Potato::Parser
 			Func(data, re);
 		});
 	}
+	*/
 
-	struct TokenGenerator
+	struct LexerWrapper : nfa_lexer
 	{
-		TokenGenerator(nfa_storage const& ref, std::u32string_view code) : comsumer(ref, code) {}
-		nfa_comsumer::travel input;
-		nfa_comsumer comsumer;
-		std::optional<lr1::storage_t> operator()()
-		{
+		using nfa_lexer::nfa_lexer;
+		nfa_lexer::travel stack() const noexcept { return input_stack; }
+		void reset_remove(std::set<size_t> rm) { remove = std::move(rm); }
+		std::optional<lr1_storage::storage_t> operator()() {
 			while (true)
 			{
-				if (comsumer)
+				if (nfa_lexer::operator bool())
 				{
-					auto re = comsumer.comsume();
-					if (re.acception_state != *SYM::Empty && re.acception_state != *SYM::Command)
+					auto result = nfa_lexer::operator()();
+					if (result)
 					{
-						input = re;
-						return static_cast<lr1::storage_t>(input.acception_state);
+						auto ite = remove.find(*result);
+						if (ite == remove.end())
+						{
+							input_stack = nfa_lexer::stack();
+							return static_cast<lr1_storage::storage_t>(*result);
+						}
 					}
+					else
+						assert(false);
 				}
 				else
 					return std::nullopt;
 			}
 		}
+	private:
+		nfa_lexer::travel input_stack;
+		std::set<size_t> remove;
 	};
 
 
@@ -135,14 +145,13 @@ namespace Potato::Parser
 	{
 		using namespace Lexical;
 		using namespace Syntax;
-		auto CurrentCode = code;
 		using storage_t = lr1::storage_t;
-
-		sbnf result;
 
 		std::map<std::u32string_view, storage_t> symbol_to_index;
 		std::vector<std::tuple<std::u32string, storage_t>> symbol_rex;
 		lr1_storage::storage_t unused_terminal = std::numeric_limits<lr1_storage::storage_t>::max();
+
+		LexerWrapper Generator(code);
 
 		// step1
 		{
@@ -166,7 +175,8 @@ namespace Potato::Parser
 
 			std::u32string_view Token;
 			std::u32string_view Rex;
-			TokenGenerator Generator(nfa_instance, CurrentCode);
+			Generator.reset_nfa(nfa_instance);
+			Generator.reset_remove({ *SYM::Empty, *SYM::Command });
 			lr1_processor lp(lr1_instance);
 			lp.controlable_analyze(Generator, [&](lr1_processor::travel input) {
 				if (input.is_terminal())
@@ -174,10 +184,10 @@ namespace Potato::Parser
 					switch (input.symbol)
 					{
 					case* SYM::Terminal: {
-						Token = Generator.input.capture_string;
+						Token = Generator.stack().capture;
 					}break;
 					case* SYM::Rex: {
-						auto re = Generator.input.capture_string;
+						auto re = Generator.stack().capture;
 						Rex = { re.data() + 1, re.size() -2 };
 					}break;
 					default:break;
@@ -201,7 +211,6 @@ namespace Potato::Parser
 			auto Find = symbol_to_index.find(U"_IGNORE");
 			if (Find != symbol_to_index.end())
 				unused_terminal = static_cast<lr1::storage_t>(Find->second);
-			CurrentCode = Generator.comsumer.last();
 		}
 
 		std::map<std::u32string_view, storage_t> noterminal_symbol_to_index;
@@ -267,12 +276,12 @@ namespace Potato::Parser
 			std::vector<std::vector<storage_t>> tem_production;
 			std::vector<std::vector<storage_t>> tem_remove;
 
-			TokenGenerator Generator(nfa_instance, CurrentCode);
+			Generator.reset_nfa(nfa_instance);
 			lr1_processor lp(imp);
-			auto& InPutString = Generator.input.capture_string;
 			lp.controlable_analyze(Generator, [&](lr1_processor::travel tra) {
 				if (tra.is_terminal())
 				{
+					auto InPutString = Generator.stack().capture;
 					switch (tra.symbol)
 					{
 					case* SYM::NoTerminal: {
@@ -284,7 +293,7 @@ namespace Potato::Parser
 						if (Find != symbol_to_index.end())
 							Input = Find->second;
 						else
-							throw error{ std::u32string(U"Undefined Terminal : ") + std::u32string(InPutString), Generator.input.start_line_count, Generator.input.start_charactor_index };
+							throw error{ std::u32string(U"Undefined Terminal : ") + std::u32string(InPutString), Generator.current_line(), Generator.current_index() };
 					}break;
 					case* SYM::Rex: {
 						static const std::u32string SpecialChar = UR"($()*+.[]?\^{}|,\)";
@@ -387,7 +396,7 @@ namespace Potato::Parser
 							LastHead = std::nullopt;
 						}
 						else
-							throw error{ U"Start Symbol Is Already Seted!", Generator.comsumer.lines(), 0 };
+							throw error{ U"Start Symbol Is Already Seted!", Generator.current_line(), 0 };
 					}break;
 					case 13: {
 						if (LastHead)
@@ -412,10 +421,10 @@ namespace Potato::Parser
 								TargetFunctionEnum = *FunctionEnum;
 								FunctionEnum = std::nullopt;
 							}
-							productions.push_back({std::move(Productions), std::move(RemoveSet), TargetFunctionEnum });
+							productions.push_back({ std::move(Productions), std::move(RemoveSet), TargetFunctionEnum });
 						}
 						else
-							throw error{ U"Production Head Symbol Is Missing", Generator.comsumer.lines(), 0 };
+							throw error{ U"Production Head Symbol Is Missing", Generator.current_line(), 0 };
 					}break;
 					case 14: {return false; };
 					default:
@@ -426,7 +435,92 @@ namespace Potato::Parser
 			});
 		}
 
-		return result;
+
+		std::vector<lr1::ope_priority> operator_priority;
+		// step3
+		{
+			static nfa_storage nfa_instance = ([]() -> nfa_storage {
+				std::vector<SYM> RequireList = { SYM::Terminal, SYM::Rex, SYM::Command,
+					SYM::LS_Brace, SYM::RS_Brace, SYM::LM_Brace, SYM::RM_Brace, SYM::Empty };
+				nfa tem;
+				for (auto& ite : RequireList)
+					tem.append_rex(Rexs[ite], *ite);
+				return tem.simplify();
+			}());
+
+			static lr1_storage lr1_instance = lr1::create(
+				*SYM::Statement, {
+					{{*SYM::Expression, *SYM::Terminal}, 1},
+					{{*SYM::Expression, *SYM::Rex}, 1},
+					{{*SYM::Expression, *SYM::Expression, *SYM::Expression}, 2},
+					{{*SYM::Statement, *SYM::Statement, *SYM::Terminal}, 3},
+					{{*SYM::Statement, *SYM::Statement, *SYM::Rex}, 3},
+					{{*SYM::Statement, *SYM::Statement, *SYM::LS_Brace, *SYM::Expression, *SYM::RS_Brace}, 4},
+					{{*SYM::Statement, *SYM::Statement, *SYM::LM_Brace, *SYM::Expression, *SYM::RM_Brace}, 5},
+					{{*SYM::Statement}},
+				}, {}
+			);
+			std::vector<storage_t> tokens;
+			Generator.reset_nfa(nfa_instance);
+			lr1_processor lp(lr1_instance);
+			lp.analyze(Generator, [&](lr1_processor::travel tra) {
+				if (tra.is_terminal())
+				{
+					if (tra.symbol == *SYM::Terminal || tra.symbol == *SYM::Rex)
+					{
+						auto Find = symbol_to_index.find(Generator.stack().capture);
+						if (Find != symbol_to_index.end())
+							tokens.push_back(Find->second);
+						else
+							throw error{ std::u32string(U"Undefined Terminal : ") + std::u32string(Generator.stack().capture), Generator.current_line(), Generator.current_index() };
+					}
+				}
+				else {
+					switch (tra.noterminal.function_enum)
+					{
+					case 3: case 4:{
+						assert(tokens.size() >= 1);
+						operator_priority.push_back(lr1::ope_priority{ std::move(tokens), true });
+					} break;
+					case 5: {
+						assert(tokens.size() >= 1);
+						operator_priority.push_back(lr1::ope_priority{ std::move(tokens), false });
+					} break;
+					}
+				}
+			});
+		}
+
+		if (!start_symbol)
+			throw error{U"Missing Start Symbol, Use \" $ = <NoTerminal> \" To Define Start Symbol.", 0, 0};
+
+		std::u32string table;
+		std::vector<std::tuple<size_t, size_t>> symbol_map;
+		symbol_map.resize(symbol_to_index.size() + noterminal_symbol_to_index.size(), {0, 0});
+		for (auto ite : symbol_to_index)
+		{
+			auto start = table.size();
+			table += ite.first;
+			symbol_map[ite.second] = {start, ite.first.size()};
+		}
+		size_t TerminalCount = symbol_to_index.size();
+		for (auto ite : noterminal_symbol_to_index)
+		{
+			auto start = table.size();
+			table += ite.first;
+			symbol_map[ite.second + TerminalCount - lr1::noterminal_start()] = { start, ite.first.size() };
+		}
+		Lexical::nfa nfa_temporary;
+		for (auto ite = symbol_rex.rbegin(); ite != symbol_rex.rend(); ++ite)
+		{
+			auto& [str, index] = *ite;
+			nfa_temporary.append_rex(str, index);
+		}
+		Syntax::lr1 lr1_temporay = Syntax::lr1::create(
+			*start_symbol, std::move(productions), std::move(operator_priority)
+		);
+
+		return {std::move(table), std::move(symbol_map), TerminalCount, unused_terminal, noterminal_temporary, nfa_temporary, lr1_temporay};
 	}
 
 	/*
