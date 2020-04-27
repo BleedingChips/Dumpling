@@ -18,13 +18,44 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\character_encoding.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\lexical.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\parser.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\syntax.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\tool.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="msc.sbnf">
+      <Filter>资源文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\Potato\auto_adapter.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\Potato\character_encoding.h">
       <Filter>Potato</Filter>
     </ClInclude>
+    <ClInclude Include="..\Potato\lexical.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
     <ClInclude Include="..\Potato\parser.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Potato\range_set.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\Potato\smart_pointer.h">
@@ -42,36 +73,5 @@
     <ClInclude Include="..\Potato\tool.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\Potato\range_set.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Potato\lexical.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\Potato\character_encoding.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\syntax.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\tool.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>头文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\parser.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\lexical.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="msc.sbnf">
-      <Filter>资源文件</Filter>
-    </None>
   </ItemGroup>
 </Project>

@@ -17,7 +17,7 @@ namespace Potato::Syntax
 
 	struct lr1_storage
 	{
-		using storage_t = uint32_t;
+		using storage_t = size_t;
 		static constexpr storage_t mask = 0x8000'0000;
 
 		static inline bool is_terminal(storage_t symbol) noexcept { return symbol < mask; }
@@ -35,13 +35,58 @@ namespace Potato::Syntax
 
 	struct lr1
 	{
-		using storage_t = uint32_t;
+		using storage_t = lr1_storage::storage_t;
 		static constexpr storage_t mask = lr1_storage::mask;
 		static inline bool is_terminal(storage_t symbol) noexcept { return lr1_storage::is_terminal(symbol); }
 		static constexpr inline storage_t eof_symbol() { return lr1_storage::eof_symbol(); }
 		static constexpr inline storage_t noterminal_start() { return mask; }
 		static constexpr inline storage_t start_symbol() { return lr1_storage::start_symbol(); }
 		static constexpr storage_t no_function_enum() { return lr1_storage::no_function_enum(); }
+
+		struct unacceptable_production_error : std::exception
+		{
+			storage_t production_index;
+			char const* what() const noexcept override;
+			unacceptable_production_error(storage_t index) : production_index(index) {}
+			unacceptable_production_error(const unacceptable_production_error&) = default;
+		};
+
+		struct missing_noterminal_define_error : std::exception
+		{
+			missing_noterminal_define_error(storage_t noterminal_symbol) : noterminal_symbol(noterminal_symbol) {}
+			missing_noterminal_define_error(const missing_noterminal_define_error& in) = default;
+			storage_t noterminal_symbol;
+			char const* what() const noexcept override;
+		};
+
+		struct production_redefine_error : std::exception
+		{
+			production_redefine_error(const production_redefine_error& in) = default;
+			production_redefine_error(storage_t old_production_index, storage_t redefine_production_index) : old_production_index(old_production_index), redefine_production_index(redefine_production_index) {}
+			storage_t old_production_index;
+			storage_t redefine_production_index;
+			char const* what() const noexcept override;
+		};
+
+		struct reduce_conflict_error : std::exception
+		{
+			storage_t token;
+			storage_t possible_production_1;
+			storage_t possible_production_2;
+			reduce_conflict_error(storage_t token, storage_t possible_production_1, storage_t possible_production_2) :
+				token(token), possible_production_1(possible_production_1), possible_production_2(possible_production_2) {}
+			reduce_conflict_error(const reduce_conflict_error&) = default;
+			char const* what() const noexcept override;
+		};
+
+		struct operator_conflict_error : std::exception
+		{
+			storage_t token;
+			storage_t conflig_token;
+			char const* what() const noexcept override;
+			operator_conflict_error(storage_t token, storage_t conflig_token) : token(token), conflig_token(conflig_token) {}
+			operator_conflict_error(const operator_conflict_error&) = default;
+		};
 
 		struct ope_priority
 		{
@@ -54,19 +99,13 @@ namespace Potato::Syntax
 			bool left_priority;
 		};
 
-		struct UnacceableProduction {};
-
 		struct production_input
 		{
 			std::vector<storage_t> production;
 			storage_t function_state;
 			std::vector<storage_t> remove_forward;
 			production_input(std::vector<storage_t> input, std::vector<storage_t> remove, storage_t function_enmu)
-				: production(std::move(input)), function_state(function_enmu), remove_forward(std::move(remove)) {
-				if (production.size() > 0 && production.size() < std::numeric_limits<storage_t>::max() && !is_terminal(production[0]));
-				else
-					throw UnacceableProduction{};
-			}
+				: production(std::move(input)), function_state(function_enmu), remove_forward(std::move(remove)) {}
 			
 			production_input(std::vector<storage_t> input) : production_input(std::move(input), {}, no_function_enum()) {}
 			production_input(std::vector<storage_t> input, storage_t funtion_enum) : production_input(std::move(input), {}, funtion_enum) {}
@@ -89,47 +128,6 @@ namespace Potato::Syntax
 			std::map<storage_t, storage_t> m_reduce;
 		};
 
-		enum class Error : size_t
-		{
-			ReduceConflig,
-			HeadMissing,
-			UnavailableSymbol,
-			ProductionRedefine,
-			OperatorPriorityConflig
-		};
-
-		struct reduce_conflict : std::logic_error
-		{
-			storage_t m_conflig_token;
-			storage_t m_old_state_index;
-			storage_t m_new_state_index;
-			std::vector<std::tuple<storage_t, std::vector<storage_t>, std::set<storage_t>>> m_state;
-			reduce_conflict(storage_t token, storage_t old_state_index, storage_t new_state_index, std::vector<std::tuple<storage_t, std::vector<storage_t>, std::set<storage_t>>>);
-		};
-
-		struct production_head_missing : std::logic_error
-		{
-			storage_t m_require_head;
-			storage_t m_production_index;
-			production_head_missing(storage_t head, storage_t index);
-		};
-
-		struct unavailable_symbol {};
-
-		struct same_production : std::logic_error
-		{
-			storage_t m_old_production_index;
-			storage_t m_new_production_index;
-			std::vector<storage_t> m_production;
-			same_production(storage_t old_index, storage_t new_index, std::vector<storage_t> production);
-		};
-
-		struct operator_level_conflict : std::logic_error
-		{
-			storage_t m_token;
-			operator_level_conflict(storage_t token) : std::logic_error("operator level conflict"), m_token(token) {}
-		};
-
 		operator lr1_storage() const;
 		lr1_storage storage() const { return *this; }
 
@@ -150,18 +148,12 @@ namespace Potato::Syntax
 	{
 		using storage_t = lr1::storage_t;
 
-		struct error_state {
-			std::set<storage_t> m_shift;
-			std::map<storage_t, storage_t> m_reduce;
-		};
-
-		struct unacceptable_error : std::logic_error, error_state {
-			storage_t m_forward_token;
-			unacceptable_error(storage_t forward_token, error_state lpes);
-		};
-
-		struct uncomplete_error : std::logic_error, error_state {
-			uncomplete_error(error_state lpes);
+		struct unacceptable_error : std::exception {
+			storage_t token;
+			storage_t last_symbol;
+			char const* what() const noexcept override;
+			unacceptable_error(storage_t token, storage_t last_symbol) : token(token), last_symbol(last_symbol) {}
+			unacceptable_error(const unacceptable_error&) = default;
 		};
 
 		struct travel

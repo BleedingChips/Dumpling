@@ -1,3 +1,5 @@
+#include "../../../Dumpling/Msc/msc_parser.h"
+#include "../../../Potato/character_encoding.h"
 #include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
 #include "..//..//..//Dumpling/Gui/Dx12/form_dx12.h"
 #include <assert.h>
@@ -8,16 +10,18 @@
 #include <fstream>
 #include <d3d12shader.h>
 #include <d3dcompiler.h>
-//#include "..//..//..//Dumpling/Gui/Dx12/pipeline.h"
+#include <sstream>
 using namespace Dumpling;
 using Dxgi::FormatPixel;
 
 using namespace Dxgi::DataType;
 using Win32::ThrowIfFault;
+using namespace Potato;
 
 namespace fs = std::filesystem;
 
 #include <iostream>
+
 
 
 int main()
@@ -42,6 +46,44 @@ int main()
 	resource_path = U"..\\Release\\";
 #endif
 #endif
+	auto Number = msc_sbnf_instance().find_symbol(U"Number");
+	Parser::sbnf_processer sp(msc_sbnf_instance());
+	std::vector<float> Data;
+	sp.analyze(U"1+2+4*4+3", [&](Parser::sbnf_processer::travel tra) {
+		if (tra.is_termina())
+		{
+			if (tra.sym == *Number)
+			{
+				Encoding::string_encoding<char32_t> se(tra.token_data.data(), tra.token_data.size());
+				auto str = se.to_string<char>();
+				std::stringstream ss;
+				ss << str;
+				float Result;
+				ss >> Result;
+				Data.push_back(Result);
+			}
+		}
+		else {
+			switch (tra.noterminal.function_enum)
+			{
+			case 1: {
+				assert(Data.size() >= 2);
+				Data[Data.size() - 2] += Data[Data.size() - 1];
+				Data.pop_back();
+			}break;
+			case 2: {
+				assert(Data.size() >= 2);
+				Data[Data.size() - 2] *= Data[Data.size() - 1];
+				Data.pop_back();
+			}break;
+			default:
+				break;
+			}
+		}
+	});
+	assert(Data.size() == 1);
+	float Result = Data[0];
+
 
 	//Win32::SearchVisualStudioPath();
 	//return 0;

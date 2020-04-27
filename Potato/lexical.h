@@ -18,7 +18,6 @@ namespace Potato::Lexical
 		std::vector<range_set> ComsumeEdge;
 		std::vector<std::tuple<EdgeType, size_t, size_t>> Edges;
 		std::vector<std::tuple<size_t, size_t>> Nodes;
-	private:
 	};
 
 	struct nfa_processer
@@ -55,6 +54,7 @@ namespace Potato::Lexical
 		std::optional<size_t> operator ()() noexcept;
 		size_t current_line() const noexcept { return line; }
 		size_t current_index() const noexcept { return index; }
+		std::u32string_view last() const noexcept { return last_code; }
 	private:
 		std::optional<nfa_processer> processer;
 		travel processer_stack;
@@ -64,46 +64,16 @@ namespace Potato::Lexical
 		size_t total_index;
 	};
 
-	/*
-	struct nfa_comsumer
-	{
-		struct travel
-		{
-			size_t acception_state;
-			std::u32string_view capture_string;
-			size_t start_line_count;
-			size_t start_charactor_index;
-		};
-
-		struct error {
-			char32_t const* code_start = nullptr;
-			size_t charactor_index;
-			size_t line_count;
-		};
-
-		travel comsume();
-		nfa_comsumer(nfa_storage const& ref, std::u32string_view code) : ref(ref), ite(code.data()), code(code.data()), length(code.size()), code_length(code.size()) {}
-		//nfa_comsumer(nfa_storage const& ref, char32_t const* input) : nfa_comsumer(ref, std::u32string_view(input)) {}
-		operator bool() const noexcept { return length != 0; }
-		size_t lines() const noexcept { return line_count; };
-		size_t line_charactor_index() const noexcept { return charactor_index; };
-		size_t last_charactor() const noexcept { return length; }
-		std::u32string_view last() const noexcept { return { ite, length }; }
-	private:
-		nfa_storage const& ref;
-		char32_t const* code = nullptr;
-		size_t code_length = 0;
-		char32_t const* ite = nullptr;
-		size_t length = 0;
-		size_t used = 0;
-		size_t charactor_index = 0;
-		size_t line_count = 0;
-	};
-	*/
-
 	struct nfa
 	{
-
+		struct unacceptable_rex_error : std::exception
+		{
+			std::u32string rex;
+			size_t acception_state;
+			size_t index;
+			unacceptable_rex_error(std::u32string rex, size_t acception_state, size_t index) : rex(rex), acception_state(acception_state), index(index) {}
+			char const* what() const noexcept override; 
+		};
 		using range_set = nfa_storage::range_set;
 
 		struct epsilon { size_t state; };

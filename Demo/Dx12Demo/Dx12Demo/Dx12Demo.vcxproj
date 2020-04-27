@@ -161,6 +161,7 @@
     <ClInclude Include="..\..\..\Potato\character_encoding.h" />
     <ClInclude Include="..\..\..\Potato\lexical.h" />
     <ClInclude Include="..\..\..\Potato\parser.h" />
+    <ClInclude Include="..\..\..\Potato\range_set.h" />
     <ClInclude Include="..\..\..\Potato\smart_pointer.h" />
     <ClInclude Include="..\..\..\Potato\syntax.h" />
     <ClInclude Include="..\..\..\Potato\tmp.h" />

@@ -1,6 +1,6 @@
 _IGNORE := '\s+'
 Code := '@\{[.\n]*?\}@'
-Number := '\-?[1-9][0-9]*(.[0-9]+)?'
+Number := '\-?[1-9][0-9]*(\.[0-9]+)?'
 String := '\".*?[^\\]\"|\"\"'
 Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 
@@ -8,9 +8,17 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 
 $ := <Statement>
 
-<SinglePath> := Id
-    := <SinglePath> '.' Id
+<Statement> := Number
+<Statement> := <Statement> '+' <Statement> [1]
+<Statement> := <Statement> '*' <Statement> [2]
+<Statement> := '(' <Statement> ')'
 
+%%%
+
+'*' '+'
+
+
+/*
 <EquationStatement> := Id '=' Id : Id [1]
     := Id '=' String
     := Id '=' Number
@@ -20,6 +28,7 @@ $ := <Statement>
 
 <Statement> := <EquationStatement>
 <Statement> := <SinglePath>
+*/
 /*
 <IncludePathList> := <SinglePath> {',' <SinglePath>}
     :=
@@ -44,6 +53,6 @@ $ := <Statement>
 <Statement> :=
             := <Statement> <MaterialStatement>
             := <Statement> <DefineStatement>
-*/
 
 %%%
+*/

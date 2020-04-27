@@ -1,8 +1,7 @@
 #include "syntax.h"
 #include <assert.h>
 #include <string>
-#include <iostream>
-
+#include <sstream>
 namespace
 {
 	using namespace Potato::Syntax;
@@ -102,7 +101,7 @@ namespace
 						return { std::move(temporary), false };
 				}
 				else
-					throw lr1::production_head_missing{ *ite, 0 };
+					throw lr1::missing_noterminal_define_error(*ite);
 			}
 		}
 		return { std::move(temporary), true };
@@ -276,7 +275,7 @@ namespace
 					}
 					else {
 						assert(production.size() <= static_cast<size_t>(std::numeric_limits<storage_t>::max()));
-						throw lr1::production_head_missing{ target_symbol, static_cast<storage_t>(production.size()) };
+						throw lr1::missing_noterminal_define_error(target_symbol);
 					}
 				}
 			}
@@ -316,26 +315,11 @@ namespace
 				{
 					auto re = reduce.insert({ ite2, pi });
 					if (!re.second)
-					{
-						std::vector<std::tuple<storage_t, std::vector<storage_t>, std::set<storage_t>>> state;
-						storage_t old_state = 0;
-						storage_t new_state = 0;
-						for (auto& ite : input)
-						{
-							assert(state.size() < std::numeric_limits<storage_t>::max());
-							if (re.first->second == ite.m_index.m_production_index)
-								old_state = static_cast<storage_t>(state.size());
-							else if (pi == ite.m_index.m_production_index)
-								new_state = static_cast<storage_t>(state.size());
-							state.push_back({ ite.m_index.m_production_element_index, production[ite.m_index.m_production_index].production, *ite.m_forward_set });
-						}
-						throw lr1::reduce_conflict{ ite2, old_state, new_state, std::move(state) };
-					}
-
+						throw lr1::reduce_conflict_error(ite2, re.first->first, pi);
 				}
 			}
 			else {
-				uint32_t target_symbol = prod[ei];
+				storage_t target_symbol = prod[ei];
 				auto cur = ite;
 				cur.m_index.m_production_element_index += 1;
 				auto& ref = temporary_shift[target_symbol];
@@ -376,7 +360,7 @@ namespace
 			{
 				auto re = ope_priority.insert({ ite, current_remove });
 				if (!re.second)
-					throw lr1::operator_level_conflict{ ite };
+					throw lr1::operator_conflict_error(ite, re.first->first);
 			}
 		}
 		return std::move(ope_priority);
@@ -399,20 +383,33 @@ namespace
 namespace Potato::Syntax
 {
 
-	lr1::reduce_conflict::reduce_conflict(uint32_t token, uint32_t old_state_index, uint32_t new_state_index, std::vector<std::tuple<uint32_t, std::vector<uint32_t>, std::set<uint32_t>>> state)
-		: std::logic_error("reduce conflict"), m_conflig_token(token), m_old_state_index(old_state_index), m_new_state_index(new_state_index), m_state(std::move(state))
-	{}
+	char const* lr1::unacceptable_production_error::what() const noexcept
+	{
+		return "Unacceable Prodution";
+	}
 
-	lr1::production_head_missing::production_head_missing(uint32_t head, uint32_t production)
-		: std::logic_error("unable to find proction head"), m_require_head(head), m_production_index(production)
-	{}
+	char const* lr1::missing_noterminal_define_error::what() const noexcept
+	{
+		return "Missinig Noterminal Define";
+	}
 
-	lr1::same_production::same_production(uint32_t old_index, uint32_t new_index, std::vector<uint32_t> production)
-		: std::logic_error("same production"), m_old_production_index(old_index), m_new_production_index(new_index), m_production(std::move(production))
-	{}
+	char const* lr1::production_redefine_error::what() const noexcept
+	{
+		return "Production Redefine Error";
+	}
+
+	char const* lr1::reduce_conflict_error::what() const noexcept
+	{
+		return "Reduce Conflict Error";
+	}
+
+	char const* lr1::operator_conflict_error::what() const noexcept
+	{
+		return "Operator Conflict Error";
+	}
 
 	lr1 lr1::create(
-		uint32_t start_symbol,
+		storage_t start_symbol,
 		std::vector<production_input> production,
 		std::vector<ope_priority> priority
 	)
@@ -422,17 +419,17 @@ namespace Potato::Syntax
 		production.push_back({ { lr1::start_symbol(), start_symbol }, {}, lr1::no_function_enum() });
 		m_production.reserve(production.size() + 1);
 		for (auto& ite : production)
-			m_production.push_back({ ite.production[0], static_cast<uint32_t>(ite.production.size()) - 1, ite.function_state });
+			m_production.push_back({ ite.production[0], static_cast<storage_t>(ite.production.size()) - 1, ite.function_state });
 
 		auto null_set = calculate_nullable_set(production);
 		auto first_set = calculate_noterminal_first_set(production, null_set);
 
-		std::vector<std::set<uint32_t>> remove;
+		std::vector<std::set<storage_t>> remove;
 		remove.resize(production.size());
 
 		{
 
-			auto insert_set = [](std::set<uint32_t>& output, const std::map<uint32_t, std::set<uint32_t>>& first_set, uint32_t symbol) {
+			auto insert_set = [](std::set<storage_t>& output, const std::map<storage_t, std::set<storage_t>>& first_set, storage_t symbol) {
 				if (is_terminal(symbol))
 					output.insert(symbol);
 				else {
@@ -443,8 +440,8 @@ namespace Potato::Syntax
 			};
 
 
-			std::map<uint32_t, std::set<uint32_t>> remove_map = translate_operator_priority(priority);
-			for (uint32_t x = 0; x < production.size(); ++x)
+			std::map<storage_t, std::set<storage_t>> remove_map = translate_operator_priority(priority);
+			for (storage_t x = 0; x < production.size(); ++x)
 			{
 				auto& ref = production[x];
 				assert(!ref.production.empty());
@@ -473,17 +470,17 @@ namespace Potato::Syntax
 						remove[x].insert(ite->second.begin(), ite->second.end());
 				}
 
-				for (uint32_t y = x + 1; y < production.size(); ++y)
+				for (storage_t y = x + 1; y < production.size(); ++y)
 				{
 					auto& ref2 = production[y];
 					assert(!ref.production.empty());
 					if (ref.production[0] == ref2.production[0])
 					{
-						uint32_t index = diff(ref.production, ref2.production);
+						storage_t index = diff(ref.production, ref2.production);
 						if (index < ref.production.size() && index < ref2.production.size())
 							continue;
 						else if (index == ref.production.size() && index == ref2.production.size())
-							throw same_production{ x, y, production[x].production };
+							throw production_redefine_error(x, y);
 						else {
 							if (index < ref.production.size())
 							{
@@ -500,7 +497,7 @@ namespace Potato::Syntax
 			}
 		}
 
-		std::map<uint32_t, std::set<uint32_t>> production_map;
+		std::map<storage_t, std::set<storage_t>> production_map;
 
 		assert(production.size() < std::numeric_limits<uint32_t>::max());
 
@@ -519,7 +516,7 @@ namespace Potato::Syntax
 
 		std::map<std::set<production_element>, storage_t> state_map_mapping;
 		std::vector<decltype(state_map_mapping)::iterator> stack;
-		uint32_t current_state = 0;
+		storage_t current_state = 0;
 		{
 			auto re = all_forward_set.insert({ eof_symbol() }).first;
 			temporary_state_map temmap{ {production_index{static_cast<storage_t>(production.size()) - 1, 0}, re} };
@@ -588,11 +585,10 @@ namespace Potato::Syntax
 		return storage;
 	}
 
-	lr1_processor::unacceptable_error::unacceptable_error(storage_t forward_token, error_state lpes)
-		: std::logic_error("unacceptable token"), m_forward_token(forward_token), error_state(std::move(lpes)) {}
-
-	lr1_processor::uncomplete_error::uncomplete_error(error_state lps)
-		: std::logic_error("unacceptable eof"), error_state(std::move(lps)) {}
+	char const* lr1_processor::unacceptable_error::what() const noexcept
+	{
+		return "UnAcceptable Token";
+	}
 
 	bool lr1_processor::try_reduce(storage_t symbol, bool (*Function)(void* Func, travel input), void* data)
 	{
@@ -668,37 +664,11 @@ namespace Potato::Syntax
 
 			if (!(Reduce || Shift))
 			{
-				throw unacceptable_error{ input, {{}, {}} };
+				assert(!m_state_stack.empty());
+				throw unacceptable_error{ input, *m_state_stack.rbegin() };
 			}
 		}
 		return true;
 	}
-
-	/*
-	void lr1_ast::imp::operator()(lr1_processor::travel input)
-	{
-		if (input.is_terminal())
-		{
-			lr1_ast ast{ input.symbol, input.terminal.token_index };
-			ast_buffer.push_back(std::move(ast));
-		}
-		else {
-			auto size = input.noterminal.production_count;
-			size_t start = ast_buffer.size() - size;
-			std::vector<lr1_ast> list{ std::move_iterator(ast_buffer.begin() + start), std::move_iterator(ast_buffer.end()) };
-			lr1_ast ast{ input.symbol, std::move(list) };
-			ast_buffer.resize(start);
-			ast_buffer.push_back(std::move(ast));
-		}
-	}
-
-	lr1_ast lr1_ast::imp::result()
-	{
-		assert(ast_buffer.size() == 1);
-		auto re = std::move(*ast_buffer.begin());
-		ast_buffer.clear();
-		return std::move(re);
-	}
-	*/
 
 }

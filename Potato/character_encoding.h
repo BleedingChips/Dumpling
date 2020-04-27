@@ -78,11 +78,11 @@ namespace Potato::Encoding
 		template<typename OutputType>
 		std::tuple<std::size_t, std::size_t> to_string(OutputType* output, std::size_t output_length) noexcept 
 		{
+			std::size_t s_used = 0;
+			std::size_t t_used = 0;
 			if (input != nullptr)
 			{
-				const char* cur = input;
-				std::size_t s_used = 0;
-				std::size_t t_used = 0;
+				const type* cur = input;
 				std::size_t cur_length = length;
 				while (!bad_string && cur_length != 0)
 				{
@@ -114,7 +114,7 @@ namespace Potato::Encoding
 					}
 				}
 			}
-			return { 0, 0 };
+			return { s_used, t_used};
 		}
 		template<typename OutputType>
 		std::basic_string<OutputType> to_string() noexcept

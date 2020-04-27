@@ -2,6 +2,7 @@
 #include <vector>
 #include <assert.h>
 #include <optional>
+#include <limits>
 namespace Potato::Tool
 {
 
@@ -113,6 +114,7 @@ namespace Potato::Tool
 		};
 
 		range_set(const range_set&) = default;
+		range_set(std::initializer_list<range> ul) : m_set(ul) {}
 		range_set(range_set&&) = default;
 		range_set& operator=(const range_set&) = default;
 		range_set& operator=(range_set&&) = default;

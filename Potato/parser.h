@@ -23,6 +23,30 @@ namespace Potato::Parser
 			size_t charactor_index;
 		};
 
+		struct unacceptable_token_error : std::exception {
+			unacceptable_token_error(std::u32string string, size_t line, size_t index) : string(std::move(string)), line(line), index(index) {}
+			unacceptable_token_error(const unacceptable_token_error&) = default;
+			char const* what() const noexcept override;
+			std::u32string string;
+			size_t line;
+			size_t index;
+		};
+
+		struct undefine_terminal_error : std::exception {
+			undefine_terminal_error(std::u32string token, size_t line, size_t index) : string(std::move(string)), line(line), index(index) {}
+			undefine_terminal_error(const undefine_terminal_error&) = default;
+			char const* what() const noexcept override;
+			std::u32string string;
+			size_t line;
+			size_t index;
+		};
+
+		struct miss_start_symbol : std::exception {
+			miss_start_symbol() {}
+			miss_start_symbol(const miss_start_symbol&) = default;
+			char const* what() const noexcept override;
+		};
+
 		std::u32string table;
 		std::vector<std::tuple<std::size_t, std::size_t>> symbol_map;
 		size_t ter_count;
@@ -31,10 +55,17 @@ namespace Potato::Parser
 		Lexical::nfa_storage nfa_s;
 		Syntax::lr1_storage lr1_s;
 		static sbnf create(std::u32string_view code);
+		std::u32string_view find_symbol(storage_t input) const noexcept;
+		std::optional<storage_t> find_symbol(std::u32string_view sym) const noexcept;
  	};
 
 	struct sbnf_processer
 	{
+		struct error : std::logic_error {
+			using std::logic_error::logic_error;
+			size_t line;
+			size_t count;
+		};
 
 		using storage_t = Syntax::lr1::storage_t;
 		struct travel
@@ -46,13 +77,12 @@ namespace Potato::Parser
 				struct terminal_t{
 
 					size_t line;
-					size_t charactor_index;
+					size_t index;
 				}terminal;
 				struct noterminal_t{
 					size_t function_enum;
-					size_t production_index;
 					storage_t const* symbol_array;
-					size_t production_element_count;
+					size_t array_count;
 				}noterminal;
 			};
 			bool is_termina() const noexcept { return Syntax::lr1::is_terminal(sym); }
@@ -60,7 +90,7 @@ namespace Potato::Parser
 		sbnf_processer(sbnf const& ref) : ref(ref) {}
 		sbnf const& ref;
 		template<typename Func> void analyze(std::u32string_view code, Func&& F) {
-			auto Wrapper = [](void* data, travel input) {  (*reinterpret_cast<Func*>(F))(input); };
+			auto Wrapper = [](void* data, travel input) {  (*reinterpret_cast<Func*>(data))(input); };
 			analyze_imp(code, Wrapper, &F);
 		}
 	private:

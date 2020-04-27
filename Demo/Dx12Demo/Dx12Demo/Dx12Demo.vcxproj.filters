@@ -45,15 +45,6 @@
     <ClCompile Include="demo.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Potato\lexical.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Potato\tool.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp">
       <Filter>Dumpling\Gui\Dxgi</Filter>
     </ClCompile>
@@ -75,38 +66,26 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp">
       <Filter>Dumpling\Gui\Win32</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Potato\syntax.cpp">
+    <ClCompile Include="..\..\..\Dumpling\Msc\msc_parser.cpp">
+      <Filter>Dumpling\Msc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\lexical.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Potato\parser.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Msc\msc_parser.cpp">
-      <Filter>Dumpling\Msc</Filter>
+    <ClCompile Include="..\..\..\Potato\syntax.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\tool.cpp">
+      <Filter>Potato</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Potato\auto_adapter.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\character_encoding.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\lexical.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\smart_pointer.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\tmp.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\tmpcall.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\tool.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h">
       <Filter>Dumpling\Gui\Dxgi</Filter>
     </ClInclude>
@@ -131,20 +110,44 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h">
       <Filter>Dumpling\Gui\Win32</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Potato\syntax.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Msc\define_msc.h">
       <Filter>Dumpling\Mscf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\parser.h">
-      <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser.h">
       <Filter>Dumpling\Msc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Msc\msc.h">
       <Filter>Dumpling\Msc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\auto_adapter.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\character_encoding.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\lexical.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\parser.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\range_set.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\smart_pointer.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\syntax.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\tmp.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\tmpcall.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\tool.h">
+      <Filter>Potato</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -274,194 +274,206 @@ namespace Potato::Lexical
 		std::vector<Tool::range_set<char32_t>> ScopeStack;
 		bool UseMinAtEnd = false;
 		auto ite = rex.begin();
-		lr1_process(rex_lr1(), [&]() -> std::optional<lr1::storage_t> {
-			if (TemporaryRange)
-			{
-				ScopeStack.push_back(std::move(*TemporaryRange));
-				TemporaryRange = std::nullopt;
-			}
-
-			if (ite != rex.end())
-			{
-				auto Re = rex_lexer(ite, rex.end());
-				if (std::holds_alternative<range_set>(Re))
+		try {
+			lr1_process(rex_lr1(), [&]() -> std::optional<lr1::storage_t> {
+				if (TemporaryRange)
 				{
-					TemporaryRange = std::move(std::get<range_set>(Re));
-					return *SYM::Char;
+					ScopeStack.push_back(std::move(*TemporaryRange));
+					TemporaryRange = std::nullopt;
 				}
-				else
-					return *std::get<SYM>(Re);
-			}
-			else {
-				return std::nullopt;
-			}
-		}, [&](lr1_processor::travel tra) {
-			if (!tra.is_terminal())
-			{
-				switch (tra.noterminal.function_enum)
+
+				if (ite != rex.end())
 				{
-				case 0: {
-					assert(StateStack.size() >= 2);
-					auto& L1 = *(StateStack.rbegin() + 1);
-					auto L2 = *(StateStack.rbegin());
-					result[std::get<1>(L1)].edge.push_back(epsilon{ std::get<0>(L2) });
-					L1 = { std::get<0>(L1), std::get<1>(L2) };
-					StateStack.pop_back();
-				} break;
-				case 7: {
-					assert(StateStack.size() >= 2);
-					auto [s1, e1] = *(StateStack.rbegin() + 1);
-					auto [s2, e2] = *(StateStack.rbegin());
-					StateStack.resize(StateStack.size() - 2);
-					auto i1s = result.back_construction({});
-					auto i2s = result.back_construction({});
-					result[i1s].edge.push_back(epsilon{ s1 });
-					result[i1s].edge.push_back(epsilon{ s2 });
-					result[e1].edge.push_back(epsilon{ i2s });
-					result[e2].edge.push_back(epsilon{ i2s });
-					StateStack.push_back({ i1s, i2s });
-					break;
-				}break;
-				case 1:case 14: break;
-				case 2: case 8: case 15: case 19: {
-					if(tra.noterminal.function_enum == 15)
-						ScopeStack.push_back({ U'-' });
-					else if (tra.noterminal.function_enum == 19)
+					auto Re = rex_lexer(ite, rex.end());
+					if (std::holds_alternative<range_set>(Re))
 					{
+						TemporaryRange = std::move(std::get<range_set>(Re));
+						return *SYM::Char;
+					}
+					else
+						return *std::get<SYM>(Re);
+				}
+				else {
+					return std::nullopt;
+				}
+			}, [&](lr1_processor::travel tra) {
+				if (!tra.is_terminal())
+				{
+					switch (tra.noterminal.function_enum)
+					{
+					case 0: {
+						assert(StateStack.size() >= 2);
+						auto& L1 = *(StateStack.rbegin() + 1);
+						auto L2 = *(StateStack.rbegin());
+						result[std::get<1>(L1)].edge.push_back(epsilon{ std::get<0>(L2) });
+						L1 = { std::get<0>(L1), std::get<1>(L2) };
+						StateStack.pop_back();
+					} break;
+					case 7: {
+						assert(StateStack.size() >= 2);
+						auto [s1, e1] = *(StateStack.rbegin() + 1);
+						auto [s2, e2] = *(StateStack.rbegin());
+						StateStack.resize(StateStack.size() - 2);
+						auto i1s = result.back_construction({});
+						auto i2s = result.back_construction({});
+						result[i1s].edge.push_back(epsilon{ s1 });
+						result[i1s].edge.push_back(epsilon{ s2 });
+						result[e1].edge.push_back(epsilon{ i2s });
+						result[e2].edge.push_back(epsilon{ i2s });
+						StateStack.push_back({ i1s, i2s });
+						break;
+					}break;
+					case 1:case 14: break;
+					case 2: case 8: case 15: case 19: {
+						if (tra.noterminal.function_enum == 15)
+							ScopeStack.push_back({ U'-' });
+						else if (tra.noterminal.function_enum == 19)
+						{
+							range_set R = range_set::range{ 1, U'\n' };
+							R |= range_set::range{ U'\n' + 1, std::numeric_limits<char32_t>::max() };
+							ScopeStack.push_back(std::move(R));
+						}
+						assert(ScopeStack.size() >= 1);
+						auto Cur = std::move(*ScopeStack.rbegin());
+						ScopeStack.pop_back();
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						result[s1].edge.push_back(comsume{ s2, std::move(Cur) });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 3: {
+						assert(ScopeStack.size() >= 1);
+						auto Cur = std::move(*ScopeStack.rbegin());
+						ScopeStack.pop_back();
+						range_set Total({ 1, std::numeric_limits<char32_t>::max() });
+						Cur.intersection_cull(Total);
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						result[s1].edge.push_back(comsume{ s2, std::move(Total) });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 4: {
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						assert(StateStack.size() >= 1);
+						auto [t1, t2] = *StateStack.rbegin();
+						StateStack.pop_back();
+						result[t2].edge.push_back(epsilon{ t1 });
+						result[s1].edge.push_back(epsilon{ t1 });
+						result[s1].edge.push_back(epsilon{ s2 });
+						result[t2].edge.push_back(epsilon{ s2 });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 16: {
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						assert(StateStack.size() >= 1);
+						auto [t1, t2] = *StateStack.rbegin();
+						StateStack.pop_back();
+						result[s1].edge.push_back(epsilon{ s2 });
+						result[s1].edge.push_back(epsilon{ t1 });
+						result[t2].edge.push_back(epsilon{ s2 });
+						result[t2].edge.push_back(epsilon{ t1 });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 5: {
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						assert(StateStack.size() >= 1);
+						auto [t1, t2] = *StateStack.rbegin();
+						StateStack.pop_back();
+						result[s1].edge.push_back(epsilon{ t1 });
+						result[s1].edge.push_back(epsilon{ s2 });
+						result[t2].edge.push_back(epsilon{ s2 });
+						StateStack.push_back({ s1, s2 });
+						break;
+					} break;
+					case 17: {
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						assert(StateStack.size() >= 1);
+						auto [t1, t2] = *StateStack.rbegin();
+						StateStack.pop_back();
+						result[s1].edge.push_back(epsilon{ s2 });
+						result[s1].edge.push_back(epsilon{ t1 });
+						result[t2].edge.push_back(epsilon{ s2 });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 6: {
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						assert(StateStack.size() >= 1);
+						auto [t1, t2] = *StateStack.rbegin();
+						StateStack.pop_back();
+						result[s1].edge.push_back(epsilon{ t1 });
+						result[t2].edge.push_back(epsilon{ t1 });
+						result[t2].edge.push_back(epsilon{ s2 });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 18: {
+						auto s1 = result.back_construction({});
+						auto s2 = result.back_construction({});
+						assert(StateStack.size() >= 1);
+						auto [t1, t2] = *StateStack.rbegin();
+						StateStack.pop_back();
+						result[s1].edge.push_back(epsilon{ t1 });
+						result[t2].edge.push_back(epsilon{ s2 });
+						result[t2].edge.push_back(epsilon{ t1 });
+						StateStack.push_back({ s1, s2 });
+					}break;
+					case 9: {
+						ScopeStack.push_back({ U'-' });
+					}break;
+					case 10: ScopeStack.push_back({}); break;
+					case 11: {
+						assert(ScopeStack.size() >= 3);
+						auto i1 = std::move(*(ScopeStack.rbegin() + 1));
+						auto i2 = std::move(*(ScopeStack.rbegin()));
+						assert(i1.size() >= 1 && i2.size() >= 1);
+						auto min = i1[0].left;
+						auto big = i2[i2.size() - 1].right;
+						assert(min < big);
+						auto& i3 = *(ScopeStack.rbegin() + 2);
+						i3 |= range_set::range{ min, big };
+						ScopeStack.resize(ScopeStack.size() - 2);
+					}break;
+					case 12: {
+						assert(ScopeStack.size() >= 2);
+						auto& i1 = *(ScopeStack.rbegin() + 1);
+						auto i2 = std::move(*(ScopeStack.rbegin()));
+						i1 |= i2;
+						ScopeStack.pop_back();
+					}break;
+					case 21: {
+						assert(ScopeStack.size() >= 1);
 						range_set R = range_set::range{ 1, U'\n' };
 						R |= range_set::range{ U'\n' + 1, std::numeric_limits<char32_t>::max() };
-						ScopeStack.push_back(std::move(R));
+						*ScopeStack.rbegin() |= R;
+					}break;
+					case 13: {} break;
+					case lr1::no_function_enum(): {} break;
+					default: assert(false); break;
 					}
-					assert(ScopeStack.size() >= 1);
-					auto Cur = std::move(*ScopeStack.rbegin());
-					ScopeStack.pop_back();
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					result[s1].edge.push_back(comsume{ s2, std::move(Cur) });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 3: {
-					assert(ScopeStack.size() >= 1);
-					auto Cur = std::move(*ScopeStack.rbegin());
-					ScopeStack.pop_back();
-					range_set Total({ 1, std::numeric_limits<char32_t>::max() });
-					Cur.intersection_cull(Total);
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					result[s1].edge.push_back(comsume{ s2, std::move(Total) });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 4: {
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					assert(StateStack.size() >= 1);
-					auto [t1, t2] = *StateStack.rbegin();
-					StateStack.pop_back();
-					result[t2].edge.push_back(epsilon{ t1 });
-					result[s1].edge.push_back(epsilon{ t1 });
-					result[s1].edge.push_back(epsilon{ s2 });
-					result[t2].edge.push_back(epsilon{ s2 });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 16: {
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					assert(StateStack.size() >= 1);
-					auto [t1, t2] = *StateStack.rbegin();
-					StateStack.pop_back();
-					result[s1].edge.push_back(epsilon{ s2 });
-					result[s1].edge.push_back(epsilon{ t1 });
-					result[t2].edge.push_back(epsilon{ s2 });
-					result[t2].edge.push_back(epsilon{ t1 });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 5: {
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					assert(StateStack.size() >= 1);
-					auto [t1, t2] = *StateStack.rbegin();
-					StateStack.pop_back();
-					result[s1].edge.push_back(epsilon{ t1 });
-					result[s1].edge.push_back(epsilon{ s2 });
-					result[t2].edge.push_back(epsilon{ s2 });
-					StateStack.push_back({ s1, s2 });
-					break;
-				} break;
-				case 17: {
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					assert(StateStack.size() >= 1);
-					auto [t1, t2] = *StateStack.rbegin();
-					StateStack.pop_back();
-					result[s1].edge.push_back(epsilon{ s2 });
-					result[s1].edge.push_back(epsilon{ t1 });
-					result[t2].edge.push_back(epsilon{ s2 });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 6: {
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					assert(StateStack.size() >= 1);
-					auto [t1, t2] = *StateStack.rbegin();
-					StateStack.pop_back();
-					result[s1].edge.push_back(epsilon{ t1 });
-					result[t2].edge.push_back(epsilon{ t1 });
-					result[t2].edge.push_back(epsilon{ s2 });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 18: {
-					auto s1 = result.back_construction({});
-					auto s2 = result.back_construction({});
-					assert(StateStack.size() >= 1);
-					auto [t1, t2] = *StateStack.rbegin();
-					StateStack.pop_back();
-					result[s1].edge.push_back(epsilon{ t1 });
-					result[t2].edge.push_back(epsilon{ s2 });
-					result[t2].edge.push_back(epsilon{ t1 });
-					StateStack.push_back({ s1, s2 });
-				}break;
-				case 9: {
-					ScopeStack.push_back({ U'-' });
-				}break;
-				case 10: ScopeStack.push_back({}); break;
-				case 11: {
-					assert(ScopeStack.size() >= 3);
-					auto i1 = std::move(*(ScopeStack.rbegin() + 1));
-					auto i2 = std::move(*(ScopeStack.rbegin()));
-					assert(i1.size() >= 1 && i2.size() >= 1);
-					auto min = i1[0].left;
-					auto big = i2[i2.size() - 1].right;
-					assert(min < big);
-					auto& i3 = *(ScopeStack.rbegin() + 2);
-					i3 |= range_set::range{ min, big };
-					ScopeStack.resize(ScopeStack.size() - 2);
-				}break;
-				case 12: {
-					assert(ScopeStack.size() >= 2);
-					auto& i1 = *(ScopeStack.rbegin() + 1);
-					auto i2 = std::move(*(ScopeStack.rbegin()));
-					i1 |= i2;
-					ScopeStack.pop_back();
-				}break;
-				case 21: {
-					assert(ScopeStack.size() >= 1);
-					range_set R = range_set::range{ 1, U'\n' };
-					R |= range_set::range{ U'\n' + 1, std::numeric_limits<char32_t>::max() };
-					*ScopeStack.rbegin() |= R;
-				}break;
-				case 13: {} break;
-				case lr1::no_function_enum(): {} break;
-				default: assert(false); break;
 				}
-			}
-		});
-		assert(StateStack.size() == 1);
-		auto end = result.back_construction({});
-		auto [s1, s2] = *StateStack.rbegin();
-		result[s2].edge.push_back(acception{ end, accept_state});
-		auto& TopNode = result[0];
-		TopNode.edge.push_back(epsilon{ s1 });
-		return *this;
+			});
+			assert(StateStack.size() == 1);
+			auto end = result.back_construction({});
+			auto [s1, s2] = *StateStack.rbegin();
+			result[s2].edge.push_back(acception{ end, accept_state });
+			auto& TopNode = result[0];
+			TopNode.edge.push_back(epsilon{ s1 });
+			return *this;
+		}
+		catch (lr1_processor::unacceptable_error const&)
+		{
+			throw unacceptable_rex_error(std::u32string(rex), accept_state, static_cast<size_t>(ite - rex.begin()));
+		}
+		
+	}
+
+	char const* nfa::unacceptable_rex_error::what() const noexcept
+	{
+		return "Unacceptable Regular Expression Error";
 	}
 
 	nfa nfa::create_from_rex(std::u32string_view rex, size_t accept_state)
@@ -470,7 +482,6 @@ namespace Potato::Lexical
 		result.append_rex(rex, accept_state);
 		return result;
 	}
-
 
 	nfa nfa::create_from_rexs(std::u32string_view const* code, size_t count)
 	{

@@ -142,6 +142,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Potato\character_encoding.cpp" />
+    <ClCompile Include="..\Potato\lexical.cpp" />
+    <ClCompile Include="..\Potato\parser.cpp" />
+    <ClCompile Include="..\Potato\syntax.cpp" />
+    <ClCompile Include="..\Potato\tool.cpp" />
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="msc.sbnf" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\Potato\auto_adapter.h" />
     <ClInclude Include="..\Potato\character_encoding.h" />
     <ClInclude Include="..\Potato\lexical.h" />
@@ -152,17 +163,6 @@
     <ClInclude Include="..\Potato\tmp.h" />
     <ClInclude Include="..\Potato\tmpcall.h" />
     <ClInclude Include="..\Potato\tool.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\Potato\character_encoding.cpp" />
-    <ClCompile Include="..\Potato\lexical.cpp" />
-    <ClCompile Include="..\Potato\parser.cpp" />
-    <ClCompile Include="..\Potato\syntax.cpp" />
-    <ClCompile Include="..\Potato\tool.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="msc.sbnf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
