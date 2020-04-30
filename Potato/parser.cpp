@@ -43,7 +43,7 @@ namespace
 		{SYM::Line, U"\r\n|\n"},
 		{SYM::Terminal, UR"([a-zA-Z_][a-zA-Z_0-9]*)"},
 		{SYM::Equal, UR"(:=)"},
-		{SYM::Mask, UR"(\%\%\%)"},
+		{SYM::Mask, UR"(%%%\s*?\n)"},
 		{SYM::Rex, UR"('.*?[^\\]')"},
 		{SYM::NoTerminal, UR"(\<[_a-zA-Z][_a-zA-Z0-9]*\>)"},
 		{SYM::StartSymbol, UR"(\$)"},
@@ -116,7 +116,7 @@ namespace Potato::Parser
 		return std::nullopt;
 	};
 
-	struct LexerWrapper : nfa_lexer
+	struct DefultLexer : nfa_lexer
 	{
 		using nfa_lexer::nfa_lexer;
 		nfa_lexer::travel stack() const noexcept { return input_stack; }
@@ -153,7 +153,7 @@ namespace Potato::Parser
 	void sbnf_processer::analyze_imp(std::u32string_view code, void(*Func)(void* data, travel), void* data)
 	{
 		assert(Func != nullptr);
-		LexerWrapper Wrapper(ref.nfa_s, code);
+		DefultLexer Wrapper(ref.nfa_s, code);
 		Wrapper.reset_remove({ ref.unused_terminal });
 		Syntax::lr1_processor lp(ref.lr1_s);
 		std::vector<storage_t> ProductionStorage;
@@ -227,6 +227,51 @@ namespace Potato::Parser
 		});
 	}
 
+	struct LexerWrapper : nfa_lexer
+	{
+		using nfa_lexer::nfa_lexer;
+		size_t state = 0;
+		nfa_lexer::travel stack() const noexcept { return input_stack; }
+		void reset_remove(std::set<size_t> rm) { remove = std::move(rm); }
+		std::optional<lr1_storage::storage_t> operator()() {
+			if (state == 1)
+			{
+				state = 0;
+				return std::nullopt;
+			}
+			while (true)
+			{
+				if (nfa_lexer::operator bool())
+				{
+					auto result = nfa_lexer::operator()();
+					if (result)
+					{
+						switch (*result)
+						{
+						case *SYM::Command:
+						case *SYM::Empty:
+							break;
+						case *SYM::Mask:
+							return std::nullopt;
+						default:
+							input_stack = nfa_lexer::stack();
+							return static_cast<lr1_storage::storage_t>(*result);
+						}
+					}
+					else {
+						auto re = nfa_lexer::last();
+						throw sbnf::unacceptable_token_error(std::u32string(re.data(), re.size() < 10 ? re.size() : 10), current_line(), current_index());
+					}
+				}
+				else
+					return std::nullopt;
+			}
+		}
+	private:
+		nfa_lexer::travel input_stack;
+		std::set<size_t> remove;
+	};
+
 
 	sbnf sbnf::create(std::u32string_view code)
 	{
@@ -254,8 +299,8 @@ namespace Potato::Parser
 				*SYM::Statement, {
 					{{*SYM::Statement, *SYM::Statement, *SYM::Terminal, *SYM::Equal, *SYM::Rex, *SYM::Line}, 1},
 					{{*SYM::Statement}, 3},
-					{{*SYM::Statement, *SYM::Statement, *SYM::Mask, *SYM::Line}, 4},
-					{{*SYM::Statement,*SYM::Statement,*SYM::Line}, 5}
+					//{{*SYM::Statement,*SYM::Statement,  *SYM::Mask}},
+					{{*SYM::Statement,*SYM::Statement,  *SYM::Line}}
 				}, {}
 			);
 
@@ -348,9 +393,10 @@ namespace Potato::Parser
 				{{*SYM::Statement, *SYM::Statement, *SYM::StartSymbol, *SYM::Equal, *SYM::NoTerminal, *SYM::Line }, 12},
 				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::Expression, *SYM::RemoveExpression, *SYM::FunctionEnum, *SYM::Line}, 13},
 				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::RemoveExpression, *SYM::FunctionEnum, *SYM::Line}, 13},
-				{{*SYM::Statement, *SYM::Statement, *SYM::Mask, *SYM::Line}, 14},
+
 				{{*SYM::Statement}},
 				{{*SYM::Statement, *SYM::Statement, *SYM::Line}},
+				//{{*SYM::Statement, *SYM::Statement, *SYM::Mask}},
 				},
 				{}
 			);
@@ -409,6 +455,7 @@ namespace Potato::Parser
 							Number = Number * 10 + ite - U'0';
 						FunctionEnum = Number;
 					}break;
+					case* SYM::Mask: return false;
 					default: break;
 					}
 				}

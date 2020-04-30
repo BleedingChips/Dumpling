@@ -1,13 +1,4 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <regex>
-#include <tuple>
-#include <optional>
-#include <map>
-#include <filesystem>
-#include <variant>
-#include <set>
 #include "lexical.h"
 #include "syntax.h"
 
@@ -85,7 +76,7 @@ namespace Potato::Parser
 					size_t array_count;
 				}noterminal;
 			};
-			bool is_termina() const noexcept { return Syntax::lr1::is_terminal(sym); }
+			bool is_terminal() const noexcept { return Syntax::lr1::is_terminal(sym); }
 		};
 		sbnf_processer(sbnf const& ref) : ref(ref) {}
 		sbnf const& ref;

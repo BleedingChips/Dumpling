@@ -27,6 +27,14 @@ namespace fs = std::filesystem;
 int main()
 {
 
+	using Type = float(*)(int);
+	using Type2 = Type (*)(int, int, float);
+	Type2 fp3;
+	float (*(*fp2)(int, int, float))(int);
+	static_assert(std::is_same_v<decltype(fp3), decltype(fp2)>);
+
+
+
 #ifdef _DEBUG
 	Dx12::InitDebugLayout();
 #endif
@@ -50,7 +58,7 @@ int main()
 	Parser::sbnf_processer sp(msc_sbnf_instance());
 	std::vector<float> Data;
 	sp.analyze(U"1+2+4*4+3", [&](Parser::sbnf_processer::travel tra) {
-		if (tra.is_termina())
+		if (tra.is_terminal())
 		{
 			if (tra.sym == *Number)
 			{
