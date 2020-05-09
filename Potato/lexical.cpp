@@ -464,7 +464,7 @@ namespace Potato::Lexical
 			TopNode.edge.push_back(epsilon{ s1 });
 			return *this;
 		}
-		catch (lr1_processor::unacceptable_error const&)
+		catch (lr1_processor::unacceptable_error const& Error)
 		{
 			throw unacceptable_rex_error(std::u32string(rex), accept_state, static_cast<size_t>(ite - rex.begin()));
 		}

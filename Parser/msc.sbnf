@@ -1,58 +1,80 @@
 _IGNORE := '\s+'
 Code := '@\{[.\n]*?\}@'
-Number := '\-?[1-9][0-9]*(\.[0-9]+)?'
-String := '\".*?[^\\]\"|\"\"'
+IntNumber := '-?[1-9][0-9]*'
+FloatNumber := '-?[1-9][0-9]*(\.[0-9]+)?'
+String := '".*?[^\\]"|""'
+Path := '\[".*?[^\\]"\]|\[""\]'
 Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 
 %%%
 
-$ := <Statement>
-
-<Statement> := Number
-<Statement> := <Statement> '+' <Statement> [1]
-<Statement> := <Statement> '*' <Statement> [2]
-<Statement> := '(' <Statement> ')'
-
-%%%
-
-'*' '+'
 
 
-/*
-<EquationStatement> := Id '=' Id : Id [1]
-    := Id '=' String
-    := Id '=' Number
-    := 'marco' Id String
-    := 'marco' Id Id
-    := 'marco' Id Number
+<NumberType> := 'int' | 'int2' | 'int3' | 'int4' | 'float' | 'float2'| 'float3'| 'float4'
 
-<Statement> := <EquationStatement>
-<Statement> := <SinglePath>
-*/
-/*
-<IncludePathList> := <SinglePath> {',' <SinglePath>}
+<ConstNumber> := IntNumber | FloatNumber
+    := <NumberType> ( '(' <ConstNumber> { ',' <ConstNumber> } ')' | '(' ')' )
+
+<ShaderResourceType> := 'Texture1D' | 'Texture2D' | 'Texture2DArray'
+<RWResourceType> := 'RWTexture1D' | 'RWTexture2D'
+
+<DefineValueExpression> := <NumberType> Id [ '=' <ConstNumber> ]
+    := <NumberType> Id [ '[' IntNumber ']' ]
+    := <ShaderResourceType> [ '<' <NumberType> '>' ] Id ['[' IntNumber ']' ]
+    := <RWResourceType> '<' <NumberType> '>' Id ['[' IntNumber ']']
+
+<PropertyDefineElement> := Id
+    := Id '=' (String | Path | <ConstNumber> | 'true' | 'false')
+
+<PropertyDefineExpression> := '[' <PropertyDefineElement> {',' <PropertyDefineElement> } ']'
+    := '[' ']'
+
+<FullDefineExpression> := <FullDefineExpression> [ <PropertyDefineExpression> ] <DefineValueExpression> ';'
+
+<DefineStatementElement> :=  <DefineStatementElement> <FullDefineExpression>
+    := <DefineStatementElement> <PropertyDefineExpression> 'space' Id '{' <FullDefineExpression> '}' ';'
+    := 
+
+<PropertyStatement> := 'property' '{' <DefineStatementElement> '}' ';'
+
+<ImportStatement> := 'import' Path 'as' Id ';'
+
+
+<RefPath> := Id
+    := <RefPath> '.' Id
+
+<IncludeExpression> := '[' <RefPath> { ',' <RefPath>  } ']' /* Conflig */
+    := '[' ']'
+
+<CodeStatement> := 'code' Id <IncludeExpression> Code ';'
+
+<SectionInoutExpression> := <NumberType> Id
+    := <SectionInoutExpression> ',' <NumberType> Id /* Conflig */
+
+<SectionStatement> := 'section' Id <IncludeExpression> '(' [ <SectionInoutExpression> ] ')' '->' '(' [ <SectionInoutExpression> ] ')' Code ';'
+
+<MaterialDefineElement> := <MaterialDefineElement> Id '=' (String | Path | <ConstNumber> | 'true' | 'false') ';'
+    :=  <MaterialDefineElement> 'define' Id String ';'
+    :=  <MaterialDefineElement> 'undefine' Id ';'
     :=
 
-<DefineVariable> := 
+<MaterialStatementElement> := <MaterialStatementElement> <CodeStatement>
+    := <MaterialStatementElement> <SectionStatement>
+    := 
 
-<VariableStatement> := 'variable' '{' 
+<MaterialStatement> := [<PropertyDefineExpression>] 'material' Id ['as' Id] '<' <MaterialDefineElement> '>' '{' <MaterialStatementElement> '}' ';'
+    := [<PropertyDefineExpression>] 'using' 'material' <RefPath> ['as' Id] '<' <MaterialDefineElement> '>' ';'
 
-<DefineStatement> := 'include' Id '[' <Include> ']' Code ';'
+<NumberDefineExpression> := <NumberType> Id ['=' <ConstNumber>]
+<NumberDefineExpression> := <NumberType> Id '[' IntNumber ']'
 
-<InoutStatement> := '(' ')'
-                := '(' Id Id { ',' Id Id } ')'
 
-<SectionStatement> := Id '[' <Include> ']' <InoutStatement> '->' <InoutStatement>  Code ';'
+<DefineEqualExpression> := Id '=' ( <ConstNumber> | String | Path )
 
-<MaterialElement> := <EquationStatement>
-                := <DefineStatement>
-                := <SectionStatement>
+$ := <Statement>
 
-<MaterialStatement> := Material '{' { <MaterialElement> } '}' ';'
+<Statement> := <Statement> <ImportStatement>
+    := <Statement> <CodeStatement>
+    := <PropertyStatement>
+    :=  : <PropertyStatement>
 
-<Statement> :=
-            := <Statement> <MaterialStatement>
-            := <Statement> <DefineStatement>
-
-%%%
-*/

@@ -9,10 +9,10 @@ template<typename T>
 std::string to_string(T&& t)
 {
 	std::stringstream ss;
-	ss << t;
+	ss << std::hex << t;
 	std::string re;
 	ss >> re;
-	return re;
+	return "0x" + re;
 }
 
 int main()

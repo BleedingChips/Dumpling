@@ -27,15 +27,17 @@ namespace
 		Or,
 		Number,
 		Colon,
-		TokenMax,
 		Command,
+		TokenMax,
 
 		Statement = lr1::noterminal_start(),
 		FunctionEnum,
 		ProductionHead,
 		RemoveElement,
 		RemoveExpression,
+		AppendExpression,
 		Expression,
+		ExpressionStatemenet,
 	};
 
 	std::map<SYM, std::u32string_view> Rexs = {
@@ -272,7 +274,6 @@ namespace Potato::Parser
 		std::set<size_t> remove;
 	};
 
-
 	sbnf sbnf::create(std::u32string_view code)
 	{
 		using namespace Lexical;
@@ -347,6 +348,7 @@ namespace Potato::Parser
 
 		std::map<std::u32string_view, storage_t> noterminal_symbol_to_index;
 		std::vector<lr1::production_input> productions;
+		std::vector<lr1::production_input> productions_for_temporary;
 		std::optional<storage_t> start_symbol;
 		storage_t noterminal_temporary = lr1::start_symbol() - 1;
 
@@ -355,7 +357,7 @@ namespace Potato::Parser
 
 			static nfa_storage nfa_instance = ([]() -> nfa_storage {
 				std::vector<SYM> RequireList = {
-					SYM::StartSymbol, SYM::Colon, SYM::Terminal, SYM::Equal, SYM::Number, SYM::NoTerminal, SYM::Mask, SYM::Rex, SYM::Line, 
+					SYM::Or, SYM::StartSymbol, SYM::Colon, SYM::Terminal, SYM::Equal, SYM::Number, SYM::NoTerminal, SYM::Mask, SYM::Rex, SYM::Line,
 					SYM::LS_Brace, SYM::RS_Brace, SYM::LM_Brace, SYM::RM_Brace, SYM::LB_Brace, SYM::RB_Brace, SYM::Command, SYM::Empty 
 				};
 				nfa tem;
@@ -370,13 +372,13 @@ namespace Potato::Parser
 				{{*SYM::Expression, *SYM::NoTerminal }, 1},
 				{{*SYM::Expression, *SYM::Terminal }, 2},
 				{{*SYM::Expression, *SYM::Rex }, 3},
-				{{*SYM::Expression, *SYM::Expression, *SYM::Expression }, 4},
-				{{*SYM::Expression, *SYM::LS_Brace, *SYM::Expression, *SYM::RS_Brace}},
-				{{*SYM::Expression, *SYM::LB_Brace, *SYM::Expression, *SYM::RB_Brace}, 5},
-				{{*SYM::Expression, *SYM::LM_Brace, *SYM::Expression, *SYM::RM_Brace}, 6},
-				{{*SYM::Expression, *SYM::Expression, *SYM::Or, *SYM::Expression}, {*SYM::Expression}, 7},
+				{{*SYM::ExpressionStatemenet, *SYM::ExpressionStatemenet, *SYM::Or, *SYM::ExpressionStatemenet}, {*SYM::Expression}, 7},
+				{{*SYM::ExpressionStatemenet, *SYM::Expression}},
+				{{*SYM::ExpressionStatemenet, *SYM::ExpressionStatemenet, *SYM::Expression}, 4},
+				{{*SYM::Expression, *SYM::LS_Brace, *SYM::ExpressionStatemenet, *SYM::RS_Brace}},
+				{{*SYM::Expression, *SYM::LB_Brace, *SYM::ExpressionStatemenet, *SYM::RB_Brace}, 5},
+				{{*SYM::Expression, *SYM::LM_Brace, *SYM::ExpressionStatemenet, *SYM::RM_Brace}, 6},
 
-				{{*SYM::FunctionEnum}},
 				{{*SYM::FunctionEnum, *SYM::LM_Brace, *SYM::Number, *SYM::RM_Brace}},
 
 				{{*SYM::ProductionHead}},
@@ -387,12 +389,14 @@ namespace Potato::Parser
 				{{*SYM::RemoveElement, *SYM::Rex}, 10},
 				{{*SYM::RemoveElement, *SYM::RemoveElement, *SYM::RemoveElement}, 11},
 
-				{{*SYM::RemoveExpression, *SYM::Colon, *SYM::RemoveElement}},
-				{{*SYM::RemoveExpression}},
+				{{*SYM::AppendExpression, *SYM::Colon, *SYM::FunctionEnum}},
+				{{*SYM::AppendExpression, *SYM::Colon, *SYM::RemoveElement}},
+				{{*SYM::AppendExpression, *SYM::Colon, *SYM::RemoveElement, *SYM::FunctionEnum}},
+				{{*SYM::AppendExpression}},
 
 				{{*SYM::Statement, *SYM::Statement, *SYM::StartSymbol, *SYM::Equal, *SYM::NoTerminal, *SYM::Line }, 12},
-				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::Expression, *SYM::RemoveExpression, *SYM::FunctionEnum, *SYM::Line}, 13},
-				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::RemoveExpression, *SYM::FunctionEnum, *SYM::Line}, 13},
+				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::ExpressionStatemenet, *SYM::AppendExpression, *SYM::Line}, 13},
+				{{*SYM::Statement, *SYM::Statement, *SYM::ProductionHead, *SYM::Equal, *SYM::AppendExpression, *SYM::Line}, 13},
 
 				{{*SYM::Statement}},
 				{{*SYM::Statement, *SYM::Statement, *SYM::Line}},
@@ -478,12 +482,12 @@ namespace Potato::Parser
 						storage_t TemProduction = noterminal_temporary--;
 						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
 						std::vector<storage_t> Pro = { TemProduction };
-						productions.push_back(lr1::production_input{ Pro });
+						productions_for_temporary.push_back(lr1::production_input{ Pro });
 						auto& ref = *tem_production.rbegin();
 						Pro.push_back(TemProduction);
 						Pro.insert(Pro.end(), ref.begin(), ref.end());
 						ref = { TemProduction };
-						productions.push_back(lr1::production_input{ std::move(Pro) });
+						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro) });
 					} break;
 					case 8:
 					case 6: {
@@ -491,11 +495,11 @@ namespace Potato::Parser
 						storage_t TemProduction = noterminal_temporary--;
 						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
 						std::vector<storage_t> Pro = { TemProduction };
-						productions.push_back(lr1::production_input{ Pro });
+						productions_for_temporary.push_back(lr1::production_input{ Pro });
 						auto& ref = *tem_production.rbegin();
 						Pro.insert(Pro.end(), ref.begin(), ref.end());
 						ref = { TemProduction };
-						productions.push_back(lr1::production_input{ std::move(Pro) });
+						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro) });
 					}break;
 					case 7: {
 						assert(tem_production.size() >= 2);
@@ -505,10 +509,10 @@ namespace Potato::Parser
 						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
 						std::vector<storage_t> Pro = { TemProduction };
 						Pro.insert(Pro.end(), Ref.begin(), Ref.end());
-						productions.push_back(lr1::production_input{ std::move(Pro) });
+						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro) });
 						std::vector<storage_t> Pro2 = { TemProduction };
 						Pro2.insert(Pro2.end(), Ref2.begin(), Ref2.end());
-						productions.push_back(lr1::production_input{ std::move(Pro2) });
+						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro2) });
 						Ref2 = { TemProduction };
 						tem_production.pop_back();
 					}break;
@@ -629,6 +633,8 @@ namespace Potato::Parser
 		if (!start_symbol)
 			throw miss_start_symbol();
 
+		size_t DefineProduction_count = productions.size();
+		productions.insert(productions.end(), std::move_iterator(productions_for_temporary.begin()), std::move_iterator(productions_for_temporary.end()));
 		std::u32string table;
 		std::vector<std::tuple<size_t, size_t>> symbol_map;
 		symbol_map.resize(symbol_to_index.size() + noterminal_symbol_to_index.size(), {0, 0});
@@ -651,10 +657,80 @@ namespace Potato::Parser
 			auto& [str, index] = *ite;
 			nfa_temporary.append_rex(str, index);
 		}
-		Syntax::lr1 lr1_temporay = Syntax::lr1::create(
-			*start_symbol, std::move(productions), std::move(operator_priority)
-		);
+		try {
+			Syntax::lr1 lr1_temporay = Syntax::lr1::create(
+				*start_symbol, productions, std::move(operator_priority)
+			);
+			return { std::move(table), std::move(symbol_map), TerminalCount, unused_terminal, noterminal_temporary, nfa_temporary, lr1_temporay };
+		}
+		catch (lr1::missing_noterminal_define_error const& ref)
+		{
+			if (ref.noterminal_symbol < noterminal_symbol_to_index.size() + lr1::noterminal_start())
+			{
+				auto [start, size] = symbol_map[ref.noterminal_symbol - lr1::noterminal_start() + symbol_to_index.size()];
+				std::u32string Name(table.data() + start, size);
+				throw sbnf::error{ U"Missing NoTerminal Symbol Define :<" + Name + U">", 0, 0 };
+			}
+			throw;
+		}
+		catch (lr1::reduce_conflict_error const& error)
+		{
+			assert(lr1::is_terminal(error.token));
+			auto [start, size] = symbol_map[error.token];
+			std::u32string Symbol(table.data() + start, size);
 
-		return {std::move(table), std::move(symbol_map), TerminalCount, unused_terminal, noterminal_temporary, nfa_temporary, lr1_temporay};
+			std::u32string Production1;
+
+			{
+				auto Productions = productions[error.possible_production_1];
+			}
+
+			auto SymbolToString = [&](size_t Head) -> std::optional<std::u32string> {
+				size_t index = 0;
+				if (lr1::is_terminal(Head))
+					index = Head;
+				else if (Head < noterminal_symbol_to_index.size())
+					index = Head - lr1::noterminal_start() + symbol_to_index.size();
+				else
+					return std::nullopt;
+				auto [start, size] = symbol_map[index];
+				std::u32string Name(table.data() + start, size);
+				return Name;
+			};
+
+			auto ProductionsToString = [&](size_t ProductionIndex) -> std::u32string {
+				std::u32string String;
+				auto& Pros = productions[ProductionIndex].production;
+				std::vector<std::tuple<size_t, size_t>> search_stack({ {ProductionIndex, 0} });
+				while (!search_stack.empty())
+				{
+					auto& [index, count] = *search_stack.rbegin();
+					auto& pro = productions[index].production;
+					for (size_t i = 1; i < pro.size(); ++i)
+					{
+
+					}
+				}
+			};
+
+			auto ToString = [](size_t input) -> std::u32string {
+				if (input != 0)
+				{
+					std::u32string Str;
+					do
+					{
+						char32_t Cur = (input % 10) + U'0';
+						Str.insert(Str.begin(), Cur);
+						input /= 10;
+					} while (input != 0);
+					return Str;
+				}
+				return U"0";
+			};
+			throw sbnf::error{ U"reduce conflig :<" + Symbol + U"> with production index [" + ToString(error.possible_production_1) + U"] and [" + ToString(error.possible_production_2) + U"]", 0, 0 };
+		}
+		
+
+		
 	}
 }

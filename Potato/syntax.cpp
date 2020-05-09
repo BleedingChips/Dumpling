@@ -315,7 +315,7 @@ namespace
 				{
 					auto re = reduce.insert({ ite2, pi });
 					if (!re.second)
-						throw lr1::reduce_conflict_error(ite2, re.first->first, pi);
+						throw lr1::reduce_conflict_error(ite2, re.first->second, pi);
 				}
 			}
 			else {

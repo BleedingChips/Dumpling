@@ -59,9 +59,9 @@ namespace Potato::Lexical
 		std::optional<nfa_processer> processer;
 		travel processer_stack;
 		std::u32string_view last_code;
-		size_t line;
-		size_t index;
-		size_t total_index;
+		size_t line = 0;
+		size_t index = 0;
+		size_t total_index = 0;
 	};
 
 	struct nfa

@@ -10,14 +10,18 @@ cbuffer WTF
 {
 	Wtf a1;
 	Wtf a2;
-	
 };
 
 Texture2D G122;
+Texture2DArray<float4> yui[6];
+RWTexture2D<float4> RT2[9][10];
 
 float4 main(
 	float4 poi : POSITION
-	) : SV_TARGET
+) : SV_TARGET
 {
-	return float4(a1.GoGo.x, 1.0f, 1.0f, 1.0f);
+	int4 Shift = int4(0, 0, 0, 0);
+	float4 p = yui[0].mips[0][int3(0, 0, 0)];
+	float4 p2 = yui[5].mips[0][int3(0, 0, 0)];
+	return float4(a1.GoGo.x + a1.GoGo2.y, 1.0f, 1.0f, 1.0f) + p + p2;
 }

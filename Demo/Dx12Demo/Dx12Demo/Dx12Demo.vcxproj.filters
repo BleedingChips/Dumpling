@@ -158,4 +158,12 @@
       <Filter>源文件</Filter>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Content\base.mscf">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\Content\base.mscfins">
+      <Filter>资源文件</Filter>
+    </None>
+  </ItemGroup>
 </Project>

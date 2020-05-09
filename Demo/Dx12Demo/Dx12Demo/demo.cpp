@@ -54,43 +54,6 @@ int main()
 	resource_path = U"..\\Release\\";
 #endif
 #endif
-	auto Number = msc_sbnf_instance().find_symbol(U"Number");
-	Parser::sbnf_processer sp(msc_sbnf_instance());
-	std::vector<float> Data;
-	sp.analyze(U"1+2+4*4+3", [&](Parser::sbnf_processer::travel tra) {
-		if (tra.is_terminal())
-		{
-			if (tra.sym == *Number)
-			{
-				Encoding::string_encoding<char32_t> se(tra.token_data.data(), tra.token_data.size());
-				auto str = se.to_string<char>();
-				std::stringstream ss;
-				ss << str;
-				float Result;
-				ss >> Result;
-				Data.push_back(Result);
-			}
-		}
-		else {
-			switch (tra.noterminal.function_enum)
-			{
-			case 1: {
-				assert(Data.size() >= 2);
-				Data[Data.size() - 2] += Data[Data.size() - 1];
-				Data.pop_back();
-			}break;
-			case 2: {
-				assert(Data.size() >= 2);
-				Data[Data.size() - 2] *= Data[Data.size() - 1];
-				Data.pop_back();
-			}break;
-			default:
-				break;
-			}
-		}
-	});
-	assert(Data.size() == 1);
-	float Result = Data[0];
 
 
 	//Win32::SearchVisualStudioPath();
@@ -118,6 +81,15 @@ int main()
 	HRESULT rer = D3DReflect(ps_shader.data(), ps_shader.size(), __uuidof(ID3D12ShaderReflection), Ref(Dx12::VoidT{}));
 	D3D12_SHADER_DESC Desc;
 	Ref->GetDesc(&Desc);
+
+	for (size_t i = 0; i < Desc.BoundResources; ++i)
+	{
+		D3D12_SHADER_INPUT_BIND_DESC Desc;
+		Ref->GetResourceBindingDesc(i, &Desc);
+		volatile int k = 0;
+	}
+
+
 	for (size_t i = 0; i < Desc.ConstantBuffers; ++i)
 	{
 		auto Buffer  = Ref->GetConstantBufferByIndex(i);
@@ -132,9 +104,7 @@ int main()
 				Ref->GetDesc(&Desc2);
 				volatile int k = 0;
 			}
-			
 		}
-		
 		volatile int k = 0;
 	}
 

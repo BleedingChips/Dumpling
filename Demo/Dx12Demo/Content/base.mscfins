@@ -1,0 +1,21 @@
+import ["base.mscf"] as Test;
+
+using ["base.mscf"] {
+    
+};
+
+
+
+setting Test{
+    in Testing{
+        Potato = float2(2.0, 1.0);
+    };
+    Texture = ["GoGo.png"];
+};
+
+def Test{
+    in Testing{
+        Potato = float2(2.0, 1.0);
+        Potato2 = float2(2.0, 1.0);
+    };
+};
