@@ -34,11 +34,8 @@
     <Filter Include="Dumpling\Gui\Dx">
       <UniqueIdentifier>{cd2cc10d-bfcb-4b62-a0c0-2bdfc1b78a18}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Dumpling\Mscf">
-      <UniqueIdentifier>{b3a3c6dd-73b4-474d-9a1b-5e9d962bab2b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Dumpling\Msc">
-      <UniqueIdentifier>{549c81f6-7d12-4f60-b78a-36f6673048cc}</UniqueIdentifier>
+      <UniqueIdentifier>{0c31266a-19fa-4e96-9d3b-8d102801a808}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -54,20 +51,11 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Mscf\complier_mscf.cpp">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\aid_win32.cpp">
       <Filter>Dumpling\Gui\Win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp">
       <Filter>Dumpling\Gui\Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Msc\msc_parser.cpp">
-      <Filter>Dumpling\Msc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
       <Filter>Potato</Filter>
@@ -84,6 +72,12 @@
     <ClCompile Include="..\..\..\Potato\tool.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Msc\mscf_parser.cpp">
+      <Filter>Dumpling\Msc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\Msc\mscf.cpp">
+      <Filter>Dumpling\Msc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h">
@@ -98,26 +92,11 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h">
       <Filter>Dumpling\Gui\Dx12</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Mscf\complier_mscf.h">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid_win32.h">
       <Filter>Dumpling\Gui\Win32</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h">
       <Filter>Dumpling\Gui\Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\define_msc.h">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\msc_parser.h">
-      <Filter>Dumpling\Msc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\msc.h">
-      <Filter>Dumpling\Msc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Potato\auto_adapter.h">
       <Filter>Potato</Filter>
@@ -148,6 +127,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Potato\tool.h">
       <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Msc\mscf_parser.h">
+      <Filter>Dumpling\Msc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\Msc\mscf.h">
+      <Filter>Dumpling\Msc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

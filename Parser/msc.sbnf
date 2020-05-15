@@ -18,8 +18,7 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 <ShaderResourceType> := 'Texture1D' | 'Texture2D' | 'Texture2DArray'
 <RWResourceType> := 'RWTexture1D' | 'RWTexture2D'
 
-<DefineValueExpression> := <NumberType> Id [ '=' <ConstNumber> ]
-    := <NumberType> Id [ '[' IntNumber ']' ]
+<DefineValueExpression> := <NumberType> Id [ '[' IntNumber ']' ] [ '=' <ConstNumber> ]
     := <ShaderResourceType> [ '<' <NumberType> '>' ] Id ['[' IntNumber ']' ]
     := <RWResourceType> '<' <NumberType> '>' Id ['[' IntNumber ']']
 

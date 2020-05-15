@@ -62,9 +62,9 @@ int main()
 				{
 
 					auto filename = ite.path().filename().generic_wstring();
-					if (filename == L"msc_parser.h")
+					if (filename == L"mscf_parser.h")
 					{
-						Target = ite.path().parent_path() / (L"msc_parser.cpp");
+						Target = ite.path().parent_path() / (L"mscf_parser.cpp");
 						break;
 					}
 				}
@@ -78,14 +78,14 @@ int main()
 			if (output_file.is_open())
 			{
 				output_file << R"(
-#include "msc_parser.h"
+#include "mscf_parser.h"
 using namespace Potato::Parser;
 using namespace Potato::Lexical;
 using namespace Potato::Syntax;
 using range_set = nfa_storage::range_set;
 using range = range_set::range;
 using EdgeType = nfa_storage::EdgeType;
-sbnf const& msc_sbnf_instance(){
+sbnf const& mscf_sbnf_instance(){
 	static sbnf instance{
 )";
 				output_file << "\t\tstd::u32string(U\"";
