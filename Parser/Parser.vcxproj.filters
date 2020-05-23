@@ -38,11 +38,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="msc.sbnf">
-      <Filter>资源文件</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\Potato\auto_adapter.h">
       <Filter>Potato</Filter>
     </ClInclude>
@@ -73,5 +68,10 @@
     <ClInclude Include="..\Potato\tool.h">
       <Filter>Potato</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="mscf.sbnf">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

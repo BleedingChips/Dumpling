@@ -352,11 +352,11 @@ namespace Potato::Parser
 		std::optional<storage_t> start_symbol;
 		storage_t noterminal_temporary = lr1::start_symbol() - 1;
 
-		struct OrRelationShift { std::vector<lr1::storage_t> s1; std::vector<lr1::storage_t> s2; size_t production; };
-		struct MBraceRelationShift { std::vector<lr1::storage_t> s1; size_t production;};
-		struct BBraceRelationShift { std::vector<lr1::storage_t> s1; size_t production;};
+		struct OrRelationShift { std::vector<lr1::storage_t> s1; std::vector<lr1::storage_t> s2; };
+		struct MBraceRelationShift { std::vector<lr1::storage_t> s1;};
+		struct BBraceRelationShift { std::vector<lr1::storage_t> s1;};
 
-		std::map<lr1::storage_t, std::variant<OrRelationShift, MBraceRelationShift, BBraceRelationShift>> temporary_noterminal_production_debug;
+		std::map<lr1::storage_t, std::tuple<std::variant<OrRelationShift, MBraceRelationShift, BBraceRelationShift>, size_t>> temporary_noterminal_production_debug;
 
 		// step2
 		{
@@ -490,7 +490,7 @@ namespace Potato::Parser
 						std::vector<storage_t> Pro = { TemProduction };
 						productions_for_temporary.push_back(lr1::production_input{ Pro });
 						auto& ref = *tem_production.rbegin();
-						auto re = temporary_noterminal_production_debug.insert({ TemProduction , BBraceRelationShift{ref, productions.size()} });
+						auto re = temporary_noterminal_production_debug.insert({ TemProduction , { BBraceRelationShift{ref}, productions.size()} });
 						Pro.push_back(TemProduction);
 						Pro.insert(Pro.end(), ref.begin(), ref.end());
 						ref = { TemProduction };
@@ -504,7 +504,7 @@ namespace Potato::Parser
 						std::vector<storage_t> Pro = { TemProduction };
 						productions_for_temporary.push_back(lr1::production_input{ Pro });
 						auto& ref = *tem_production.rbegin();
-						auto re = temporary_noterminal_production_debug.insert({ TemProduction , MBraceRelationShift{ref, productions.size()} });
+						auto re = temporary_noterminal_production_debug.insert({ TemProduction , {MBraceRelationShift{ref}, productions.size()} });
 						assert(re.second);
 						Pro.insert(Pro.end(), ref.begin(), ref.end());
 						ref = { TemProduction };
@@ -516,7 +516,7 @@ namespace Potato::Parser
 						auto& Ref2 = *(tem_production.rbegin() + 1);
 						storage_t TemProduction = noterminal_temporary--;
 						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
-						auto re = temporary_noterminal_production_debug.insert({ TemProduction , OrRelationShift{Ref, Ref2, productions.size()} });
+						auto re = temporary_noterminal_production_debug.insert({ TemProduction , {OrRelationShift{Ref, Ref2}, productions.size()} });
 						assert(re.second);
 						std::vector<storage_t> Pro = { TemProduction };
 						Pro.insert(Pro.end(), Ref.begin(), Ref.end());
@@ -680,7 +680,7 @@ namespace Potato::Parser
 			{
 				auto [start, size] = symbol_map[ref.noterminal_symbol - lr1::noterminal_start() + symbol_to_index.size()];
 				std::u32string Name(table.data() + start, size);
-				throw sbnf::error{ U"Missing NoTerminal Symbol Define :<" + Name + U">", 0, 0 };
+				throw sbnf::error{ U"Missing NoTerminal Symbol Define :" + Name, 0, 0 };
 			}
 			throw;
 		}
@@ -730,103 +730,130 @@ namespace Potato::Parser
 				return U"0";
 			};
 
+
+			auto TempNoTerminalProductionToString = [&](size_t ProductionIndex) -> std::tuple<std::u32string, size_t> {
+				std::u32string String;
+				size_t UsedPindex = 0;
+				auto& Pros = productions[ProductionIndex].production;
+				auto FindIte = temporary_noterminal_production_debug.find(Pros[0]);
+				assert(FindIte != temporary_noterminal_production_debug.end());
+				UsedPindex = std::get<1>(FindIte->second);
+
+				std::vector<std::tuple<lr1::storage_t, size_t>> SearchStack;
+				for (size_t i = 0; i < Pros.size(); ++i)
+				{
+					SearchStack.push_back({ Pros[i], 0 });
+					while (!SearchStack.empty())
+					{
+						lr1::storage_t Head;
+						auto& [sym, count] = *SearchStack.rbegin();
+						auto Find = temporary_noterminal_production_debug.find(sym);
+						assert(Find != temporary_noterminal_production_debug.end());
+						auto& [RelationShip, PI] = Find->second;
+						if (std::holds_alternative<OrRelationShift>(RelationShip))
+						{
+							auto& ref = std::get<OrRelationShift>(RelationShip);
+							if (count == 0)
+								String += U" ( ";
+							if (count < ref.s1.size())
+							{
+								Head = ref.s1[count];
+								++count;
+							}
+							else if (count >= ref.s1.size() + ref.s2.size())
+							{
+								String += U" ) ";
+								SearchStack.pop_back();
+								continue;
+							}
+							else {
+								if (count == ref.s1.size())
+									String += U" | ";
+								Head = ref.s2[count - ref.s1.size()];
+								++count;
+							}
+						}
+						else if (std::holds_alternative<MBraceRelationShift>(RelationShip))
+						{
+							auto& ref = std::get<MBraceRelationShift>(RelationShip);
+							if (count == 0)
+								String += U" [ ";
+							if (count >= ref.s1.size())
+							{
+								String += U" ] ";
+								SearchStack.pop_back();
+								continue;
+							}
+							Head = ref.s1[count];
+							++count;
+						}
+						else if (std::holds_alternative<BBraceRelationShift>(RelationShip))
+						{
+							auto& ref = std::get<BBraceRelationShift>(RelationShip);
+							if (count == 0)
+								String += U" { ";
+							if (count >= ref.s1.size())
+							{
+								String += U" { ";
+								SearchStack.pop_back();
+								continue;
+							}
+							Head = ref.s1[count];
+							++count;
+						}
+						auto re = SymbolToString(Head);
+						if (re)
+							String += *re + U" ";
+						else
+							SearchStack.push_back({ Head, 0 });
+					}
+				}
+				return { String, UsedPindex };
+			};
+
 			auto ProductionsToString = [&](size_t ProductionIndex) -> std::u32string {
 				std::u32string String;
 				auto& Pros = productions[ProductionIndex].production;
-				bool InsideNormalProduction = true;
-				for (size_t i = 0; i < Pros.size(); ++i)
+				auto Re = SymbolToString(Pros[0]);
+				if (Re)
 				{
-					auto Re = SymbolToString(Pros[i]);
-					if (Re){
-						if(i != 0)
+					String += *Re + U" := ";
+					for (size_t i = 1; i < Pros.size(); ++i)
+					{
+						auto Re = SymbolToString(Pros[i]);
+						if (Re)
 							String += *Re + U" ";
-					}
-					else {
-						if (i == 0)
-							InsideNormalProduction = false;
-						std::vector<std::tuple<lr1::storage_t, size_t>> SearchStack;
-						SearchStack.push_back({Pros[i], 0});
-						while (!SearchStack.empty())
-						{
-							lr1::storage_t Head;
-							auto& [sym, count] = *SearchStack.rbegin();
-							auto Find = temporary_noterminal_production_debug.find(sym);
-							assert(Find != temporary_noterminal_production_debug.end());
-							if (std::holds_alternative<OrRelationShift>(Find->second))
-							{
-								auto& ref = std::get<OrRelationShift>(Find->second);
-								if (count == 0)
-									String += U" ( ";
-								if (count < ref.s1.size())
-								{
-									Head = ref.s1[count];
-									++count;
-								}
-								else if (count >= ref.s1.size() + ref.s2.size())
-								{
-									if (!InsideNormalProduction && SearchStack.size() == 1)
-										String += U" )[" + ToString(ref.production) + U"] ";
-									else
-										String += U" ) ";
-									SearchStack.pop_back();
-									continue;
-								}
-								else {
-									if (count == ref.s1.size())
-										String += U" | ";
-									Head = ref.s2[count - ref.s1.size()];
-									++count;
-								}
-							}
-							else if (std::holds_alternative<MBraceRelationShift>(Find->second))
-							{
-								auto& ref = std::get<MBraceRelationShift>(Find->second);
-								if (count == 0)
-									String += U" [ ";
-								if (count >= ref.s1.size())
-								{
-									if (!InsideNormalProduction && SearchStack.size() == 1)
-										String += U" ][" + ToString(ref.production) + U"] ";
-									else
-										String += U" ] ";
-									SearchStack.pop_back();
-									continue;
-								}
-								Head = ref.s1[count];
-								++count;
-							}
-							else if (std::holds_alternative<BBraceRelationShift>(Find->second))
-							{
-								auto& ref = std::get<BBraceRelationShift>(Find->second);
-								if (count == 0)
-									String += U" { ";
-								if (count >= ref.s1.size())
-								{
-									if (!InsideNormalProduction && SearchStack.size() == 1)
-										String += U" }[" + ToString(ref.production) + U"] ";
-									else
-										String += U" { ";
-									SearchStack.pop_back();
-									continue;
-								}
-								Head = ref.s1[count];
-								++count;
-							}
-							auto re = SymbolToString(Head);
-							if (re)
-								String += *re + U" ";
-							else
-								SearchStack.push_back({Head, 0});
+						else {
+							auto [Str, index] = TempNoTerminalProductionToString(Pros[i]);
+							String += Str + U' ';
 						}
 					}
+				}
+				else {
+					String += U'\"';
+					auto [Str, index] = TempNoTerminalProductionToString(Pros[0]);
+					auto& Pro2 = productions[index].production;
+					auto Re = SymbolToString(Pro2[0]);
+					assert(Re);
+					String += *Re + U" := ";
+					for (size_t i = 1; i < Pro2.size(); ++i)
+					{
+						auto Re = SymbolToString(Pro2[i]);
+						if (Re)
+							String += *Re + U" ";
+						else {
+							auto [Str, index] = TempNoTerminalProductionToString(Pro2[i]);
+							String += Str + U' ';
+						}
+					}
+					String += U'\"';
 				}
 				return String;
 			};
 
-			
 			auto S1String = ProductionsToString(error.possible_production_1);
 			auto S2String = ProductionsToString(error.possible_production_2);
-			throw sbnf::error{ U"reduce conflig :<" + Symbol + U"> with production :" + S1String + U"; and " + S2String + U";", 0, 0 };
+			throw sbnf::error{ U"reduce conflig " + Symbol + U" with production " + S1String + U" and " + S2String + U";", 0, 0 };
 		}
 		
 

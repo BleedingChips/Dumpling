@@ -429,17 +429,6 @@ namespace Potato::Syntax
 
 		{
 
-			auto insert_set = [](std::set<storage_t>& output, const std::map<storage_t, std::set<storage_t>>& first_set, storage_t symbol) {
-				if (is_terminal(symbol))
-					output.insert(symbol);
-				else {
-					auto ite = first_set.find(symbol);
-					assert(ite != first_set.end());
-					output.insert(ite->second.begin(), ite->second.end());
-				}
-			};
-
-
 			std::map<storage_t, std::set<storage_t>> remove_map = translate_operator_priority(priority);
 			for (storage_t x = 0; x < production.size(); ++x)
 			{
@@ -482,6 +471,18 @@ namespace Potato::Syntax
 						else if (index == ref.production.size() && index == ref2.production.size())
 							throw production_redefine_error(x, y);
 						else {
+
+							auto insert_set = [](std::set<storage_t>& output, const std::map<storage_t, std::set<storage_t>>& first_set, storage_t symbol) {
+								if (is_terminal(symbol))
+									output.insert(symbol);
+								else {
+									auto ite = first_set.find(symbol);
+									if (ite == first_set.end())
+										throw missing_noterminal_define_error(symbol);
+									output.insert(ite->second.begin(), ite->second.end());
+								}
+							};
+
 							if (index < ref.production.size())
 							{
 								if (ref.production[index] != ref.production[0])

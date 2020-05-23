@@ -81,7 +81,7 @@ namespace Potato::Parser
 		sbnf_processer(sbnf const& ref) : ref(ref) {}
 		sbnf const& ref;
 		template<typename Func> void analyze(std::u32string_view code, Func&& F) {
-			auto Wrapper = [](void* data, travel input) {  (*reinterpret_cast<Func*>(data))(input); };
+			auto Wrapper = [](void* data, travel input) {  (*reinterpret_cast<std::remove_reference_t<Func>*>(data))(input); };
 			analyze_imp(code, Wrapper, &F);
 		}
 	private:

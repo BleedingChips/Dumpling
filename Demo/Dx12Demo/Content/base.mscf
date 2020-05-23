@@ -1,16 +1,16 @@
-import ["CS\WTF\GoGo.h"] as GoGo;
-
 property{
     [_instance_only, caterage = "WTF2"]
-    space WTF{
+    {
         [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
         float2 Potato = float2(1.0, 1.0);
-        float2 Potato2 = float2(2.0, 2.0);
-        float2 Data[100];
+        block{
+            float2 Potato2 = float2(2.0, 2.0);
+            float2 Data[100];
+        }
     };
 
     [desc = "DefineWTF"]
-    space gogo{
+    {
         float2 Demo = float2(2.0, 1.0);
         float2 Cc;
     };
@@ -19,6 +19,11 @@ property{
     texture2D<float4> T2;
     texture2DArray<float4> T3;
 };
+
+
+import "CS\WTF\GoGo.h" as GoGo;
+
+
 
 code Random [] @{
     float2 Function(float){return float2(1.0, 1.0);} 

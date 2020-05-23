@@ -3,6 +3,7 @@
 #include <tuple>
 #include <optional>
 #include <assert.h>
+#include <string_view>
 namespace Potato::Encoding
 {
 
@@ -73,6 +74,7 @@ namespace Potato::Encoding
 		using type = Type;
 		static constexpr std::size_t max_space = Implement::char_imp<Type>::max_space;
 		string_encoding(const Type* input, std::size_t input_length) noexcept : input(input), length(input_length), bad_string(false) {}
+		string_encoding(std::basic_string_view<Type> sv) noexcept : input(sv.data()), length(sv.length()), bad_string(false) {}
 		operator bool() noexcept { return !bad_string && input != nullptr && length != 0; }
 		bool is_bad_string() const noexcept { return bad_string; }
 		template<typename OutputType>

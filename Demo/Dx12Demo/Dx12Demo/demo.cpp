@@ -1,7 +1,8 @@
-#include "../../../Dumpling/Msc/msc_parser.h"
+#include "../../../Dumpling/Mscf/mscf_parser.h"
 #include "../../../Potato/character_encoding.h"
 #include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
 #include "..//..//..//Dumpling/Gui/Dx12/form_dx12.h"
+#include "../../../Dumpling/Gui/Dx/math_dx.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
@@ -23,9 +24,21 @@ namespace fs = std::filesystem;
 #include <iostream>
 
 
-
 int main()
 {
+
+	Dx::Int i = {2};
+	Dx::Int i2 = 4;
+
+	auto i3 = i + i2;
+
+	//Int a;
+	//a.r = 1;
+	//auto i1 = a.x;
+
+
+
+
 
 	using Type = float(*)(int);
 	using Type2 = Type (*)(int, int, float);
