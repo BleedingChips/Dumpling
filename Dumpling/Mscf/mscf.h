@@ -3,10 +3,6 @@
 #include "../Msc/msc.h"
 namespace Dumpling::Mscf
 {
-
-	
-
-
 	struct mscf : Msc::mscf_interface
 	{
 	};

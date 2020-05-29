@@ -131,6 +131,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Dumpling\FrameWork\path_system.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
@@ -146,6 +147,7 @@
     <ClCompile Include="demo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Dumpling\FrameWork\path_system.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />

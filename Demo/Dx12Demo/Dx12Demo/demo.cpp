@@ -3,6 +3,7 @@
 #include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
 #include "..//..//..//Dumpling/Gui/Dx12/form_dx12.h"
 #include "../../../Dumpling/Gui/Dx/math_dx.h"
+#include "../../../Dumpling/FrameWork/path_system.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
@@ -27,24 +28,14 @@ namespace fs = std::filesystem;
 int main()
 {
 
-	Dx::Int i = {2};
-	Dx::Int i2 = 4;
+	using namespace Dumpling::Path;
 
-	auto i3 = i + i2;
+	auto Re2 = SearchAndResetRootDirectory(U"Content");
+	assert(Re2);
+	auto Fined = SearchFile(U"base.mscf");
 
-	//Int a;
-	//a.r = 1;
-	//auto i1 = a.x;
+	//auto String = LoadEntireBinaryFile();
 
-
-
-
-
-	using Type = float(*)(int);
-	using Type2 = Type (*)(int, int, float);
-	Type2 fp3;
-	float (*(*fp2)(int, int, float))(int);
-	static_assert(std::is_same_v<decltype(fp3), decltype(fp2)>);
 
 
 
@@ -67,6 +58,16 @@ int main()
 	resource_path = U"..\\Release\\";
 #endif
 #endif
+
+
+
+	std::filesystem::path P = U"$:asdasda.txt";
+
+	auto  p3 = P.root_name();
+	auto  p2 = P.root_path();
+
+
+	std::filesystem::path CurPath = std::filesystem::current_path();
 
 
 	//Win32::SearchVisualStudioPath();

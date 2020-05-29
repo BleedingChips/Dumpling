@@ -3,72 +3,33 @@
 namespace Dumpling::Mscf
 {
 	using namespace Potato::Parser;
+	using namespace Dumpling::Dx;
 
-	enum class StringType
-	{
-		ID, String, Path, Code
-	};
+	auto& ref = mscf_sbnf_instance();
+	using storage_t = sbnf::storage_t;
 
-	enum class Terminal : sbnf_processer::storage_t
-	{
-		IntNumber,
-		FloatNumber,
-		String,
-		Code,
-		Id,
-		Int,
-		Int2,
-		Int3,
-		Int4,
-		Float,
-		Float2,
-		Float3,
-		Float4,
-	};
-
-	sbnf_processer::storage_t operator*(Terminal input) { return static_cast<sbnf_processer::storage_t>(input); }
-
-	std::map<Terminal, std::u32string> TerStrMap = {
-		{Terminal::IntNumber, U"IntNumber"},
-		{Terminal::FloatNumber, U"FloatNumber"},
-		{Terminal::String, U"String"},
-		{Terminal::Id, U"Id"},
-		{Terminal::Int, U"'int'"},
-		{Terminal::Int2, U"'int2'"},
-		{Terminal::Int3, U"'int3'"},
-		{Terminal::Int4, U"'int4'"},
-		{Terminal::Float, U"'float'"},
-		{Terminal::Float2, U"'float2'"},
-		{Terminal::Float3, U"'float3'"},
-		{Terminal::Float4, U"'float4'"},
-	};
-
-	std::map<Terminal, sbnf_processer::storage_t> TerminalSymbolMapping = [&]() {
-		std::map<Terminal, sbnf_processer::storage_t> result;
-		for (auto& ite : TerStrMap)
-		{
-			auto re = mscf_sbnf_instance().find_symbol(ite.second);
-			assert(re);
-			result.insert({ ite.first, *re });
-		}
-		return std::move(result);
-	}();
-
+	storage_t TyInt[4] = { *ref.find_symbol(U"'int'"), *ref.find_symbol(U"'int2'"), *ref.find_symbol(U"'int3'"), *ref.find_symbol(U"'int4'") };
+	storage_t TyFloat[4] = { *ref.find_symbol(U"'float'"), *ref.find_symbol(U"'float2'"), *ref.find_symbol(U"'float3'"), *ref.find_symbol(U"'float4'") };
+	storage_t TyTexture[2] = { *ref.find_symbol(U"'Texture2D'"), *ref.find_symbol(U"'Texture1D'") };
+	storage_t TyRWTexture[2] = { *ref.find_symbol(U"'RWTexture2D'"), *ref.find_symbol(U"'RWTexture1D'") };
 
 	struct MscfHandler
 	{
 		//std::vector<std::variant<std::u32string, int, float>>
 		void operator()(sbnf_processer::travel tra);
+		std::vector<std::u32string> ID;
+		std::vector<std::u32string> String;
+		std::vector<std::variant<std::u32string, Int, Int2, Int3, Int4, Float, Float2, Float3, Float4>> Variable;
 	};
 
 	void MscfHandler::operator()(sbnf_processer::travel tra)
 	{
 		if (tra.is_terminal())
 		{
-			if (tra.sym == TerminalSymbolMapping[Terminal::IntNumber])
-			{
-
-			}
+			if (tra.sym_str == U"'ID'")
+				ID.push_back(std::u32string(tra.token_data));
+			else if (tra.sym_str == U"'String'")
+				String.push_back(std::u32string(tra.token_data));
 		}
 		else {
 

@@ -18,9 +18,9 @@ namespace Dumpling::Dx
 		TypeStorage& operator*=(TypeStorage const& ref) noexcept { return *this = *this * ref; }
 		TypeStorage operator/(TypeStorage const& ref) const noexcept { return Ope(ref, [](auto&& i, auto&& i2) { return i / i2; }); }
 		TypeStorage& operator/=(TypeStorage const& ref) noexcept { return *this = *this / ref; }
-		operator std::enable_if_t<ChannelCount == 1, StorageT>() const noexcept { return Storage[0]; }
+		//operator std::enable_if_t<ChannelCount == 1, StorageT>() const noexcept { return Storage[0]; }
 		TypeStorage(StorageT Input = 0) { for (size_t i = 0; i < ChannelCount; ++i) Storage[i] = Input; };
-		TypeStorage(TypeStorage const& Input) : TypeStorage(static_cast<StorageT>(Input)) {}
+		TypeStorage(TypeStorage const& Input) : Storage(Input.Storage) {}
 		template<size_t Count, size_t Count2, typename = std::enable_if_t<Count + Count2 == ChannelCount>>
 		TypeStorage(TypeStorage<StorageT, Count> const& Input1, TypeStorage<StorageT, Count2> const& Input2) {
 			for (size_t i = 0; i < Count; ++i)
@@ -44,7 +44,7 @@ namespace Dumpling::Dx
 			return result;
 		}
 		size_t Size() const noexcept { return ChannelCount; }
-		StorageT* Data() const noexcept { return Storage.data(); }
+		StorageT const* Data() const noexcept { return Storage.data(); }
 	private:
 		template<typename FuncOpe> TypeStorage Ope(TypeStorage const& ref, FuncOpe&& FO) const noexcept {
 			TypeStorage Result;
@@ -63,16 +63,22 @@ namespace Dumpling::Dx
 	using XMVECTOR = DirectX::XMVECTOR;
 
 	template<typename StorageT, size_t ChannelCount> XMVECTOR UseSIMD(TypeStorageA<StorageT, ChannelCount> const&);
-	XMVECTOR ToSIMD(TypeStorageA<float, 1> const& Input) { return DirectX::XMLoadFloat(Input.Data()); }
-	XMVECTOR ToSIMD(TypeStorageA<float, 2> const& Input) { return DirectX::XMLoadFloat2A(reinterpret_cast<DirectX::XMFLOAT2A const*>(Input.Data())); }
-	XMVECTOR ToSIMD(TypeStorageA<float, 3> const& Input) { return DirectX::XMLoadFloat3A(reinterpret_cast<DirectX::XMFLOAT3A const*>(Input.Data())); }
-	XMVECTOR ToSIMD(TypeStorageA<float, 4> const& Input) { return DirectX::XMLoadFloat4A(reinterpret_cast<DirectX::XMFLOAT4A const*>(Input.Data())); }
-	XMVECTOR ToSIMD(TypeStorageA<int32_t, 1> const& Input) { return DirectX::XMLoadInt(reinterpret_cast<uint32_t const*>(Input.Data())); }
-	XMVECTOR ToSIMD(TypeStorageA<int32_t, 2> const& Input) { return DirectX::XMLoadInt2(reinterpret_cast<uint32_t const*>(Input.Data())); }
-	XMVECTOR ToSIMD(TypeStorageA<int32_t, 3> const& Input) { return DirectX::XMLoadInt3(reinterpret_cast<uint32_t const*>(Input.Data())); }
-	XMVECTOR ToSIMD(TypeStorageA<int32_t, 4> const& Input) { return DirectX::XMLoadInt4(reinterpret_cast<uint32_t const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<float, 1> const& Input) { return DirectX::XMLoadFloat(Input.Data()); }
+	inline XMVECTOR ToSIMD(TypeStorageA<float, 2> const& Input) { return DirectX::XMLoadFloat2A(reinterpret_cast<DirectX::XMFLOAT2A const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<float, 3> const& Input) { return DirectX::XMLoadFloat3A(reinterpret_cast<DirectX::XMFLOAT3A const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<float, 4> const& Input) { return DirectX::XMLoadFloat4A(reinterpret_cast<DirectX::XMFLOAT4A const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<int32_t, 1> const& Input) { return DirectX::XMLoadInt(reinterpret_cast<uint32_t const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<int32_t, 2> const& Input) { return DirectX::XMLoadInt2(reinterpret_cast<uint32_t const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<int32_t, 3> const& Input) { return DirectX::XMLoadInt3(reinterpret_cast<uint32_t const*>(Input.Data())); }
+	inline XMVECTOR ToSIMD(TypeStorageA<int32_t, 4> const& Input) { return DirectX::XMLoadInt4(reinterpret_cast<uint32_t const*>(Input.Data())); }
 
 
 	using Int = TypeStorage<int32_t, 1>;
-
+	using Int2 = TypeStorage<int32_t, 2>;
+	using Int3 = TypeStorage<int32_t, 3>;
+	using Int4 = TypeStorage<int32_t, 4>;
+	using Float = TypeStorage<float, 1>;
+	using Float2 = TypeStorage<float, 2>;
+	using Float3 = TypeStorage<float, 3>;
+	using Float4 = TypeStorage<float, 4>;
 }

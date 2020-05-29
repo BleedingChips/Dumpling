@@ -7,25 +7,15 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 
 %%%
 
-<NumberType> := 'int'
-    := 'int2'
-    := 'int3'
-    := 'int4'
-    := 'float'
-    := 'float2'
-    := 'float3'
-    := 'float4'
+<NumberType> := 'int' | 'int2' | 'int3' | 'int4' | 'float' | 'float2' | 'float3' | 'float4'
 
-<TextureType> := 'Texture2D'
-    := 'Texture1D'
+<TextureType> := 'Texture2D' | 'Texture1D'
 
-<RWTextureType> := 'RWTexture1D'
-    := 'RWTexture2D'
-
+<RWTextureType> := ( 'RWTexture1D' | 'RWTexture2D' ) '<' <NumberType> '>'
 
 <Type> := <NumberType>
     := <TextureType>
-    := <RWTextureType> '<' <NumberType> '>'
+    := <RWTextureType>
 
 <ConstNumberElement> := <ConstNumber>
     := <ConstNumberElement> ',' <ConstNumber>

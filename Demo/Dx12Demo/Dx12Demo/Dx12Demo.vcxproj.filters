@@ -40,6 +40,9 @@
     <Filter Include="Dumpling\Mscf">
       <UniqueIdentifier>{68e4b97d-cee8-42fb-b9a1-d596e19ee854}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Dumpling\Gui\FrameWork">
+      <UniqueIdentifier>{7535446b-d5a0-446c-a378-9e6c6d594f49}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="demo.cpp">
@@ -80,6 +83,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\Mscf\mscf_parser.cpp">
       <Filter>Dumpling\Mscf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\FrameWork\path_system.cpp">
+      <Filter>Dumpling\Gui\FrameWork</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +148,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx\math_dx.h">
       <Filter>Dumpling\Gui\Dx</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\FrameWork\path_system.h">
+      <Filter>Dumpling\Gui\FrameWork</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
