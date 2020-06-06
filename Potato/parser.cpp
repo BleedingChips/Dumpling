@@ -166,18 +166,17 @@ namespace Potato::Parser
 		std::set<size_t> remove;
 	};
 
-	void sbnf_processer::analyze_imp(std::u32string_view code, void(*Func)(void* data, travel), void* data)
+	void sbnf_processer::analyze_imp(sbnf const& ref, std::u32string_view code, void(*Func)(void* data, travel), void* data)
 	{
 		assert(Func != nullptr);
 		DefultLexer Wrapper(ref.nfa_s, code);
 		Wrapper.reset_remove({ ref.unused_terminal });
-		Syntax::lr1_processor lp(ref.lr1_s);
 		std::vector<storage_t> ProductionStorage;
 		std::vector<storage_t> TemporaryProductionCountReserve;
 		std::vector<size_t> TemporaryProductionCount;
 		size_t TemporarySymbolCount = 0;
 		try {
-			lp.analyze(Wrapper, [&](Syntax::lr1_processor::travel tra) {
+			Syntax::lr1_processor{}(ref.lr1_s, Wrapper, [&](Syntax::lr1_processor::travel tra) {
 				if (tra.is_terminal())
 				{
 					travel re;

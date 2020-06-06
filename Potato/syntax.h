@@ -198,10 +198,11 @@ namespace Potato::Syntax
 			reduce(table, TokenGeneratorWrapper, &sym, TransFunc, &Func);
 		}
 
-		lr1_processor(const lr1_storage& table) : m_table_ref(table) { clear(); }
+		//lr1_processor(const lr1_storage& table) : m_table_ref(table) { clear(); }
 
 		// ForeachFunction : std::optional<terminal> (Ite), RespondFunction: void (lr1_processor::travel)
 
+		/*
 		template<typename TokenGenerator, typename RespondFunction>
 		void analyze(TokenGenerator&& sym, RespondFunction&& Func)
 		{
@@ -231,26 +232,31 @@ namespace Potato::Syntax
 					break;
 			}
 		}
+		*/
 
-		void clear() { m_state_stack = { 0 }; m_input_buffer.clear(); }
+		//void clear() { m_state_stack = { 0 }; m_input_buffer.clear(); }
 
 	private:
 		// for no terminal, index means production index, for terminal ,index means token stream index, count means elements in production
 		void reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer);
 
 
-		bool try_reduce(storage_t symbol, bool (*Function)(void* Func, travel input), void* data);
+		//bool try_reduce(storage_t symbol, bool (*Function)(void* Func, travel input), void* data);
+		/*
 		const lr1_storage& m_table_ref;
 		size_t token_index = 0;
 		std::vector<elemnt> m_state_stack;
 		std::vector<std::tuple<storage_t, std::size_t>> m_input_buffer;
+		*/
 	};
 
+	/*
 	template<typename TokenGenerator, typename RespondFunction>
 	void lr1_process(const lr1_storage& imp, TokenGenerator&& SF, RespondFunction&& Function)
 	{
 		lr1_processor pro(imp);
 		pro.analyze(std::forward<TokenGenerator&&>(SF), std::forward<RespondFunction&&>(Function));
 	}
+	*/
 };
 

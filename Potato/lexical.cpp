@@ -275,7 +275,7 @@ namespace Potato::Lexical
 		bool UseMinAtEnd = false;
 		auto ite = rex.begin();
 		try {
-			lr1_process(rex_lr1(), [&]() -> std::optional<lr1::storage_t> {
+			lr1_processor{}(rex_lr1(), [&]() -> std::optional<lr1::storage_t> {
 				if (TemporaryRange)
 				{
 					ScopeStack.push_back(std::move(*TemporaryRange));

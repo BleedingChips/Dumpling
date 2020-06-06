@@ -595,23 +595,25 @@ namespace Potato::Syntax
 	void lr1_processor::reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer)
 	{
 		std::vector<lr1::storage_t> state_stack({ 0 });
-		std::optional<lr1::storage_t> input;
-		std::any input_data;
+		std::vector<element> input_stack;
 		std::vector<element> storage_array;
 		size_t token_index = 0;
 		bool done = false;
 		while (!done)
 		{
-			if (!input)
+			if (input_stack.empty())
 			{
-				input = (*Generator)(GeneratorPointer);
-				if (!input){
-					input = lr1_storage::eof_symbol();
+				auto Gen = (*Generator)(GeneratorPointer);
+				if (Gen)
+					input_stack.push_back({ *Gen, {} });
+				else {
+					input_stack.push_back({ lr1_storage::eof_symbol(), {} });
 					done = true;
 				}
 			}
-			while (input)
+			while (!input_stack.empty())
 			{
+				auto& [input, data] = *input_stack.rbegin();
 				auto state = *state_stack.rbegin();
 				auto [start, reduce_s, shift_s] = table.nodes[state];
 				bool reduce = false;
@@ -622,13 +624,12 @@ namespace Potato::Syntax
 					{
 						reduce = true;
 						storage_t production_index = pro_index;
-						assert(production_index < m_table_ref.productions.size());
+						assert(production_index < table.productions.size());
 						storage_t head_symbol;
 						storage_t production_count;
 						storage_t function_state;
-						std::tie(head_symbol, production_count, function_state) = m_table_ref.productions[production_index];
-						assert(m_state_stack.size() >= production_count);
-
+						std::tie(head_symbol, production_count, function_state) = table.productions[production_index];
+						assert(state_stack.size() >= production_count);
 						if (head_symbol != lr1::start_symbol())
 						{
 							travel input;
@@ -637,20 +638,49 @@ namespace Potato::Syntax
 							input.noterminal.symbol_count = production_count;
 							input.noterminal.symbol_array = storage_array.data() + storage_array.size() - production_count;
 							input.noterminal.function_enum = function_state;
-							auto re = (*Function)(data, input);
-							if (!re)
-								return false;
-							m_state_stack.resize(m_state_stack.size() - production_count);
-							m_input_buffer.push_back({ head_symbol, 0 });
+							auto ResData = (*RespondFunction)(RespondFunctionPointer, input);
+							state_stack.resize(state_stack.size() - production_count);
+							storage_array.resize(state_stack.size() - production_count);
+							input_stack.push_back({ head_symbol, std::move(ResData) });
 						}
 						else
 						{
-							m_state_stack.resize(m_state_stack.size() - production_count);
-							assert(m_state_stack.size() == 1);
-							m_input_buffer.clear();
+							state_stack.resize(state_stack.size() - production_count);
+							assert(state_stack.size() == 1);
+							input_stack.clear();
 						}
 						break;
 					}
+				}
+				bool shift = false;
+				if (!reduce)
+				{
+					for (size_t i = 0; i < shift_s; ++i)
+					{
+						auto [in, state] = table.reduce_shift_table[start + reduce_s + i];
+						if (input == in)
+						{
+							shift = true;
+							auto [sym, data] = *input_stack.rbegin();
+							if (lr1::is_terminal(sym))
+							{
+								travel input;
+								input.symbol = sym;
+								input.terminal.token_index = token_index;
+								data = (*RespondFunction)(RespondFunctionPointer, input);
+							}
+							storage_array.push_back({sym, std::move(data)});
+							input_stack.pop_back();
+							state_stack.push_back(state);
+							break;
+						}
+					}
+				}
+
+				if (!(reduce || shift))
+				{
+					assert(state_stack.size() >= 1);
+					throw unacceptable_error{ input, *(state_stack.rbegin()) };
 				}
 			}
 			++token_index;
@@ -659,7 +689,7 @@ namespace Potato::Syntax
 
 
 
-
+	/*
 
 	bool lr1_processor::try_reduce(storage_t symbol, bool (*Function)(void* Func, travel input), void* data)
 	{
@@ -741,5 +771,6 @@ namespace Potato::Syntax
 		}
 		return true;
 	}
+	*/
 
 }

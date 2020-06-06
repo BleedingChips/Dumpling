@@ -78,14 +78,16 @@ namespace Potato::Parser
 			};
 			bool is_terminal() const noexcept { return Syntax::lr1::is_terminal(sym); }
 		};
-		sbnf_processer(sbnf const& ref) : ref(ref) {}
-		sbnf const& ref;
-		template<typename Func> void analyze(std::u32string_view code, Func&& F) {
+		//sbnf_processer(sbnf const& ref) : ref(ref) {}
+		//sbnf const& ref;
+
+		template<typename Func> void operator()(sbnf const& ref, std::u32string_view code, Func&& F) {
 			auto Wrapper = [](void* data, travel input) {  (*reinterpret_cast<std::remove_reference_t<Func>*>(data))(input); };
-			analyze_imp(code, Wrapper, &F);
+			analyze_imp(ref, code, Wrapper, &F);
 		}
+
 	private:
-		void analyze_imp(std::u32string_view, void(*Func)(void* data, travel), void* data);
+		void analyze_imp(sbnf const& ref, std::u32string_view, void(*Func)(void* data, travel), void* data);
 	};
 
 	/*
