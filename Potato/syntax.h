@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <variant>
 #include "range_set.h"
+#include <any>
 namespace Potato::Syntax
 {
 
@@ -156,6 +157,12 @@ namespace Potato::Syntax
 			unacceptable_error(const unacceptable_error&) = default;
 		};
 
+		struct element
+		{
+			storage_t symbol;
+			std::any data;
+		};
+
 		struct travel
 		{
 			storage_t symbol;
@@ -164,19 +171,33 @@ namespace Potato::Syntax
 				struct noterminal_t
 				{
 					std::size_t production_index;
-					std::size_t production_count;
-					storage_t const* symbol_array;
+					element const* symbol_array;
+					std::size_t symbol_count;
 					std::size_t function_enum;
 				}noterminal;
 
 				struct terminal_t
 				{
 					std::size_t token_index;
-				}terminal;			
+				}terminal;
 			};
+			std::any data;
 			bool is_terminal() const noexcept { return lr1::is_terminal(symbol); }
 		};
-		
+
+		template<typename TokenGenerator, typename RespondFunction>
+		void operator()(const lr1_storage& table, TokenGenerator&& sym, RespondFunction&& Func)
+		{
+			auto TokenGeneratorWrapper = [](void* Func) -> std::optional<lr1_storage> {
+				return std::forward<TokenGenerator&&>(*reinterpret_cast<std::remove_reference_t<TokenGenerator>*>(Func))();
+			};
+
+			auto TransFunc = [](void* Func, travel input) -> std::any {
+				return std::forward<RespondFunction&&>(*reinterpret_cast<std::remove_reference_t<RespondFunction>*>(Func)).operator()(input);
+			};
+			reduce(table, TokenGeneratorWrapper, &sym, TransFunc, &Func);
+		}
+
 		lr1_processor(const lr1_storage& table) : m_table_ref(table) { clear(); }
 
 		// ForeachFunction : std::optional<terminal> (Ite), RespondFunction: void (lr1_processor::travel)
@@ -184,9 +205,8 @@ namespace Potato::Syntax
 		template<typename TokenGenerator, typename RespondFunction>
 		void analyze(TokenGenerator&& sym, RespondFunction&& Func)
 		{
-			auto TransFunc = [](void* Func, travel input) -> bool {
-				std::forward<RespondFunction&&>(*reinterpret_cast<std::remove_reference_t<RespondFunction>*>(Func)).operator()(input);
-				return true;
+			auto TransFunc = [](void* Func, travel input) -> std::any {
+				return std::forward<RespondFunction&&>(*reinterpret_cast<std::remove_reference_t<RespondFunction>*>(Func)).operator()(input);
 			};
 			clear();
 			while (true)
@@ -216,10 +236,13 @@ namespace Potato::Syntax
 
 	private:
 		// for no terminal, index means production index, for terminal ,index means token stream index, count means elements in production
+		void reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer);
+
+
 		bool try_reduce(storage_t symbol, bool (*Function)(void* Func, travel input), void* data);
 		const lr1_storage& m_table_ref;
 		size_t token_index = 0;
-		std::vector<storage_t> m_state_stack;
+		std::vector<elemnt> m_state_stack;
 		std::vector<std::tuple<storage_t, std::size_t>> m_input_buffer;
 	};
 

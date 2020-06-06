@@ -1,10 +1,16 @@
 #include "../Potato/character_encoding.h"
 #include "../Potato/parser.h"
+#include "../Dumpling/FrameWork/path_system.h"
 #include <filesystem>
 #include <fstream>
 #include <fstream>
 #include <sstream>
 #include <iostream>
+
+using namespace Potato::Parser;
+using namespace Potato::Encoding;
+using namespace Potato::Lexical;
+using namespace Dumpling::Path;
 
 template<typename T>
 std::string to_string(T&& t)
@@ -16,70 +22,157 @@ std::string to_string(T&& t)
 	return "0x" + re;
 }
 
+
+std::string SbnfToString(Potato::Parser::sbnf const& ref, std::string_view Name, size_t TabCount = 0)
+{
+	std::string Tapstring;
+	for (size_t i = 0; i < TabCount; ++i)
+		Tapstring += U'\t';
+	std::string Code;
+	Code += Tapstring + "Potato::Parser::sbnf " + std::string(Name) + "{ \n";
+	Code += Tapstring + "\tstd::u32string(U\"";
+	for (auto ite : ref.table)
+	{
+		char Buffer[100];
+		size_t used = sprintf_s(Buffer, 100, "\\x%lX", static_cast<uint32_t>(ite));
+		Code += Buffer;
+	}
+	Code += "\"),\n";
+	Code += Tapstring + "\t\t{";
+	for (auto ite : ref.symbol_map)
+	{
+		auto [s, e] = ite;
+		Code += "{" + to_string(s) + ", " + to_string(e) + "},";
+	}
+	Code += "},\n";
+	Code += Tapstring + "\t\t" + to_string(ref.ter_count) + ",\n";
+	Code += "\t\t" + to_string(ref.unused_terminal) + "," + '\n';
+	Code += "\t\t" + to_string(ref.temporary_prodution_start) + "," + '\n';
+
+	Code += "\t\tnfa_storage{\n";
+	{
+		Code += "\t\t\t{\n\t\t\t\t";
+		for (auto& ite : ref.nfa_s.ComsumeEdge)
+		{
+			Code += "range_set({";
+			for (auto& ite2 : ite)
+			{
+				Code += "{" + to_string(static_cast<uint32_t>(ite2.left)) + ", " + to_string(static_cast<uint32_t>(ite2.right)) + "},";
+			}
+			Code += "}),";
+		}
+		Code += "\n\t\t\t},\n";
+
+		Code += "\n\t\t\t{\n\t\t\t\t";
+		for (auto& ite : ref.nfa_s.Edges)
+		{
+			Code += "{";
+			auto [type, i, k] = ite;
+			switch (type)
+			{
+			case Potato::Lexical::nfa_storage::EdgeType::Acception:
+				Code += "EdgeType::Acception, ";
+				break;
+			case Potato::Lexical::nfa_storage::EdgeType::Comsume:
+				Code += "EdgeType::Comsume, ";
+				break;
+			default: assert(false);
+			}
+			Code += to_string(i) + ", " + to_string(k) + "},";
+		}
+		Code += "\n\t\t\t},\n";
+
+		Code += "\t\t\t{\n\t\t\t\t";
+		for (auto& ite : ref.nfa_s.Nodes)
+		{
+			Code += "{";
+			auto [i, k] = ite;
+			Code += to_string(i) + ", " + to_string(k) + "},";
+		}
+		Code += "\n\t\t\t}\n";
+	}
+	Code += "\t\t},\n";
+
+	Code += "\t\tlr1_storage{\n";
+	{
+		Code += "\t\t\t{\n\t\t\t\t";
+		for (auto& ite : ref.lr1_s.productions)
+		{
+			Code += "{";
+			auto [i, k, l] = ite;
+			Code += to_string(i) + ", " + to_string(k) + ", " + to_string(l) + "},";
+		}
+		Code += "\n\t\t\t}, \n";
+
+		Code += "\t\t\t{\n\t\t\t\t";
+		for (auto& ite : ref.lr1_s.reduce_shift_table)
+		{
+			Code += "{";
+			auto [i, k] = ite;
+			Code += to_string(i) + ", " + to_string(k) + "},";
+		}
+		Code += "\n\t\t\t},\n";
+
+		Code += "\t\t\t{\n\t\t\t\t";
+		for (auto& ite : ref.lr1_s.nodes)
+		{
+			Code += "{";
+			auto [i, k, l] = ite;
+			Code += to_string(i) + ", " + to_string(k) + ", " + to_string(l) + "},";
+		}
+		Code += "\n\t\t\t}\n";
+	}
+	Code += "\t\t}\n";
+
+	Code += "\t};\n";
+	return std::move(Code);
+}
+
 int main()
 {
-	try {
-		using namespace Potato;
 
-		Lexical::nfa n = Lexical::nfa::create_from_rex(UR"('.*?[^\\]')", 1);
-		auto storage = n.simplify();
+	auto Data = std::filesystem::current_path();
 
-		Lexical::nfa_processer np(storage, U"\'*\' \'+;");
+	auto ParserPath = UpSearch(U"Parser");
+	assert(ParserPath);
 
-		auto tra = np();
+	{
+		auto MscfSbnf = Search(U"mscf.sbnf", *ParserPath);
+		assert(MscfSbnf);
 
-		auto p = std::filesystem::current_path();
-		p += "/mscf.sbnf";
-		std::ifstream file(p);
-		if (file.is_open())
+		auto MscfFile = LoadEntireFile(*MscfSbnf);
+		assert(MscfFile);
+
+		auto [BomType, Data, size] = FixBinaryWithBom(MscfFile->data(), MscfFile->size());
+
+		std::u32string Code;
+		switch (BomType)
 		{
-			size_t file_size = std::filesystem::file_size(p);
-			std::byte* data = new std::byte[file_size];
-			file.read(reinterpret_cast<char*>(data), file_size);
-			auto [Type, size] = Encoding::translate_binary_to_bomtype(data, file_size);
-			std::byte* ite = data;
-			ite += size;
-			std::u32string Code;
-			switch (Type)
-			{
-			case Encoding::BomType::UTF8:
-			case Encoding::BomType::None: {
-				Encoding::string_encoding<char> se(reinterpret_cast<char*>(ite), file_size - size);
-				Code = se.to_string<char32_t>();
-			}	break;
-			default: assert(false);
-				break;
-			}
-			delete[](data);
-			auto sbnf_instance = Parser::sbnf::create(Code);
-			std::filesystem::path Path = std::filesystem::current_path();
-			std::filesystem::path Target;
+		case BomType::UTF8:
+		case BomType::None: {
+			Code = EncodingWrapper<char>(reinterpret_cast<char const*>(Data), size).To<char32_t>();
+		}	break;
+		case BomType::UTF16BE:
+		case BomType::UTF16LE:
+			Code = EncodingWrapper<char16_t>(reinterpret_cast<char16_t const*>(Data), size).To<char32_t>();
+			break;
+		case BomType::UTF32BE:
+		case BomType::UTF32LE:
+			Code = EncodingWrapper<char32_t>(reinterpret_cast<char32_t const*>(Data), size).To<char32_t>();
+			break;
+		default: assert(false);
+			break;
+		}
 
-			for (size_t search_depth = 0; search_depth < 3 && Target.empty(); ++search_depth)
-			{
-				std::filesystem::recursive_directory_iterator Di(Path);
-				for (auto& ite : Di)
-				{
-					if (ite.is_regular_file())
-					{
+		try {
+			auto MscfSbnfInstance = sbnf::create(Code);
+			auto DumplingPath = UpSearch(U"Dumpling", *ParserPath);
+			assert(DumplingPath);
+			auto MscfRequirePath = Search(U"mscf_parser.h", *DumplingPath);
+			assert(MscfRequirePath);
+			MscfRequirePath->replace_extension(U".cpp");
 
-						auto filename = ite.path().filename().generic_wstring();
-						if (filename == L"mscf_parser.h")
-						{
-							Target = ite.path().parent_path() / (L"mscf_parser.cpp");
-							break;
-						}
-					}
-				}
-				Path = Path.parent_path();
-			}
-
-			if (!Target.empty())
-			{
-				std::ofstream output_file(Target, std::ios::out);
-				if (output_file.is_open())
-				{
-					output_file << R"(
+			std::string TotalCode = R"(
 #include "mscf_parser.h"
 using namespace Potato::Parser;
 using namespace Potato::Lexical;
@@ -88,135 +181,28 @@ using range_set = nfa_storage::range_set;
 using range = range_set::range;
 using EdgeType = nfa_storage::EdgeType;
 sbnf const& mscf_sbnf_instance(){
-	static sbnf instance{
-)";
-					output_file << "\t\tstd::u32string(U\"";
-					for (auto ite : sbnf_instance.table)
-					{
-						char Buffer[100];
-						size_t used = sprintf_s(Buffer, 100, "\\x%lX", static_cast<uint32_t>(ite));
-						output_file << Buffer;
-					}
-					output_file << "\")," << std::endl;
+	static )";
 
-					output_file << "\t\t{";
-					for (auto ite : sbnf_instance.symbol_map)
-					{
-						auto [s, e] = ite;
-						output_file << "{" << to_string(s) << ", " << to_string(e) << "},";
-					}
-					output_file << "}," << std::endl;;
-					output_file << "\t\t" << to_string(sbnf_instance.ter_count) << "," << std::endl;
-					output_file << "\t\t" << to_string(sbnf_instance.unused_terminal) << "," << std::endl;
-					output_file << "\t\t" << to_string(sbnf_instance.temporary_prodution_start) << "," << std::endl;
+			auto Code = SbnfToString(MscfSbnfInstance, "instance");
 
-					output_file << "\t\tnfa_storage{" << std::endl;
-					{
-						output_file << "\t\t\t{" << std::endl << "\t\t\t\t";
-						for (auto& ite : sbnf_instance.nfa_s.ComsumeEdge)
-						{
-							output_file << "range_set({";
-							for (auto& ite2 : ite)
-							{
-								output_file << "{" << to_string(ite2.left) << ", " << to_string(ite2.right) << "},";
-							}
-							output_file << "}),";
-						}
-						output_file << std::endl << "\t\t\t}," << std::endl;
-
-						output_file << std::endl << "\t\t\t{" << std::endl << "\t\t\t\t";
-						for (auto& ite : sbnf_instance.nfa_s.Edges)
-						{
-							output_file << "{";
-							auto [type, i, k] = ite;
-							switch (type)
-							{
-							case Potato::Lexical::nfa_storage::EdgeType::Acception:
-								output_file << "EdgeType::Acception" << ", ";
-								break;
-							case Potato::Lexical::nfa_storage::EdgeType::Comsume:
-								output_file << "EdgeType::Comsume" << ", ";
-								break;
-							default: assert(false);
-							}
-							output_file << to_string(i) << ", " << to_string(k) << "},";
-						}
-						output_file << std::endl << "\t\t\t}," << std::endl;
-
-						output_file << "\t\t\t{" << std::endl << "\t\t\t\t";
-						for (auto& ite : sbnf_instance.nfa_s.Nodes)
-						{
-							output_file << "{";
-							auto [i, k] = ite;
-							output_file << to_string(i) << ", " << to_string(k) << "},";
-						}
-						output_file << std::endl << "\t\t\t}" << std::endl;
-					}
-					output_file << "\t\t}," << std::endl;
-
-					output_file << "\t\tlr1_storage{" << std::endl;
-					{
-						output_file << "\t\t\t{" << std::endl << "\t\t\t\t";
-						for (auto& ite : sbnf_instance.lr1_s.productions)
-						{
-							output_file << "{";
-							auto [i, k, l] = ite;
-							output_file << to_string(i) << ", " << to_string(k) << ", " << to_string(l) << "},";
-						}
-						output_file << std::endl << "\t\t\t}," << std::endl;
-
-						output_file << "\t\t\t{" << std::endl << "\t\t\t\t";
-						for (auto& ite : sbnf_instance.lr1_s.reduce_shift_table)
-						{
-							output_file << "{";
-							auto [i, k] = ite;
-							output_file << to_string(i) << ", " << to_string(k) << "},";
-						}
-						output_file << std::endl << "\t\t\t}," << std::endl;
-
-						output_file << "\t\t\t{" << std::endl << "\t\t\t\t";
-						for (auto& ite : sbnf_instance.lr1_s.nodes)
-						{
-							output_file << "{";
-							auto [i, k, l] = ite;
-							output_file << to_string(i) << ", " << to_string(k) << ", " << to_string(l) << "},";
-						}
-						output_file << std::endl << "\t\t\t}" << std::endl;
-					}
-					output_file << "\t\t}" << std::endl;
-
-					output_file << "\t};" << std::endl;
-					output_file << R"(
+			TotalCode += Code;
+			TotalCode += R"(
 	return instance;
 }
-)" << std::endl;
-				}
-				else assert(false);
-			}
+)";
+			std::ofstream MscfOutputFile(*MscfRequirePath, std::ios::binary);
+
+			MscfOutputFile.write(TotalCode.data(), TotalCode.size());
+
+
 		}
-		else assert(false);
+		catch (Potato::Parser::sbnf::error const& error)
+		{
+			auto Message = EncodingWrapper<char32_t>(error.message).To<wchar_t>();
+			std::wcout << L"error :" << Message << L". in line :" << error.line << L", in Index :" << error.charactor_index << L"." << std::endl;
+		}
+
+		
+
 	}
-	catch (Potato::Parser::sbnf::error const& error)
-	{
-		Potato::Encoding::string_encoding<char32_t> se(error.message);
-		auto string = se.to_string<char>();
-
-
-		std::cout << "error :" << string << ". in line :" << error.line << ", in Index :" << error.charactor_index << "." << std::endl;
-	}
-
-
-
-	
-
-
-
-
-	//std::wofstream tem_f(L"Result.txt");
-
-
-
-	//tem_f << Result;
-
-	volatile int irr = 0;
 }

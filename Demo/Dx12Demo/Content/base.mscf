@@ -3,7 +3,7 @@ property{
     {
         [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
         float2 Potato = float2(1.0, 1.0);
-        block{
+        []{
             float2 Potato2 = float2(2.0, 2.0);
             float2 Data[100];
         }
@@ -16,8 +16,8 @@ property{
     };
 
     float Potato;
-    texture2D<float4> T2;
-    texture2DArray<float4> T3;
+    Texture2D<float4> T2;
+    Texture2D<float4> T3;
 };
 
 
@@ -25,7 +25,7 @@ import "CS\WTF\GoGo.h" as GoGo;
 
 
 
-code Random [] @{
+code Random [ ] @{
     float2 Function(float){return float2(1.0, 1.0);} 
 }@;
 

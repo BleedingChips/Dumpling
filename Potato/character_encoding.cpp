@@ -2,17 +2,15 @@
 #include <assert.h>
 
 #ifdef _WIN32
-#include <windows.h>
-
 namespace Potato::Encoding
 {
 
-	size_t ansis_to_wchar_require_space(const char* input, size_t input_length, uint32_t code_page) noexcept
+	std::size_t EncodingAnsiToWcharRequireSpace(char const* input, std::size_t input_length, uint32_t code_page) noexcept
 	{
 		return MultiByteToWideChar(code_page, 0, input, static_cast<int>(input_length), nullptr, 0);
 	}
 
-	size_t ansis_to_wchar(const char* input, size_t input_length, wchar_t* output, size_t output_length, uint32_t code_page) noexcept
+	std::size_t EncodingAnsiToWchar(char const* input, std::size_t input_length, wchar_t* output, std::size_t output_length, uint32_t code_page) noexcept
 	{
 		if (output_length != 0)
 		{
@@ -21,13 +19,22 @@ namespace Potato::Encoding
 		return 0;
 	}
 
-	size_t wchar_to_ansis_require_space(const wchar_t* input, size_t input_length, uint32_t code_page) noexcept
+	std::wstring EncodingAnsiToWchar(char* const input, std::size_t length, uint32_t code_page) noexcept
+	{
+		std::size_t Relength = EncodingAnsiToWcharRequireSpace(input, length, code_page);
+		std::wstring Result;
+		Result.resize(Relength);
+		EncodingAnsiToWchar(input, length, Result.data(), Result.size(), code_page);
+		return Result;
+	}
+
+	std::size_t EncodingWcharToAnsiRequireSpace(const wchar_t* input, std::size_t input_length, uint32_t code_page) noexcept
 	{
 		BOOL unchangleble = true;
 		return WideCharToMultiByte(code_page, 0, reinterpret_cast<const wchar_t*>(input), static_cast<int>(input_length), nullptr, 0, "?", &unchangleble);
 	}
 
-	size_t wchar_to_ansis(const wchar_t* input, size_t input_length, char* output, size_t output_length, uint32_t code_page) noexcept
+	std::size_t EncodingWcharToAnsi(const wchar_t* input, std::size_t input_length, char* output, std::size_t output_length, uint32_t code_page) noexcept
 	{
 		if (output_length != 0)
 		{
@@ -37,825 +44,379 @@ namespace Potato::Encoding
 		return 0;
 	}
 
-	size_t ansi_require_space(char da) noexcept
+	std::string EncodingWcharToAnsi(wchar_t* const input, std::size_t length, uint32_t code_page) noexcept
 	{
-		return static_cast<uint8_t>(da) > 127 ? 2 : 1;
+		std::size_t Relength = EncodingWcharToAnsiRequireSpace(input, length, code_page);
+		std::string Result;
+		Result.resize(Relength);
+		EncodingWcharToAnsi(input, length, Result.data(), Result.size(), code_page);
+		return Result;
 	}
 }
 #endif
 
+
 namespace Potato::Encoding
 {
-	namespace Implement
+
+	std::size_t UTF8RequireSpace(char first_char)
 	{
-
-		std::size_t char_imp<char>::single_char_space(type first_char) noexcept
-		{
-			if ((first_char & 0xFE) == 0xFC)
-				return 6;
-			else if ((first_char & 0xFC) == 0xF8)
-				return 5;
-			else if ((first_char & 0xF8) == 0xF0)
-				return 4;
-			else if ((first_char & 0xF0) == 0xE0)
-				return 3;
-			else if ((first_char & 0xE0) == 0xC0)
-				return 2;
-			else if ((first_char & 0x80) == 0)
-				return 1;
-			else
-				return 0;
-		}
-
-
-		std::optional<std::size_t> char_imp<char>::check_single_char(const type* input, std::size_t length) noexcept
-		{
-			if (input != nullptr && length != 0)
-			{
-				std::size_t size = single_char_space(input[0]);
-				if (size != 0 && size <= length)
-				{
-					for (size_t i = 1; i < size; ++i)
-					{
-						if ((input[i] & 0xC0) != 0x80)
-							return std::nullopt;
-					}
-					return { size };
-				}
-				return std::nullopt;
-			}
-			return { 0 };
-		}
-
-
-		std::size_t char_imp<char>::to_single(const type* input, std::size_t length, char* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length != 0);
-			if (output_length > length)
-			{
-				std::memcpy(output, input, length);
-				return length;
-			}
-			else {
-				return 0;
-			}
-		}
-
-		std::size_t char_imp<char>::to_single(const type* input, std::size_t length, char16_t* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length != 0);
-			char32_t buffer[char_imp<char32_t>::max_space];
-			auto tar32 = to_single(input, length, buffer, char_imp<char32_t>::max_space);
-			auto tar16= char_imp<char32_t>::to_single(buffer, tar32, output, output_length);
-			return tar16;
-		}
-
-		std::size_t char_imp<char>::to_single(const type* input, std::size_t length, char32_t* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length != 0);
-			if (output_length >= 1)
-			{
-				switch (length)
-				{
-				case 1: output[0] = input[0]; break;
-				case 2: output[0] = ((input[0] & 0x1F) << 6) | (input[1] & 0x3F); break;
-				case 3: output[0] = ((input[0] & 0x0F) << 12) | ((input[1] & 0x3F) << 6) | (input[2] & 0x3F); break;
-				case 4: output[0] = ((input[0] & 0x07) << 18) | ((input[1] & 0x3F) << 12) | ((input[2] & 0x3F) << 6) | (input[3] & 0x3F); break;
-				case 5: output[0] = ((input[0] & 0x03) << 24) | ((input[1] & 0x3F) << 18) | ((input[2] & 0x3F) << 12) | ((input[3] & 0x3F) << 6) | (input[4] & 0x3F); break;
-				case 6: output[0] = ((input[0] & 0x01) << 30) | ((input[1] & 0x3F) << 24) | ((input[2] & 0x3F) << 18) | ((input[3] & 0x3F) << 12) | ((input[4] & 0x3F) << 6) | (input[5] & 0x3F); break;
-				}
-				return 1;
-			}
+		if ((first_char & 0xFE) == 0xFC)
+			return 6;
+		else if ((first_char & 0xFC) == 0xF8)
+			return 5;
+		else if ((first_char & 0xF8) == 0xF0)
+			return 4;
+		else if ((first_char & 0xF0) == 0xE0)
+			return 3;
+		else if ((first_char & 0xE0) == 0xC0)
+			return 2;
+		else if ((first_char & 0x80) == 0)
+			return 1;
+		else
 			return 0;
-		}
-
-		std::size_t char_imp<char16_t>::single_char_space(type first_char) noexcept
-		{
-			if (first_char <= 0x00ffff)
-				return 1;
-			else if ((first_char & 0xD800) == 0xD800)
-				return 2;
-			else
-				return 0;
-		}
-
-		std::optional<std::size_t> char_imp<char16_t>::check_single_char(const type* input, std::size_t length) noexcept
-		{
-			if (input != nullptr && length != 0)
-			{
-				auto size = single_char_space(input[0]);
-				if (size == 1)
-					return { 1 };
-				else if (size == 2 && length >= 2 && (input[1] & 0xDC00) == 0xD800)
-				{
-					return { 2 };
-				}
-				return std::nullopt;
-			}
-			return { 0 };
-		}
-
-		std::size_t char_imp<char16_t>::to_single(const type* input, std::size_t length, char* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length != 0);
-			char32_t buffer[char_imp<char32_t>::max_space];
-			auto tar32 = to_single(input, length, buffer, char_imp<char32_t>::max_space);
-			auto tar8 = char_imp<char32_t>::to_single(buffer, tar32, output, output_length);
-			return tar8;
-		}
-
-		std::size_t char_imp<char16_t>::to_single(const type* input, std::size_t length, char16_t* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length != 0);
-			if (length <= output_length)
-			{
-				std::memcpy(output, input, length * sizeof(char16_t));
-				return length;
-			}
-			return 0;
-		}
-
-		std::size_t char_imp<char16_t>::to_single(const type* input, std::size_t length, char32_t* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length != 0);
-			if (output != nullptr && output_length != 0)
-			{
-				switch (length)
-				{
-				case 1: output[0] = *input; break;
-				case 2: output[0] = (((input[0] & 0x3FF) << 10) | (input[1] & 0x3FF)) + 0x10000; break;
-				}
-			}
-			return 0;
-		}
-
-		std::optional<std::size_t> char_imp<char32_t>::check_single_char(const type* input, std::size_t length) noexcept
-		{
-			if (input != nullptr && length != 0)
-				return { 1 };
-			else
-				return { 0 };
-		}
-
-		std::size_t char_imp<char32_t>::to_single(const type* input, std::size_t length, char* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length ==1);
-			if (output != nullptr)
-			{
-				if ((input[0] & 0xFFFFFF80) == 0)
-				{
-					if (output_length >= 1)
-					{
-						*output = static_cast<char>(input[0] & 0x0000007F);
-						return 1;
-					}
-				}
-				else if ((input[0] & 0xFFFF'F800) == 0)
-				{
-					if (output_length >= 2)
-					{
-						*output = 0xC0 | static_cast<char>((input[0] & 0x07C0) >> 6);
-						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0x3F));
-						return 2;
-					}
-				}
-				else if ((input[0] & 0xFFFF'0000) == 0)
-				{
-					if (output_length >= 3)
-					{
-						*output = 0xE0 | static_cast<char>((input[0] & 0xF000) >> 12);
-						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
-						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0x3F));
-						return 3;
-					}
-				}
-				else if ((input[0] & 0xFFE0'0000) == 0)
-				{
-					if (output_length >= 4)
-					{
-						*output = 0x1E | static_cast<char>((input[0] & 0x1C0000) >> 18);
-						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0x3F000) >> 12);
-						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
-						*(output + 3) = 0x80 | static_cast<char>((input[0] & 0x3F));
-						return 4;
-					}
-				}
-				else if ((input[0] & 0xFC00'0000) == 0)
-				{
-					if (output_length >= 5)
-					{
-						*output = 0xF8 | static_cast<char>((input[0] & 0x300'0000) >> 24);
-						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0xFC'0000) >> 18);
-						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0x3'F000) >> 12);
-						*(output + 3) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
-						*(output + 4) = 0x80 | static_cast<char>((input[0] & 0x3F));
-						return 5;
-					}
-				}
-				else if ((input[0] & 0x8000'0000) == 0)
-				{
-					if (output_length >= 6)
-					{
-						*output = 0xFC | static_cast<char>((input[0] & 0x4000'0000) >> 30);
-						*(output + 1) = 0x80 | static_cast<char>((input[0] & 0x3F00'0000) >> 24);
-						*(output + 2) = 0x80 | static_cast<char>((input[0] & 0xFC'0000) >> 18);
-						*(output + 3) = 0x80 | static_cast<char>((input[0] & 0x3'F000) >> 12);
-						*(output + 4) = 0x80 | static_cast<char>((input[0] & 0xFC0) >> 6);
-						*(output + 5) = 0x80 | static_cast<char>((input[0] & 0x3F));
-						return 6;
-					}
-				}
-				else
-					assert(false);
-			}
-			return 0;
-		}
-
-		std::size_t char_imp<char32_t>::to_single(const type* input, std::size_t length, char16_t* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length == 1);
-			if (input[0] >= 0x10000 && input[0] <= 0x10FFFF)
-			{
-				if (output_length >= 2)
-				{
-					char32_t tem = input[0] - 0x10000;
-					output[0] = ((tem & 0xFFC00) >> 10) & 0xD800;
-					output[1] = (tem & 0x3FF) & 0xDC00;
-					return 2;
-				}
-			}
-			else {
-				if (output_length >= 1)
-				{
-					output[0] = static_cast<char16_t>(input[0]);
-					return 1;
-				}
-			}
-			return 0;
-		}
-
-		std::size_t char_imp<char32_t>::to_single(const type* input, std::size_t length, char32_t* output, std::size_t output_length) noexcept
-		{
-			assert(input != nullptr && length == 1);
-			if (output != nullptr && output_length != 0)
-			{
-				std::memcpy(output, input, sizeof(char32_t));
-				return 1;
-			}
-			return 0;
-		}
 	}
 
-	/*
-	bool utf8_check_string(const char* input, size_t avalible, size_t require_space) noexcept
+	std::size_t CheckUTF8String(char const* Input, std::size_t InputLength)
 	{
-		if (require_space != 0 && avalible >= require_space)
+		assert(Input != nullptr && InputLength != 0);
+		auto Size = UTF8RequireSpace(Input[0]);
+		if (InputLength > Size)
 		{
-			for (size_t i = 1; i < require_space; ++i)
+			for (std::size_t i = 1; i < Size; ++i)
 			{
-				if ((input[i] & 0xC0) != 0x80)
-					return false;
+				if ((Input[i] & 0xC0) != 0x80)
+					return 0;
 			}
-			return true;
+			return Size;
 		}
-		return false;
+		return 0;
 	}
 
-	std::optional<size_t> utf8_check_string(const char* input, size_t avalible) noexcept
+	EncodeResult Encoding<char, char>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
 	{
-		if (avalible > 0)
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
 		{
-			size_t re_space = utf8_require_space(input[0]);
-			if (utf8_check_string(input, avalible, re_space))
-				return { re_space };
-			return {};
+			auto Size = CheckUTF8String(Input + Result.InputUsedSpace, InputSpace - Result.InputUsedSpace);
+			if(Size != 0 && MaxOutputSpace >= Result.OutputUsedSpace + Size)
+				Result.Add(Size, Size);
+			else
+				break;
 		}
-		return { 0 };
+		return Result;
 	}
 
-	size_t utf16_require_space(char16_t da)
+	std::size_t Encoding<char, char>::EncodingNoCheck(From const* input, std::size_t InputSpace, To* Output)
 	{
-		if (da >= 0xD800 && da <= 0xDBFF)
+		std::memcpy(Output, input, sizeof(char) * InputSpace);
+		return InputSpace;
+	}
+
+	EncodeResult Encoding<char, char16_t>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
+	{
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
+		{
+			auto Size = CheckUTF8String(Input + Result.InputUsedSpace, InputSpace - Result.InputUsedSpace);
+			if (Size != 0)
+			{
+				auto OutputSize = (Size <= 3) ? 1 : 2;
+				if (MaxOutputSpace >= Result.OutputUsedSpace + Size)
+					Result.Add(Size, OutputSize);
+			}
+			else
+				break;
+		}
+		return Result;
+	}
+
+
+	std::size_t Encoding<char, char16_t>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
+	{
+		std::size_t Used = 0;
+		while (InputSpace != 0)
+		{
+			char32_t Buffer;
+			auto Size = UTF8RequireSpace(Input[0]);
+			Encoding<char, char32_t>::EncodingNoCheck(Input, Size, &Buffer);
+			Used += Encoding<char32_t, char16_t>::EncodingNoCheck(&Buffer, 1, Output + Used);
+			Input += Size;
+			InputSpace -= Size;
+		}
+		return Used;
+	}
+
+	EncodeResult Encoding<char, char32_t>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
+	{
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
+		{
+			auto Size = CheckUTF8String(Input + Result.InputUsedSpace, InputSpace - Result.InputUsedSpace);
+			if (Size != 0 && MaxOutputSpace >= Result.OutputUsedSpace + 1)
+				Result.Add(Size, 1);
+			else
+				break;
+		}
+		return Result;
+	}
+
+
+	std::size_t Encoding<char, char32_t>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
+	{
+		while (InputSpace != 0)
+		{
+			auto Size = UTF8RequireSpace(Input[0]);
+			switch (Size)
+			{
+			case 1: Output[0] = Input[0]; break;
+			case 2: Output[0] = ((Input[0] & 0x1F) << 6) | (Input[1] & 0x3F); break;
+			case 3: Output[0] = ((Input[0] & 0x0F) << 12) | ((Input[1] & 0x3F) << 6) | (Input[2] & 0x3F); break;
+			case 4: Output[0] = ((Input[0] & 0x07) << 18) | ((Input[1] & 0x3F) << 12) | ((Input[2] & 0x3F) << 6) | (Input[3] & 0x3F); break;
+			case 5: Output[0] = ((Input[0] & 0x03) << 24) | ((Input[1] & 0x3F) << 18) | ((Input[2] & 0x3F) << 12) | ((Input[3] & 0x3F) << 6) | (Input[4] & 0x3F); break;
+			case 6: Output[0] = ((Input[0] & 0x01) << 30) | ((Input[1] & 0x3F) << 24) | ((Input[2] & 0x3F) << 18) | ((Input[3] & 0x3F) << 12) | ((Input[4] & 0x3F) << 6) | (Input[5] & 0x3F); break;
+			default: assert(false);
+			}
+			Input += Size;
+			InputSpace -= Size;
+			Output += 1;
+		}
+		return 1;
+	}
+
+	std::size_t CheckUTF16String(char16_t const* FirstChar, std::size_t Length)
+	{
+		assert(FirstChar != nullptr && Length != 0);
+		if (((FirstChar[0] & 0xD800) == 0xD800) && Length >= 2 && (FirstChar[1] & 0xDC00) == 0xDC00)
 			return 2;
 		return 1;
 	}
 
-	size_t utf32_to_utf8_require_space(char32_t input)
+	EncodeResult Encoding<char16_t, char>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
 	{
-		if ((input & 0xFFFFFF80) == 0)
-			return 1;
-		else if ((input & 0xFFFF'F800) == 0)
-			return 2;
-		else if ((input & 0xFFFF'0000) == 0)
-			return 3;
-		else if ((input & 0xFFE0'0000) == 0)
-			return 4;
-		else if ((input & 0xFC00'0000) == 0)
-			return 5;
-		else if ((input & 0x8000'0000) == 0)
-			return 6;
-		else
-			return 0;
-	}
-
-	size_t utf32_to_utf16_require_space(char32_t input)
-	{
-		if (input >= 0x10000 && input <= 0x10FFFF)
-			return 2;
-		else
-			return 1;
-	}
-
-	size_t utf32_to_utf8(char32_t input, char* buffer, size_t output_size)
-	{
-		size_t require_count = utf32_to_utf8_require_space(input);
-		if (output_size >= require_count)
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
 		{
-			switch (require_count)
+			auto Size = CheckUTF16String(Input + Result.InputUsedSpace, InputSpace - Result.InputUsedSpace);
+			std::size_t RequireSize = 0;
+			switch (Size)
+			{
+			case 2: RequireSize = 4; break;
+			case 1:
+				if (Input[0] <= 0x7F) RequireSize = 1;
+				else if (Input[0] <= 0x7FF) RequireSize = 2;
+				else if (Input[0] <= 0xFFFF) RequireSize = 3;
+				else assert(false);
+				break;
+			}
+			if (MaxOutputSpace >= Result.OutputUsedSpace + RequireSize)
+				Result.Add(Size, RequireSize);
+			else
+				break;
+		}
+		return Result;
+	}
+
+
+	std::size_t Encoding<char16_t, char>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
+	{
+		std::size_t Used = 0;
+		while (InputSpace != 0)
+		{
+			char32_t Buffer;
+			auto Size = CheckUTF16String(Input, InputSpace);
+			Encoding<char16_t, char32_t>::EncodingNoCheck(Input, Size, &Buffer);
+			Used += Encoding<char32_t, char>::EncodingNoCheck(&Buffer, 1, Output + Used);
+			Input += Size;
+			InputSpace -= Size;
+		}
+		return Used;
+	}
+
+	EncodeResult Encoding<char16_t, char16_t>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
+	{
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
+		{
+			auto Size = CheckUTF16String(Input + Result.InputUsedSpace, InputSpace - Result.InputUsedSpace);
+			if (MaxOutputSpace >= Result.OutputUsedSpace + Size)
+				Result.Add(Size, Size);
+			else
+				break;
+		}
+		return Result;
+	}
+
+
+	std::size_t Encoding<char16_t, char16_t>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
+	{
+		std::memcpy(Output, Input, sizeof(char16_t) * InputSpace);
+		return InputSpace;
+	}
+
+	EncodeResult Encoding<char16_t, char32_t>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
+	{
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
+		{
+			auto Size = CheckUTF16String(Input + Result.InputUsedSpace, InputSpace - Result.InputUsedSpace);
+			if (MaxOutputSpace >= Result.OutputUsedSpace + 1)
+				Result.Add(Size, 1);
+			else
+				break;
+		}
+		return Result;
+	}
+
+
+	std::size_t Encoding<char16_t, char32_t>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
+	{
+		std::size_t Used = 0;
+		while (InputSpace > 0)
+		{
+			auto Size = CheckUTF16String(Input, InputSpace);
+			switch (Size)
 			{
 			case 1:
-				*buffer = static_cast<char>(input & 0x0000007F);
+				Output[0] = Input[0];
 				break;
 			case 2:
-				*buffer = 0xC0 | static_cast<char>((input & 0x07C0) >> 6);
-				*(buffer + 1) = 0x80 | static_cast<char>((input & 0x3F));
+				Output[0] = ((Input[0] & 0x3FF) << 10) | ((Input[1] & 0x3FF));
 				break;
-			case 3:
-				*buffer = 0xE0 | static_cast<char>((input & 0xF000) >> 12);
-				*(buffer + 1) = 0x80 | static_cast<char>((input & 0xFC0) >> 6);
-				*(buffer + 2) = 0x80 | static_cast<char>((input & 0x3F));
+			default: assert(false); break;
+			}
+			Input += Size;
+			InputSpace -= Size;
+			Output++;
+			++Used;
+		}
+		return Used;
+	}
+
+
+	EncodeResult Encoding<char32_t, char>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
+	{
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
+		{
+			std::size_t RequireSize = 0;
+			if (Input[0] <= 0x7F) RequireSize = 1;
+			else if (Input[0] <= 0x7FF) RequireSize = 2;
+			else if (Input[0] <= 0xFFFF) RequireSize = 3;
+			else if (Input[0] <= 0x1FFFFF) RequireSize = 4;
+			else assert(false);
+			if (MaxOutputSpace >= Result.OutputUsedSpace + RequireSize)
+				Result.Add(1, RequireSize);
+			else
 				break;
-			case 4:
-				*buffer = 0x1E | static_cast<char>((input & 0x1C0000) >> 18);
-				*(buffer + 1) = 0x80 | static_cast<char>((input & 0x3F000) >> 12);
-				*(buffer + 2) = 0x80 | static_cast<char>((input & 0xFC0) >> 6);
-				*(buffer + 3) = 0x80 | static_cast<char>((input & 0x3F));
+		}
+		return Result;
+	}
+
+
+	std::size_t Encoding<char32_t, char>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
+	{
+		std::size_t Used;
+		while (InputSpace > 0)
+		{
+			if (Input[0] <= 0x7F)
+			{
+				Output[Used] = static_cast<char>(Input[0] & 0x0000007F);
+				Used += 1;
+			}
+			else if (Input[0] <= 0x7FF)
+			{
+				Output[Used] = 0xC0 | static_cast<char>((Input[0] & 0x07C0) >> 6);
+				Output[Used + 1] = 0x80 | static_cast<char>((Input[0] & 0x3F));
+				Used += 2;
+			}
+			else if (Input[0] <= 0xFFFF)
+			{
+				Output[Used] = 0xE0 | static_cast<char>((Input[0] & 0xF000) >> 12);
+				Output[Used+ 1] = 0x80 | static_cast<char>((Input[0] & 0xFC0) >> 6);
+				Output[Used + 2] = 0x80 | static_cast<char>((Input[0] & 0x3F));
+				Used += 3;
+			}
+			else if (Input[0] <= 0x1FFFFF)
+			{
+				Output[Used] = 0x1E | static_cast<char>((Input[0] & 0x1C0000) >> 18);
+				Output[Used + 1] = 0x80 | static_cast<char>((Input[0] & 0x3F000) >> 12);
+				Output[Used + 2] = 0x80 | static_cast<char>((Input[0] & 0xFC0) >> 6);
+				Output[Used + 3] = 0x80 | static_cast<char>((Input[0] & 0x3F));
+			}
+			else
+				assert(false);
+			Input += 1;
+			InputSpace--;
+		}
+		return Used;
+	}
+
+	EncodeResult Encoding<char32_t, char16_t>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
+	{
+		assert(Input != nullptr);
+		EncodeResult Result;
+		while (InputSpace > Result.InputUsedSpace && MaxOutputSpace > Result.OutputUsedSpace && Result.UsedChar < MaxCharLimited)
+		{
+			std::size_t RequireSize = 0;
+			if (Input[0] <= 0xFFFF) RequireSize = 1;
+			else RequireSize = 2;
+			if (MaxOutputSpace >= Result.OutputUsedSpace + RequireSize)
+				Result.Add(1, RequireSize);
+			else
 				break;
-			case 5:
-				*buffer = 0xF8 | static_cast<char>((input & 0x300'0000) >> 24);
-				*(buffer + 1) = 0x80 | static_cast<char>((input & 0xFC'0000) >> 18);
-				*(buffer + 2) = 0x80 | static_cast<char>((input & 0x3'F000) >> 12);
-				*(buffer + 3) = 0x80 | static_cast<char>((input & 0xFC0) >> 6);
-				*(buffer + 4) = 0x80 | static_cast<char>((input & 0x3F));
-				break;
-			case 6:
-				*buffer = 0xFC | static_cast<char>((input & 0x4000'0000) >> 30);
-				*(buffer + 1) = 0x80 | static_cast<char>((input & 0x3F00'0000) >> 24);
-				*(buffer + 2) = 0x80 | static_cast<char>((input & 0xFC'0000) >> 18);
-				*(buffer + 3) = 0x80 | static_cast<char>((input & 0x3'F000) >> 12);
-				*(buffer + 4) = 0x80 | static_cast<char>((input & 0xFC0) >> 6);
-				*(buffer + 5) = 0x80 | static_cast<char>((input & 0x3F));
-				break;
-			}
-			return require_count;
 		}
-		return 0;
+		return Result;
 	}
 
-	size_t utf8_to_utf32(const char* input, size_t input_size, char32_t& output)
+	std::size_t Encoding<char32_t, char16_t>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
 	{
-		if (input_size != 0)
+		std::size_t Used;
+		while (InputSpace > 0)
 		{
-			size_t require_space = utf8_require_space(input[0]);
-			if (require_space <= input_size)
+			if (Input[0] <= 0xFFFF)
 			{
-				switch (require_space)
-				{
-				case 1: output = input[0]; break;
-				case 2: output = ((input[0] & 0x1F) << 6) | (input[1] & 0x3F); break;
-				case 3: output = ((input[0] & 0x0F) << 12) | ((input[1] & 0x3F) << 6) | (input[2] & 0x3F); break;
-				case 4: output = ((input[0] & 0x07) << 18) | ((input[1] & 0x3F) << 12) | ((input[2] & 0x3F) << 6) | (input[3] & 0x3F); break;
-				case 5: output = ((input[0] & 0x03) << 24) | ((input[1] & 0x3F) << 18) | ((input[2] & 0x3F) << 12) | ((input[3] & 0x3F) << 6) | (input[4] & 0x3F); break;
-				case 6: output = ((input[0] & 0x01) << 30) | ((input[1] & 0x3F) << 24) | ((input[2] & 0x3F) << 18) | ((input[3] & 0x3F) << 12) | ((input[4] & 0x3F) << 6) | (input[5] & 0x3F); break;
-				}
-				return require_space;
+				Output[Used] = static_cast<char16_t>(Input[0]);
+				Used += 1;
 			}
-		}
-		return 0;
-	}
-
-	size_t utf16_to_uft32(const char16_t* input, size_t input_size, char32_t& output)
-	{
-		if (input_size != 0)
-		{
-			size_t require_space = utf16_require_space(input[0]);
-			if (input_size >= require_space)
+			else if (Input[0] <= 0x7FF)
 			{
-				switch (require_space)
-				{
-				case 1: output = *input; break;
-				case 2: output = (((input[0] & 0x3FF) << 10) | (input[1] & 0x3FF)) + 0x10000; break;
-				}
-				return require_space;
+				Output[Used] = 0xDB00 | static_cast<char16_t>((Input[0] & 0xFFC00) >> 10);
+				Output[Used + 1] = 0xDC00 | static_cast<char16_t>((Input[0] & 0x3FF));
+				Used += 2;
 			}
-
+			Input += 1;
+			InputSpace--;
 		}
-		return 0;
-	}
-
-	size_t utf32_to_utf16(char32_t input, char16_t* buffer, size_t output_size)
-	{
-		size_t require_space = utf32_to_utf16_require_space(input);
-		if (output_size >= require_space)
-		{
-			switch (require_space)
-			{
-			case 1: buffer[0] = static_cast<char16_t>(input); break;
-			case 2:
-				char32_t tem = input - 0x10000;
-				buffer[0] = ((tem & 0xFFC00) >> 10) & 0xD800;
-				buffer[0] = (tem & 0x3FF) & 0xDC00;
-				break;
-			}
-			return require_space;
-		}
-		return 0;
-	}
-
-	std::tuple<size_t, size_t> utf8_to_utf16(const char* input, size_t input_size, char16_t* output, size_t output_size)
-	{
-		size_t _1 = 0;
-		size_t _2 = 0;
-		if (input_size != 0)
-		{
-			char32_t tem;
-			_1 = utf8_to_utf32(input, input_size, tem);
-			if (_1 != 0)
-				_2 = utf32_to_utf16(tem, output, output_size);
-		}
-		return { _1, _2 };
-	}
-
-	std::tuple<size_t, size_t> utf16_to_utf8(const char16_t* input, size_t input_size, char* output, size_t output_size)
-	{
-		size_t _1 = 0;
-		size_t _2 = 0;
-		if (input != nullptr && input_size != 0)
-		{
-			char32_t tem;
-			_1 = utf16_to_uft32(input, input_size, tem);
-			if (_1 != 0)
-				_2 = utf32_to_utf8(tem, output, output_size);
-		}
-		return { _1, _2 };
-	}
-
-	std::tuple<size_t, size_t> utf32s_to_utf8s(const char32_t* input, size_t input_size, char* output, size_t output_size) noexcept
-	{
-		size_t index = 0;
-		size_t utf8_used = 0;
-		if (input_size >= 0)
-		{
-			for (; index < input_size; ++index)
-			{
-				size_t used = utf32_to_utf8(input[index], output + utf8_used, output_size);
-				if (used != 0)
-				{
-					output_size -= used;
-					utf8_used += used;
-				}
-				else
-					break;
-			}
-		}
-		return { index, utf8_used };
-	}
-
-	std::tuple<size_t, size_t> utf8s_to_utf32s(const char* input, size_t input_size, char32_t* output, size_t output_size) noexcept
-	{
-		size_t input_index = 0;
-		size_t utf32_index = 0;
-		if (input_size != 0)
-		{
-			for (; input_index < input_size && output_size > 0;)
-			{
-				size_t used = utf8_to_utf32(input + input_index, input_size, output[utf32_index]);
-				if (used != 0)
-				{
-					input_index += used;
-					++utf32_index;
-				}
-				else
-					break;
-			}
-		}
-		return { input_index, utf32_index };
-	}
-
-	std::tuple<size_t, size_t> utf16s_to_utf8s(const char16_t* input, size_t input_size, char* output, size_t output_size) noexcept
-	{
-		size_t utf16_index = 0;
-		size_t utf8_index = 0;
-		if (input_size != 0)
-		{
-			for (; utf16_index < input_size;)
-			{
-				auto pair = utf16_to_utf8(input + utf16_index, input_size, output + utf8_index, output_size);
-				if (std::get<0>(pair) != 0 && std::get<1>(pair) != 0)
-				{
-					utf16_index += std::get<0>(pair);
-					utf8_index += std::get<1>(pair);
-					output_size -= std::get<1>(pair);
-				}
-				else
-					break;
-			}
-		}
-		return { utf16_index, utf8_index };
-	}
-
-	std::tuple<size_t, size_t> utf8s_to_utf16s(const char* input, size_t input_size, char16_t* output, size_t output_size) noexcept
-	{
-		size_t utf16_index = 0;
-		size_t utf8_index = 0;
-		if (input_size != 0)
-		{
-			while (utf8_index < input_size)
-			{
-				auto pair = utf8_to_utf16(input + utf8_index, input_size, output + utf16_index, output_size);
-				if (std::get<0>(pair) != 0 && std::get<1>(pair) != 0)
-				{
-					utf8_index += std::get<0>(pair);
-					utf16_index += std::get<1>(pair);
-					output_size -= std::get<1>(pair);
-				}
-				else
-					break;
-			}
-		}
-		return { utf8_index, utf16_index };
+		return Used;
 	}
 
 
-	std::u32string utf8s_to_utf32s(const std::string& input)
+	EncodeResult Encoding<char32_t, char32_t>::RequireOutputSpace(From const* Input, std::size_t InputSpace, std::size_t MaxOutputSpace, std::size_t MaxCharLimited)
 	{
-		std::u32string temporary(input.size(), U'\0');
-		auto pair = utf8s_to_utf32s(input.data(), input.size(), temporary.data(), temporary.size());
-		temporary.resize(std::get<1>(pair));
-		return temporary;
+		assert(Input != nullptr);
+		std::size_t Min = InputSpace < MaxOutputSpace ? InputSpace : MaxOutputSpace;
+		Min = Min < MaxCharLimited ? MaxCharLimited : MaxCharLimited;
+		return { Min , Min , Min };
 	}
 
-	std::string utf32s_to_utf8s(const std::u32string& input)
+	std::size_t Encoding<char32_t, char32_t>::EncodingNoCheck(From const* Input, std::size_t InputSpace, To* Output)
 	{
-		std::string temporary(input.size() * 6, u'\0');
-		auto pair = utf32s_to_utf8s(input.data(), input.size(), temporary.data(), temporary.size());
-		temporary.resize(std::get<1>(pair));
-		return temporary;
+		std::memcpy(Output, Input, sizeof(char32_t) * InputSpace);
+		return InputSpace;
 	}
 
-	std::string utf16s_to_utf8s(const std::u16string& input)
-	{
-		std::string temporary(input.size() * 4, u'\0');
-		auto pair = utf16s_to_utf8s(input.data(), input.size(), temporary.data(), temporary.size());
-		temporary.resize(std::get<1>(pair));
-		return temporary;
-	}
-
-	std::u16string utf8s_to_utf16s(const std::string& input)
-	{
-		std::u16string temporary(input.size(), u'\0');
-		auto pair = utf8s_to_utf16s(input.data(), input.size(), temporary.data(), temporary.size());
-		temporary.resize(std::get<1>(pair));
-		return temporary;
-	}
-	*/
-}
-
-
-namespace Potato::Encoding
-{
-	/*
-	std::optional<size_t> encoding_wrapper<char>::require_space(char input) noexcept
-	{
-		if ((input & 0xFE) == 0xFC)
-			return 6;
-		else if ((input & 0xFC) == 0xF8)
-			return 5;
-		else if ((input & 0xF8) == 0xF0)
-			return 4;
-		else if ((input & 0xF0) == 0xE0)
-			return 3;
-		else if ((input & 0xE0) == 0xC0)
-			return 2;
-		else if ((input & 0x80) == 0)
-			return 1;
-		else
-			return std::nullopt;
-	}
-
-	bool encoding_wrapper<char>::check(const char* input, size_t input_length) noexcept
-	{
-		assert(input_length >= 1);
-		auto p = require_space(input[0]);
-		assert(p && *p == input_length);
-		for (size_t i = 1; i < input_length; ++i)
-			if ((input[i] & 0B11000000) != 0B10000000)
-				return false;
-		return true;
+	Ending DetectEnding() {
+		constexpr uint16_t Detect = 0x0001;
+		return *reinterpret_cast<uint8_t const*>(&Detect) == 0x01 ? Ending::Less : Ending::Big;
 	};
-
-	size_t encoding_wrapper<char>::encoding(const char* input, size_t input_length, char* output, size_t output_length) noexcept
-	{
-		if (input_length >= output_length)
-		{
-			for (size_t i = 0; i < input_length; ++i)
-				output[i] = input[i];
-			return input_length;
-		}
-		else
-			return 0;
-	}
-
-	size_t encoding_wrapper<char>::encoding(const char* input, size_t input_length, char32_t* output, size_t output_length) noexcept
-	{
-		if (output_length >= 1)
-		{
-			switch (input_length)
-			{
-			case 1: *output = input[0]; break;
-			case 2: *output = ((input[0] & 0x1F) << 6) | (input[1] & 0x3F); break;
-			case 3: *output = ((input[0] & 0x0F) << 12) | ((input[1] & 0x3F) << 6) | (input[2] & 0x3F); break;
-			case 4: *output = ((input[0] & 0x07) << 18) | ((input[1] & 0x3F) << 12) | ((input[2] & 0x3F) << 6) | (input[3] & 0x3F); break;
-			case 5: *output = ((input[0] & 0x03) << 24) | ((input[1] & 0x3F) << 18) | ((input[2] & 0x3F) << 12) | ((input[3] & 0x3F) << 6) | (input[4] & 0x3F); break;
-			case 6: *output = ((input[0] & 0x01) << 30) | ((input[1] & 0x3F) << 24) | ((input[2] & 0x3F) << 18) | ((input[3] & 0x3F) << 12) | ((input[4] & 0x3F) << 6) | (input[5] & 0x3F); break;
-			}
-			return 1;
-		}
-		return 0;
-	}
-
-	size_t encoding_wrapper<char>::encoding(const char* input, size_t input_length, char16_t* output, size_t output_length) noexcept
-	{
-		char32_t tem;
-		size_t re = encoding(input, input_length, &tem, 1);
-		assert(re == 1);
-		return encoding_wrapper<char32_t>::encoding(&tem, 1, output, output_length);
-	}
-
-	std::optional<size_t> encoding_wrapper<char16_t>::require_space(char16_t input) noexcept
-	{
-		if (input <= 0x00ffff)
-			return 1;
-		else if ((input & 0B11011000) == 0B11011000)
-			return 2;
-		else
-			return std::nullopt;
-	}
-
-	bool encoding_wrapper<char16_t>::check(const char16_t* input, size_t input_length) noexcept
-	{
-		assert(input_length >= 1);
-		auto p = require_space(input[0]);
-		assert(p && *p == input_length);
-		if (input_length == 2)
-			return (input[2] & 0B11011100) == 0B11011100;
-		return true;
-	}
-
-	size_t encoding_wrapper<char16_t>::encoding(const char16_t* input, size_t input_length, char* output, size_t output_length) noexcept
-	{
-		char32_t tem;
-		size_t re = encoding_wrapper<char16_t>::encoding(input, input_length, &tem, 1);
-		assert(re == input_length);
-		return encoding_wrapper<char32_t>::encoding(&tem, 1, output, output_length);
-	}
-
-	size_t encoding_wrapper<char16_t>::encoding(const char16_t* input, size_t input_length, char32_t* output, size_t output_length) noexcept
-	{
-		if (output_length >= 1)
-		{
-			switch (input_length)
-			{
-			case 1: *output = *input; break;
-			case 2: *output = (char32_t(input[0] & 0B0000001111111111) << 10) + char32_t(input[1] & 0B0000001111111111) + 0x10000; break;
-			}
-			return 1;
-		}
-		return 0;
-	}
-
-	size_t encoding_wrapper<char16_t>::encoding(const char16_t* input, size_t input_length, char16_t* output, size_t output_length) noexcept
-	{
-		if (input_length <= output_length)
-		{
-			for (size_t i = 0; i < input_length; ++i)
-				output[i] = input[i];
-			return input_length;
-		}
-		return 0;
-	}
-
-	std::optional<size_t> encoding_wrapper<char32_t>::require_space(char32_t input) noexcept
-	{
-		if (input <= 0x10ffff)
-			return 1;
-		return std::nullopt;
-	}
-
-	bool encoding_wrapper<char32_t>::check(const char32_t* input, size_t input_length) noexcept { return input_length == 1; }
-
-	size_t encoding_wrapper<char32_t>::encoding(const char32_t* input, size_t input_length, char* output, size_t output_length) noexcept
-	{
-		if ((input[0] & 0xFFFFFF80) == 0)
-		{
-			if (output_length >= 1)
-			{
-				output[0] = static_cast<char>(input[0] & 0x0000007F);
-				return 1;
-			}
-		}
-		else if ((input[0] & 0xFFFF'F800) == 0)
-		{
-			if (output_length >= 2)
-			{
-				output[0] = 0xC0 | static_cast<char>((*input & 0x07C0) >> 6);
-				output[1] = 0x80 | static_cast<char>((*input & 0x3F));
-				return 2;
-			}
-		}
-		else if ((input[0] & 0xFFFF'0000) == 0)
-		{
-			if (output_length >= 3)
-			{
-				output[0] = 0xE0 | static_cast<char>((*input & 0xF000) >> 12);
-				output[1] = 0x80 | static_cast<char>((*input & 0xFC0) >> 6);
-				output[2] = 0x80 | static_cast<char>((*input & 0x3F));
-				return 3;
-			}
-		}
-		else if ((input[0] & 0xFFE0'0000) == 0)
-		{
-			if (output_length >= 4)
-			{
-				output[0] = 0x1E | static_cast<char>((*input & 0x1C0000) >> 18);
-				output[1] = 0x80 | static_cast<char>((*input & 0x3F000) >> 12);
-				output[2] = 0x80 | static_cast<char>((*input & 0xFC0) >> 6);
-				output[3] = 0x80 | static_cast<char>((*input & 0x3F));
-				return 4;
-			}
-		}
-		else if ((input[0] & 0xFC00'0000) == 0)
-		{
-			if (output_length >= 5)
-			{
-				output[0] = 0xF8 | static_cast<char>((*input & 0x300'0000) >> 24);
-				output[1] = 0x80 | static_cast<char>((*input & 0xFC'0000) >> 18);
-				output[2] = 0x80 | static_cast<char>((*input & 0x3'F000) >> 12);
-				output[3] = 0x80 | static_cast<char>((*input & 0xFC0) >> 6);
-				output[4] = 0x80 | static_cast<char>((*input & 0x3F));
-				return 5;
-			}
-
-		}
-		else if ((input[0] & 0x8000'0000) == 0)
-		{
-			if (output_length >= 6)
-			{
-				output[0] = 0xFC | static_cast<char>((*input & 0x4000'0000) >> 30);
-				output[1] = 0x80 | static_cast<char>((*input & 0x3F00'0000) >> 24);
-				output[2] = 0x80 | static_cast<char>((*input & 0xFC'0000) >> 18);
-				output[3] = 0x80 | static_cast<char>((*input & 0x3'F000) >> 12);
-				output[4] = 0x80 | static_cast<char>((*input & 0xFC0) >> 6);
-				output[5] = 0x80 | static_cast<char>((*input & 0x3F));
-				return 6;
-			}
-		}
-		else
-			assert(false);
-		return 0;
-	}
-
-	size_t encoding_wrapper<char32_t>::encoding(const char32_t* input, size_t input_length, char32_t* output, size_t output_length) noexcept
-	{
-		assert(input_length == 1);
-		if (output_length >= 1)
-			output[0] = input[0];
-		return 1;
-	}
-
-	size_t encoding_wrapper<char32_t>::encoding(const char32_t* input, size_t input_length, char16_t* output, size_t output_length) noexcept
-	{
-		if (input[0] >= 0x10000)
-		{
-			if (output_length >= 2)
-			{
-				char32_t tem = input[0] - 0x10000;
-				output[0] = ((tem & 0xFFC00) >> 10) & 0xD800;
-				output[1] = (tem & 0x3FF) & 0xDC00;
-				return 2;
-			}
-		}
-		else
-		{
-			if (output_length >= 1)
-			{
-				output[0] = static_cast<char16_t>(input[0]);
-				return 1;
-			}
-		}
-		return 0;
-	}
-	*/
 
 	const unsigned char utf8_bom[] = { 0xEF, 0xBB, 0xBF };
 	const unsigned char utf16_le_bom[] = { 0xFF, 0xFE };
@@ -863,7 +424,7 @@ namespace Potato::Encoding
 	const unsigned char utf32_le_bom[] = { 0x00, 0x00, 0xFE, 0xFF };
 	const unsigned char utf32_be_bom[] = { 0xFF, 0xFe, 0x00, 0x00 };
 
-	std::tuple<BomType, size_t>translate_binary_to_bomtype(const std::byte* bom, size_t bom_length) noexcept
+	std::tuple<BomType, std::size_t> BinaryToBom(const std::byte* bom, std::size_t bom_length) noexcept
 	{
 		assert(bom_length >= 4);
 		if (std::memcmp(bom, utf8_bom, 3) == 0)
@@ -880,7 +441,7 @@ namespace Potato::Encoding
 			return { BomType::None, 0 };
 	}
 
-	std::tuple<const std::byte*, size_t> translate_bomtype_to_binary(BomType format) noexcept
+	std::tuple<const std::byte*, std::size_t> BomToBinary(BomType format) noexcept
 	{
 		switch (format)
 		{
@@ -890,6 +451,34 @@ namespace Potato::Encoding
 		case BomType::UTF32LE: return { reinterpret_cast<const std::byte*>(utf32_le_bom), 4 };
 		case BomType::UTF32BE: return { reinterpret_cast<const std::byte*>(utf32_be_bom), 4 };
 		default: return { nullptr, 0 };
+		}
+	}
+
+	std::tuple<BomType, std::byte*, size_t> FixBinaryWithBom(std::byte* Bom, std::size_t BomLength) noexcept
+	{
+		auto [Type, size] = BinaryToBom(Bom, BomLength);
+		BomLength -= size;
+		Bom += size;
+		FixBinary(Bom, BomLength, Type);
+		return { Type, Bom, BomLength };
+	}
+	void FixBinary(std::byte* Bom, std::size_t BomLength, BomType Type) noexcept
+	{
+		if (Type == BomType::UTF16LE && DetectEnding() != Ending::Less || Type == BomType::UTF16BE && DetectEnding() != Ending::Big)
+		{
+			for (size_t i = 0; i + 4 < BomLength; i += 4)
+			{
+				std::swap(Bom[i], Bom[i + 3]);
+				std::swap(Bom[i + 1], Bom[i + 2]);
+			}
+		}
+		else if (Type == BomType::UTF32LE && DetectEnding() != Ending::Less || Type == BomType::UTF32BE && DetectEnding() != Ending::Big)
+		{
+			for (size_t i = 0; i + 8 < BomLength; i += 8)
+			{
+				for(size_t k =0; k < 4; ++k)
+					std::swap(Bom[i + k], Bom[i + 7 - k]);
+			}
 		}
 	}
 }

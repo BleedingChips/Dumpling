@@ -62,6 +62,20 @@ namespace
 	};
 	constexpr lr1::storage_t operator*(SYM i) { return static_cast<size_t>(i); }
 
+	enum class DebugSymbol : lr1::storage_t
+	{
+		SBrace_L = lr1::start_symbol() - 1,
+		SBrace_R = lr1::start_symbol() - 2,
+		MBrace_L = lr1::start_symbol() - 3,
+		MBrace_R = lr1::start_symbol() - 4,
+		BBrace_L = lr1::start_symbol() - 5,
+		BBrace_R = lr1::start_symbol() - 6,
+		Or = lr1::start_symbol() - 7,
+		None = lr1::start_symbol() - 8,
+	};
+
+	constexpr lr1::storage_t operator*(DebugSymbol input) { return static_cast<lr1::storage_t>(input); };
+
 }
 
 namespace Potato::Parser
@@ -162,71 +176,89 @@ namespace Potato::Parser
 		std::vector<storage_t> TemporaryProductionCountReserve;
 		std::vector<size_t> TemporaryProductionCount;
 		size_t TemporarySymbolCount = 0;
-		lp.analyze(Wrapper, [&](Syntax::lr1_processor::travel tra) {
-			if (tra.is_terminal())
-			{
-				travel re;
-				re.sym_str = ref.find_symbol(tra.symbol);
-				re.sym = tra.symbol;
-				auto stack = Wrapper.stack();
-				re.token_data = stack.capture;
-				re.terminal.line = stack.line;
-				re.terminal.index = stack.index;
-				Func(data, re);
-			}
-			else {
-				if (tra.symbol > ref.temporary_prodution_start && tra.symbol != lr1::start_symbol())
+		try {
+			lp.analyze(Wrapper, [&](Syntax::lr1_processor::travel tra) {
+				if (tra.is_terminal())
 				{
-					std::vector<storage_t> Storage;
-					for (size_t i = tra.noterminal.production_count; i > 0; --i)
-					{
-						if (tra.noterminal.symbol_array[i - 1] > ref.temporary_prodution_start)
-						{
-							assert(TemporaryProductionCount.size() > 0);
-							auto count = *TemporaryProductionCount.rbegin();
-							TemporaryProductionCount.pop_back();
-							size_t k = TemporaryProductionCount.size();
-							size_t target = k - count;
-							for (size_t j = target; j < k; ++j)
-								Storage.push_back(TemporaryProductionCountReserve[j]);
-							TemporaryProductionCountReserve.resize(target);
-						}
-						else
-							Storage.push_back(tra.symbol);
-					}
-					TemporaryProductionCount.push_back(Storage.size());
-					TemporaryProductionCountReserve.insert(TemporaryProductionCountReserve.end(), Storage.begin(), Storage.end());
-				}
-				else {
-					ProductionStorage.clear();
-					for (size_t i = tra.noterminal.production_count; i > 0; --i)
-					{
-						auto sym = tra.noterminal.symbol_array[i - 1];
-						if (sym > ref.temporary_prodution_start)
-						{
-							assert(TemporaryProductionCount.size() > 0);
-							auto Size = *TemporaryProductionCount.rbegin();
-							TemporaryProductionCount.pop_back();
-							auto Target = TemporaryProductionCountReserve.size() - Size;
-							for (size_t ite = Target; ite < TemporaryProductionCountReserve.size(); ++ite)
-								ProductionStorage.push_back(TemporaryProductionCountReserve[ite]);
-							TemporaryProductionCountReserve.resize(Target);
-						}
-						else
-							ProductionStorage.push_back(tra.symbol);
-					}
-					std::reverse(ProductionStorage.begin(), ProductionStorage.end());
 					travel re;
 					re.sym_str = ref.find_symbol(tra.symbol);
 					re.sym = tra.symbol;
 					auto stack = Wrapper.stack();
-					re.noterminal.array_count = ProductionStorage.size();
-					re.noterminal.function_enum = tra.noterminal.function_enum;
-					re.noterminal.symbol_array = ProductionStorage.data();
+					re.token_data = stack.capture;
+					re.terminal.line = stack.line;
+					re.terminal.index = stack.index;
 					Func(data, re);
 				}
-			}
-		});
+				else {
+					if (tra.symbol > ref.temporary_prodution_start && tra.symbol != lr1::start_symbol())
+					{
+						std::vector<storage_t> Storage;
+						for (size_t i = tra.noterminal.production_count; i > 0; --i)
+						{
+							if (tra.noterminal.symbol_array[i - 1] > ref.temporary_prodution_start)
+							{
+								assert(TemporaryProductionCount.size() > 0);
+								auto count = *TemporaryProductionCount.rbegin();
+								TemporaryProductionCount.pop_back();
+								size_t k = TemporaryProductionCount.size();
+								size_t target = k - count;
+								for (size_t j = target; j < k; ++j)
+									Storage.push_back(TemporaryProductionCountReserve[j]);
+								TemporaryProductionCountReserve.resize(target);
+							}
+							else
+								Storage.push_back(tra.symbol);
+						}
+						TemporaryProductionCount.push_back(Storage.size());
+						TemporaryProductionCountReserve.insert(TemporaryProductionCountReserve.end(), Storage.begin(), Storage.end());
+					}
+					else {
+						ProductionStorage.clear();
+						for (size_t i = tra.noterminal.production_count; i > 0; --i)
+						{
+							auto sym = tra.noterminal.symbol_array[i - 1];
+							if (sym > ref.temporary_prodution_start)
+							{
+								assert(TemporaryProductionCount.size() > 0);
+								auto Size = *TemporaryProductionCount.rbegin();
+								TemporaryProductionCount.pop_back();
+								auto Target = TemporaryProductionCountReserve.size() - Size;
+								for (size_t ite = Target; ite < TemporaryProductionCountReserve.size(); ++ite)
+									ProductionStorage.push_back(TemporaryProductionCountReserve[ite]);
+								TemporaryProductionCountReserve.resize(Target);
+							}
+							else
+								ProductionStorage.push_back(tra.symbol);
+						}
+						std::reverse(ProductionStorage.begin(), ProductionStorage.end());
+						travel re;
+						re.sym_str = ref.find_symbol(tra.symbol);
+						re.sym = tra.symbol;
+						auto stack = Wrapper.stack();
+						re.noterminal.array_count = ProductionStorage.size();
+						re.noterminal.function_enum = tra.noterminal.function_enum;
+						re.noterminal.symbol_array = ProductionStorage.data();
+						Func(data, re);
+					}
+				}
+			});
+		}
+		catch (lr1_processor::unacceptable_error const& Ue)
+		{
+			auto Symbol = ref.find_symbol(Ue.token);
+			auto LastSymbol = ref.find_symbol(Ue.last_symbol);
+
+			std::u32string Result = std::u32string(U"Unacceptable Token [") + std::u32string(Symbol) + U"] And Token Data [" + std::u32string(Wrapper.stack().capture) + U"]";
+			if (LastSymbol.size() != 0)
+				Result += U" With Follow Symbol [" + std::u32string(LastSymbol) + U"].";
+
+			throw sbnf::error{
+				std::move(Result),
+				Wrapper.stack().line,
+				Wrapper.stack().index
+			};
+		}
+		
 	}
 
 	struct LexerWrapper : nfa_lexer
@@ -350,13 +382,19 @@ namespace Potato::Parser
 		std::vector<lr1::production_input> productions;
 		std::vector<lr1::production_input> productions_for_temporary;
 		std::optional<storage_t> start_symbol;
-		storage_t noterminal_temporary = lr1::start_symbol() - 1;
+		// ( -> -1, ) -> -2, [ -> -3, ] -> -4, { -> -5, } -> -6, | -> -7
+
+
+		const storage_t noterminal_temporary_start = *DebugSymbol::None;
+		storage_t noterminal_temporary = noterminal_temporary_start;
 
 		struct OrRelationShift { std::vector<lr1::storage_t> s1; std::vector<lr1::storage_t> s2; };
 		struct MBraceRelationShift { std::vector<lr1::storage_t> s1;};
 		struct BBraceRelationShift { std::vector<lr1::storage_t> s1;};
 
-		std::map<lr1::storage_t, std::tuple<std::variant<OrRelationShift, MBraceRelationShift, BBraceRelationShift>, size_t>> temporary_noterminal_production_debug;
+		std::vector<std::tuple<lr1::storage_t , std::vector<lr1::storage_t>>> noterminal_temporary_debug_production;
+
+		//std::map<lr1::storage_t, std::tuple<std::variant<OrRelationShift, MBraceRelationShift, BBraceRelationShift>, size_t>> temporary_noterminal_production_debug;
 
 		// step2
 		{
@@ -490,9 +528,15 @@ namespace Potato::Parser
 						std::vector<storage_t> Pro = { TemProduction };
 						productions_for_temporary.push_back(lr1::production_input{ Pro });
 						auto& ref = *tem_production.rbegin();
-						auto re = temporary_noterminal_production_debug.insert({ TemProduction , { BBraceRelationShift{ref}, productions.size()} });
+						//auto re = temporary_noterminal_production_debug.insert({ TemProduction , { BBraceRelationShift{ref}, productions.size()} });
+						std::vector<lr1::storage_t> DebugProduction;
+						DebugProduction.push_back(*DebugSymbol::BBrace_L);
+						DebugProduction.insert(DebugProduction.end(), ref.begin(), ref.end());
+						DebugProduction.push_back(*DebugSymbol::BBrace_R);
+						noterminal_temporary_debug_production.push_back({ productions.size(), std::move(DebugProduction) });
 						Pro.push_back(TemProduction);
 						Pro.insert(Pro.end(), ref.begin(), ref.end());
+						
 						ref = { TemProduction };
 						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro) });
 					} break;
@@ -504,9 +548,14 @@ namespace Potato::Parser
 						std::vector<storage_t> Pro = { TemProduction };
 						productions_for_temporary.push_back(lr1::production_input{ Pro });
 						auto& ref = *tem_production.rbegin();
-						auto re = temporary_noterminal_production_debug.insert({ TemProduction , {MBraceRelationShift{ref}, productions.size()} });
-						assert(re.second);
+						//auto re = temporary_noterminal_production_debug.insert({ TemProduction , {MBraceRelationShift{ref}, productions.size()} });
+						//assert(re.second);
 						Pro.insert(Pro.end(), ref.begin(), ref.end());
+						std::vector<lr1::storage_t> DebugProduction;
+						DebugProduction.push_back(*DebugSymbol::MBrace_L);
+						DebugProduction.insert(DebugProduction.end(), ref.begin(), ref.end());
+						DebugProduction.push_back(*DebugSymbol::MBrace_R);
+						noterminal_temporary_debug_production.push_back({ productions.size(), std::move(DebugProduction) });
 						ref = { TemProduction };
 						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro) });
 					}break;
@@ -515,9 +564,18 @@ namespace Potato::Parser
 						auto& Ref = *tem_production.rbegin();
 						auto& Ref2 = *(tem_production.rbegin() + 1);
 						storage_t TemProduction = noterminal_temporary--;
+
+						std::vector<lr1::storage_t> DebugProduction;
+						DebugProduction.push_back(*DebugSymbol::SBrace_L);
+						DebugProduction.insert(DebugProduction.end(), Ref2.begin(), Ref2.end());
+						DebugProduction.push_back(*DebugSymbol::Or);
+						DebugProduction.insert(DebugProduction.end(), Ref.begin(), Ref.end());
+						DebugProduction.push_back(*DebugSymbol::SBrace_R);
+						noterminal_temporary_debug_production.push_back({ productions.size(), std::move(DebugProduction) });
+
 						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
-						auto re = temporary_noterminal_production_debug.insert({ TemProduction , {OrRelationShift{Ref, Ref2}, productions.size()} });
-						assert(re.second);
+						//auto re = temporary_noterminal_production_debug.insert({ TemProduction , {OrRelationShift{Ref, Ref2}, productions.size()} });
+						//assert(re.second);
 						std::vector<storage_t> Pro = { TemProduction };
 						Pro.insert(Pro.end(), Ref.begin(), Ref.end());
 						productions_for_temporary.push_back(lr1::production_input{ std::move(Pro) });
@@ -730,7 +788,81 @@ namespace Potato::Parser
 				return U"0";
 			};
 
+			auto ProductionIndexToString = [&](lr1::storage_t ProductionIndex)
+			{
+				assert(ProductionIndex < productions.size());
+				auto& ProductionRef = productions[ProductionIndex].production;
+				auto Symbol = ProductionRef[0];
+				std::u32string Result;
+				auto Re = SymbolToString(Symbol);
+				std::vector<std::tuple<bool, size_t, size_t>> SearchStack;
+				if (Re) {
+					Result += *Re;
+					SearchStack.push_back({ true, ProductionIndex, 1 });
+				}
+				else {
+					Result += U"@Production" + ToString(std::get<0>(noterminal_temporary_debug_production[noterminal_temporary_start - Symbol]));
+					SearchStack.push_back({ false, Symbol, 0 });
+				}
+				Result += U" := ";
+				while (!SearchStack.empty())
+				{
+					auto& [IsNormalProduction, Index, Count] = *SearchStack.rbegin();
+					if (IsNormalProduction)
+					{
+						auto& Ref = productions[Index].production;
+						if (Count < Ref.size())
+						{
+							auto Index = ++Count;
+							auto Da = SymbolToString(Ref[Index]);
+							if (Da) {
+								Result += *Da;
+								Result += U' ';
+							}
+							else {
+								SearchStack.push_back({ false, Ref[Index], 0 });
+							}
+						}
+						else {
+							SearchStack.pop_back();
+						}
+					}
+					else {
+						auto& [ProIndex, Ref] = noterminal_temporary_debug_production[noterminal_temporary_start - Index];
+						if (Count < Ref.size())
+						{
+							auto CurIndex = ++Count;
+							switch (Ref[CurIndex])
+							{
+							case* DebugSymbol::BBrace_L: Result += U" { "; break;
+							case* DebugSymbol::BBrace_R: Result += U" } "; break;
+							case* DebugSymbol::MBrace_L: Result += U" [ "; break;
+							case* DebugSymbol::MBrace_R: Result += U" ] "; break;
+							case* DebugSymbol::SBrace_L: Result += U" ( "; break;
+							case* DebugSymbol::SBrace_R: Result += U" ) "; break;
+							case* DebugSymbol::Or: Result += U" | "; break;
+							default: {
+								auto Da = SymbolToString(Ref[CurIndex]);
+								if (Da) {
+									Result += *Da;
+									Result += U' ';
+								}
+								else {
+									SearchStack.push_back({ false, Ref[CurIndex], 0 });
+								}
+							}
+								break;
+							}
+						}
+						else {
+							SearchStack.pop_back();
+						}
+					}
+				}
+				return Result;
+			};
 
+			/*
 			auto TempNoTerminalProductionToString = [&](size_t ProductionIndex) -> std::tuple<std::u32string, size_t> {
 				std::u32string String;
 				size_t UsedPindex = 0;
@@ -850,9 +982,10 @@ namespace Potato::Parser
 				}
 				return String;
 			};
+			*/
 
-			auto S1String = ProductionsToString(error.possible_production_1);
-			auto S2String = ProductionsToString(error.possible_production_2);
+			auto S1String = ProductionIndexToString(error.possible_production_1);
+			auto S2String = ProductionIndexToString(error.possible_production_2);
 			throw sbnf::error{ U"reduce conflig " + Symbol + U" with production " + S1String + U" and " + S2String + U";", 0, 0 };
 		}
 		

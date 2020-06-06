@@ -24,6 +24,7 @@ namespace Dumpling::Mscf
 
 	void MscfHandler::operator()(sbnf_processer::travel tra)
 	{
+		return;
 		if (tra.is_terminal())
 		{
 			if (tra.sym_str == U"'ID'")
@@ -42,8 +43,14 @@ namespace Dumpling::Mscf
 		auto& mscf_sbnf = mscf_sbnf_instance();
 		sbnf_processer sp(mscf_sbnf);
 		MscfHandler Handler;
-
-		sp.analyze(code, Handler);
+		try {
+			sp.analyze(code, Handler);
+		}
+		catch (sbnf::error const& Message)
+		{
+			__debugbreak();
+		}
+		
 		return {};
 	}
 }

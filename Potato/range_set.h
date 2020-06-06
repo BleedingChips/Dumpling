@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <optional>
 #include <limits>
+#undef small
+#undef max
 namespace Potato::Tool
 {
 

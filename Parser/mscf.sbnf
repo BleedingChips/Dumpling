@@ -1,7 +1,7 @@
 _IGNORE := '\s+'
 Code := '@\{[.\n]*?\}@'
+FloatNumber := '-?[1-9][0-9]*\.[0-9]*'
 IntNumber := '-?[1-9][0-9]*'
-FloatNumber := '-?[1-9][0-9]*(\.[0-9]+)?'
 String := '".*?[^\\]"|""'
 Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 
@@ -14,8 +14,9 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 <RWTextureType> := ( 'RWTexture1D' | 'RWTexture2D' ) '<' <NumberType> '>'
 
 <Type> := <NumberType>
-    := <TextureType>
-    := <RWTextureType>
+    := <TextureType>  : '<'
+    := <TextureType> '<' <NumberType> '>'
+    := <RWTextureType> '<' <NumberType> '>'
 
 <ConstNumberElement> := <ConstNumber>
     := <ConstNumberElement> ',' <ConstNumber>
@@ -31,7 +32,9 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 <MateDateElementList> := <MateDateElement>
     := <MateDateElementList> ',' <MateDateElement>
 
-<MateDate> := '[' [ <MateDateElementList> ] ']'
+<MateDate> := '[' ']'
+    := '[' <MateDateElementList>  ']'
+
 <NullableMateData> := <MateDate>
     := 
 
@@ -42,6 +45,7 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 <DefinePropertyStatement> := <DefinePropertyStatement> <DefineProperty> ';'
     := <DefinePropertyStatement> <MateDate> '{' <DefinePropertyStatement> '}'
     := 
+    := <DefinePropertyStatement> ';'
 
 <ImportStatement> := 'import' String 'as' Id ';'
 
@@ -58,7 +62,6 @@ Id := '[a-zA-Z_][a-zA-Z_0-9]*'
     :=
 
 <CodeStatement> := 'code' Id <Include> Code ';'
-    := 'code' <Include> Id Code ';'
 
 <Conflig> := '<' <MateDateElementList> '>'
     := '<' '>'

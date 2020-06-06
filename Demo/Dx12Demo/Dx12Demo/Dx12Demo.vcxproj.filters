@@ -40,8 +40,8 @@
     <Filter Include="Dumpling\Mscf">
       <UniqueIdentifier>{68e4b97d-cee8-42fb-b9a1-d596e19ee854}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Dumpling\Gui\FrameWork">
-      <UniqueIdentifier>{7535446b-d5a0-446c-a378-9e6c6d594f49}</UniqueIdentifier>
+    <Filter Include="Dumpling\FrameWork">
+      <UniqueIdentifier>{a72287bd-6e2c-477c-81fb-c80839a3f0a6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -85,7 +85,7 @@
       <Filter>Dumpling\Mscf</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\FrameWork\path_system.cpp">
-      <Filter>Dumpling\Gui\FrameWork</Filter>
+      <Filter>Dumpling\FrameWork</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -150,7 +150,7 @@
       <Filter>Dumpling\Gui\Dx</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\FrameWork\path_system.h">
-      <Filter>Dumpling\Gui\FrameWork</Filter>
+      <Filter>Dumpling\FrameWork</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

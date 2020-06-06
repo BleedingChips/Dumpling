@@ -1,4 +1,4 @@
-#include "../../../Dumpling/Mscf/mscf_parser.h"
+#include "../../../Dumpling/Mscf/mscf.h"
 #include "../../../Potato/character_encoding.h"
 #include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
 #include "..//..//..//Dumpling/Gui/Dx12/form_dx12.h"
@@ -30,9 +30,26 @@ int main()
 
 	using namespace Dumpling::Path;
 
-	auto Re2 = SearchAndResetRootDirectory(U"Content");
+	auto Re2 = UpSearch(U"Content");
 	assert(Re2);
-	auto Fined = SearchFile(U"base.mscf");
+	auto Finded = Search(U"base.mscf", *Re2);
+	assert(Finded);
+	auto Data = LoadEntireFile(*Finded);
+	assert(Data);
+
+	auto [Type, Bytes, Size] = Encoding::FixBinaryWithBom(Data->data(), Data->size());
+	Encoding::EncodingWrapper<char> wrapper(reinterpret_cast<char const*>(Bytes), Size);
+	auto TotalString = wrapper.To<char32_t>();
+	
+
+	std::stringstream ss;
+	ss << "asdasdasd" << 234 << "\n" << "sdasd";
+	std::string result;
+	ss >> result;
+
+
+
+	auto Resykt = Mscf::translate(TotalString);
 
 	//auto String = LoadEntireBinaryFile();
 
