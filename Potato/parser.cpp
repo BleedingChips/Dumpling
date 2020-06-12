@@ -62,20 +62,6 @@ namespace
 	};
 	constexpr lr1::storage_t operator*(SYM i) { return static_cast<size_t>(i); }
 
-	enum class DebugSymbol : lr1::storage_t
-	{
-		SBrace_L = lr1::start_symbol() - 1,
-		SBrace_R = lr1::start_symbol() - 2,
-		MBrace_L = lr1::start_symbol() - 3,
-		MBrace_R = lr1::start_symbol() - 4,
-		BBrace_L = lr1::start_symbol() - 5,
-		BBrace_R = lr1::start_symbol() - 6,
-		Or = lr1::start_symbol() - 7,
-		None = lr1::start_symbol() - 8,
-	};
-
-	constexpr lr1::storage_t operator*(DebugSymbol input) { return static_cast<lr1::storage_t>(input); };
-
 }
 
 namespace Potato::Parser
@@ -166,7 +152,7 @@ namespace Potato::Parser
 		std::set<size_t> remove;
 	};
 
-	void sbnf_processer::analyze_imp(sbnf const& ref, std::u32string_view code, void(*Func)(void* data, travel), void* data)
+	std::any sbnf_processer::analyze_imp(sbnf const& ref, std::u32string_view code, std::any(*Func)(void* data, travel), void* data)
 	{
 		assert(Func != nullptr);
 		DefultLexer Wrapper(ref.nfa_s, code);
@@ -336,13 +322,11 @@ namespace Potato::Parser
 				}, {}
 			);
 
-
 			std::u32string_view Token;
 			std::u32string_view Rex;
 			Generator.reset_nfa(nfa_instance);
 			Generator.reset_remove({ *SYM::Empty, *SYM::Command });
-			lr1_processor lp(lr1_instance);
-			lp.controlable_analyze(Generator, [&](lr1_processor::travel input) {
+			lr1_processor{}(lr1_instance, Generator, [&](lr1_processor::travel input) -> std::any {
 				if (input.is_terminal())
 				{
 					switch (input.symbol)
@@ -370,7 +354,7 @@ namespace Potato::Parser
 					default: break;
 					}
 				}
-				return true;
+				return {};
 			});
 			auto Find = symbol_to_index.find(U"_IGNORE");
 			if (Find != symbol_to_index.end())
@@ -379,19 +363,13 @@ namespace Potato::Parser
 
 		std::map<std::u32string_view, storage_t> noterminal_symbol_to_index;
 		std::vector<lr1::production_input> productions;
-		std::vector<lr1::production_input> productions_for_temporary;
 		std::optional<storage_t> start_symbol;
 		// ( -> -1, ) -> -2, [ -> -3, ] -> -4, { -> -5, } -> -6, | -> -7
 
+		storage_t noterminal_temporary = lr1::start_symbol() -1;
 
-		const storage_t noterminal_temporary_start = *DebugSymbol::None;
-		storage_t noterminal_temporary = noterminal_temporary_start;
+		std::vector<std::tuple<std::vector<lr1::storage_t>, size_t>> noterminal_temporary_debug;
 
-		struct OrRelationShift { std::vector<lr1::storage_t> s1; std::vector<lr1::storage_t> s2; };
-		struct MBraceRelationShift { std::vector<lr1::storage_t> s1;};
-		struct BBraceRelationShift { std::vector<lr1::storage_t> s1;};
-
-		std::vector<std::tuple<lr1::storage_t , std::vector<lr1::storage_t>>> noterminal_temporary_debug_production;
 
 		//std::map<lr1::storage_t, std::tuple<std::variant<OrRelationShift, MBraceRelationShift, BBraceRelationShift>, size_t>> temporary_noterminal_production_debug;
 
@@ -413,12 +391,12 @@ namespace Potato::Parser
 			static lr1_storage imp = lr1::create(
 				*SYM::Statement, {
 				{{*SYM::Expression, *SYM::NoTerminal }, 1},
-				{{*SYM::Expression, *SYM::Terminal }, 2},
-				{{*SYM::Expression, *SYM::Rex }, 3},
+				{{*SYM::Expression, *SYM::Terminal }, 1},
+				{{*SYM::Expression, *SYM::Rex }, 1},
 				{{*SYM::ExpressionStatemenet, *SYM::ExpressionStatemenet, *SYM::Or, *SYM::ExpressionStatemenet}, {*SYM::Expression}, 7},
-				{{*SYM::ExpressionStatemenet, *SYM::Expression}},
+				{{*SYM::ExpressionStatemenet, *SYM::Expression}, 2},
 				{{*SYM::ExpressionStatemenet, *SYM::ExpressionStatemenet, *SYM::Expression}, 4},
-				{{*SYM::Expression, *SYM::LS_Brace, *SYM::ExpressionStatemenet, *SYM::RS_Brace}},
+				{{*SYM::Expression, *SYM::LS_Brace, *SYM::ExpressionStatemenet, *SYM::RS_Brace}, 3},
 				{{*SYM::Expression, *SYM::LB_Brace, *SYM::ExpressionStatemenet, *SYM::RB_Brace}, 5},
 				{{*SYM::Expression, *SYM::LM_Brace, *SYM::ExpressionStatemenet, *SYM::RM_Brace}, 6},
 
@@ -448,17 +426,16 @@ namespace Potato::Parser
 				{}
 			);
 
+			using ProExpres = std::vector<std::vector<lr1::storage_t>>;
+
 			std::optional<storage_t> LastHead;
-			storage_t Input;
 			std::vector<storage_t> Tokens;
-			std::optional<storage_t> FunctionEnum;
 			//std::map<std::u32string_view, storage_t> Mapping;
 			std::vector<std::vector<storage_t>> tem_production;
 			std::vector<std::vector<storage_t>> tem_remove;
 
 			Generator.reset_nfa(nfa_instance);
-			lr1_processor lp(imp);
-			lp.controlable_analyze(Generator, [&](lr1_processor::travel tra) {
+			lr1_processor{}(imp, Generator, [&](lr1_processor::travel tra) -> std::any {
 				if (tra.is_terminal())
 				{
 					auto InPutString = Generator.stack().capture;
@@ -466,12 +443,12 @@ namespace Potato::Parser
 					{
 					case* SYM::NoTerminal: {
 						auto Find = noterminal_symbol_to_index.insert({ InPutString, static_cast<storage_t>(noterminal_symbol_to_index.size() + lr1::noterminal_start()) });
-						Input = Find.first->second;
+						return ProExpres({ Find.first->second});
 					}break;
 					case* SYM::Terminal: {
 						auto Find = symbol_to_index.find(InPutString);
 						if (Find != symbol_to_index.end())
-							Input = Find->second;
+							return ProExpres({ Find->second });
 						else
 							throw error{ std::u32string(U"Undefined Terminal : ") + std::u32string(InPutString), Generator.current_line(), Generator.current_index() };
 					}break;
@@ -494,13 +471,13 @@ namespace Potato::Parser
 							}
 							symbol_rex.push_back({ std::move(rex), re.first->second });
 						}
-						Input = re.first->second;
+						return ProExpres({ re.first->second });
 					}break;
 					case* SYM::Number: {
 						storage_t Number = 0;
 						for (auto ite : InPutString)
 							Number = Number * 10 + ite - U'0';
-						FunctionEnum = Number;
+						return Number;
 					}break;
 					case* SYM::Mask: return false;
 					default: break;
@@ -510,18 +487,34 @@ namespace Potato::Parser
 				{
 					switch (tra.noterminal.function_enum)
 					{
-					case 1: case 2: case 3:{
-						tem_production.push_back({ Input });
-					}break;
+					case 1:
+						assert(tra.noterminal.symbol_count == 1);
+						return std::move(tra[0].data);
+					case 2:
+						assert(tra.noterminal.symbol_count == 1);
+						return std::move(tra[0].data);
+					case 3:
+						assert(tra.noterminal.symbol_count == 3);
+						return std::move(tra[1].data);
 					case 4: {
-						assert(tem_production.size() >=2);
-						auto& Ref = *(tem_production.rbegin() + 1);
-						auto& Ref2 = *(tem_production.rbegin());
-						Ref.insert(Ref.end(), Ref2.begin(), Ref2.end());
-						tem_production.pop_back();
+						assert(tra.noterminal.symbol_count == 2);
+						auto& Token1 = std::any_cast<ProExpres&>(tra[0].data);
+						auto& Token2 = std::any_cast<ProExpres&>(tra[1].data);
+						ProExpres AllStorage;
+						for (auto& ite : Token1)
+						{
+							for (auto& ite2 : Token2)
+							{
+								ProExpres::value_type Tem;
+								Tem.insert(Tem.end(), ite.begin(), ite.end());
+								Tem.insert(Tem.end(), ite2.begin(), ite2.end());
+								AllStorage.push_back(std::move(Tem));
+							}
+						}
+						return AllStorage;
 					}break;
 					case 5: {
-						assert(tem_production.size() >= 1);
+						assert(tra.noterminal.symbol_count == 1);
 						storage_t TemProduction = noterminal_temporary--;
 						assert(TemProduction > noterminal_symbol_to_index.size() + lr1::noterminal_start());
 						std::vector<storage_t> Pro = { TemProduction };
@@ -637,7 +630,7 @@ namespace Potato::Parser
 						break;
 					}
 				}
-				return true;
+				return {};
 			});
 		}
 

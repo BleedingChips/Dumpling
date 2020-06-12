@@ -296,7 +296,7 @@ namespace Potato::Lexical
 				else {
 					return std::nullopt;
 				}
-			}, [&](lr1_processor::travel tra) {
+			}, [&](lr1_processor::travel tra) -> std::any {
 				if (!tra.is_terminal())
 				{
 					switch (tra.noterminal.function_enum)
@@ -455,6 +455,7 @@ namespace Potato::Lexical
 					default: assert(false); break;
 					}
 				}
+				return {};
 			});
 			assert(StateStack.size() == 1);
 			auto end = result.back_construction({});

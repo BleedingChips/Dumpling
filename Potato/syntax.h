@@ -171,7 +171,7 @@ namespace Potato::Syntax
 				struct noterminal_t
 				{
 					std::size_t production_index;
-					element const* symbol_array;
+					element* symbol_array;
 					std::size_t symbol_count;
 					std::size_t function_enum;
 				}noterminal;
@@ -181,21 +181,21 @@ namespace Potato::Syntax
 					std::size_t token_index;
 				}terminal;
 			};
-			std::any data;
 			bool is_terminal() const noexcept { return lr1::is_terminal(symbol); }
+			element& operator[](size_t index) { return noterminal.symbol_array[index]; }
 		};
 
 		template<typename TokenGenerator, typename RespondFunction>
-		void operator()(const lr1_storage& table, TokenGenerator&& sym, RespondFunction&& Func)
+		std::any operator()(const lr1_storage& table, TokenGenerator&& sym, RespondFunction&& Func)
 		{
-			auto TokenGeneratorWrapper = [](void* Func) -> std::optional<lr1_storage> {
+			auto TokenGeneratorWrapper = [](void* Func) -> std::optional<lr1::storage_t> {
 				return std::forward<TokenGenerator&&>(*reinterpret_cast<std::remove_reference_t<TokenGenerator>*>(Func))();
 			};
 
 			auto TransFunc = [](void* Func, travel input) -> std::any {
 				return std::forward<RespondFunction&&>(*reinterpret_cast<std::remove_reference_t<RespondFunction>*>(Func)).operator()(input);
 			};
-			reduce(table, TokenGeneratorWrapper, &sym, TransFunc, &Func);
+			return reduce(table, TokenGeneratorWrapper, &sym, TransFunc, &Func);
 		}
 
 		//lr1_processor(const lr1_storage& table) : m_table_ref(table) { clear(); }
@@ -238,7 +238,7 @@ namespace Potato::Syntax
 
 	private:
 		// for no terminal, index means production index, for terminal ,index means token stream index, count means elements in production
-		void reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer);
+		std::any reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer);
 
 
 		//bool try_reduce(storage_t symbol, bool (*Function)(void* Func, travel input), void* data);

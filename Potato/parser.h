@@ -81,13 +81,13 @@ namespace Potato::Parser
 		//sbnf_processer(sbnf const& ref) : ref(ref) {}
 		//sbnf const& ref;
 
-		template<typename Func> void operator()(sbnf const& ref, std::u32string_view code, Func&& F) {
-			auto Wrapper = [](void* data, travel input) {  (*reinterpret_cast<std::remove_reference_t<Func>*>(data))(input); };
-			analyze_imp(ref, code, Wrapper, &F);
+		template<typename Func> std::any operator()(sbnf const& ref, std::u32string_view code, Func&& F) {
+			auto Wrapper = [](void* data, travel input) -> std::any { return  (*reinterpret_cast<std::remove_reference_t<Func>*>(data))(input); };
+			return analyze_imp(ref, code, Wrapper, &F);
 		}
 
 	private:
-		void analyze_imp(sbnf const& ref, std::u32string_view, void(*Func)(void* data, travel), void* data);
+		std::any analyze_imp(sbnf const& ref, std::u32string_view, std::any(*Func)(void* data, travel), void* data);
 	};
 
 	/*

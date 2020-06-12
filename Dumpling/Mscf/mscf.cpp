@@ -41,10 +41,9 @@ namespace Dumpling::Mscf
 	{
 
 		auto& mscf_sbnf = mscf_sbnf_instance();
-		sbnf_processer sp(mscf_sbnf);
 		MscfHandler Handler;
 		try {
-			sp.analyze(code, Handler);
+			sbnf_processer{}(mscf_sbnf, code, Handler);
 		}
 		catch (sbnf::error const& Message)
 		{

@@ -592,7 +592,7 @@ namespace Potato::Syntax
 	}
 
 
-	void lr1_processor::reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer)
+	std::any lr1_processor::reduce(lr1_storage const& table, std::optional<lr1::storage_t>(*Generator)(void* Func), void* GeneratorPointer, std::any(*RespondFunction)(void* Func, travel input), void* RespondFunctionPointer)
 	{
 		std::vector<lr1::storage_t> state_stack({ 0 });
 		std::vector<element> input_stack;
@@ -645,9 +645,9 @@ namespace Potato::Syntax
 						}
 						else
 						{
-							state_stack.resize(state_stack.size() - production_count);
-							assert(state_stack.size() == 1);
-							input_stack.clear();
+							assert(state_stack.size() == 2);
+							assert(storage_array.size() == 1);
+							return std::move(storage_array[0].data);
 						}
 						break;
 					}
@@ -685,6 +685,8 @@ namespace Potato::Syntax
 			}
 			++token_index;
 		}
+		assert(false);
+		return {};
 	}
 
 
