@@ -143,24 +143,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="auto_adapter.h" />
-    <ClInclude Include="character_encoding.h" />
-    <ClInclude Include="parser_nfa.h" />
-    <ClInclude Include="parser_lr0.h" />
-    <ClInclude Include="parser_lr1.h" />
-    <ClInclude Include="range_set.h" />
-    <ClInclude Include="smart_pointer.h" />
-    <ClInclude Include="tmp.h" />
-    <ClInclude Include="tmpcall.h" />
-    <ClInclude Include="tool.h" />
+    <ClCompile Include="..\Potato\character_encoding.cpp" />
+    <ClCompile Include="..\Potato\parser_ebnf.cpp" />
+    <ClCompile Include="..\Potato\parser_lr0.cpp" />
+    <ClCompile Include="..\Potato\parser_nfa.cpp" />
+    <ClCompile Include="..\Potato\tool.cpp" />
+    <ClCompile Include="testing.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="character_encoding.cpp" />
-    <ClCompile Include="parser_nfa.cpp" />
-    <ClCompile Include="parser_lr0.cpp" />
-    <ClCompile Include="parser_lr1.cpp" />
-    <ClCompile Include="testing.cpp" />
-    <ClCompile Include="tool.cpp" />
+    <ClInclude Include="..\Potato\auto_adapter.h" />
+    <ClInclude Include="..\Potato\character_encoding.h" />
+    <ClInclude Include="..\Potato\parser_ebnf.h" />
+    <ClInclude Include="..\Potato\parser_lr0.h" />
+    <ClInclude Include="..\Potato\parser_nfa.h" />
+    <ClInclude Include="..\Potato\range_set.h" />
+    <ClInclude Include="..\Potato\smart_pointer.h" />
+    <ClInclude Include="..\Potato\tmp.h" />
+    <ClInclude Include="..\Potato\tmpcall.h" />
+    <ClInclude Include="..\Potato\tool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

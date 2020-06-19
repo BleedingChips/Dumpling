@@ -137,12 +137,10 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\aid_win32.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf_parser.cpp" />
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
-    <ClCompile Include="..\..\..\Potato\lexical.cpp" />
-    <ClCompile Include="..\..\..\Potato\parser.cpp" />
-    <ClCompile Include="..\..\..\Potato\syntax.cpp" />
+    <ClCompile Include="..\..\..\Potato\parser_ebnf.cpp" />
+    <ClCompile Include="..\..\..\Potato\parser_lr0.cpp" />
+    <ClCompile Include="..\..\..\Potato\parser_nfa.cpp" />
     <ClCompile Include="..\..\..\Potato\tool.cpp" />
     <ClCompile Include="demo.cpp" />
   </ItemGroup>
@@ -154,16 +152,14 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx\math_dx.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid_win32.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h" />
-    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h" />
-    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf_parser.h" />
     <ClInclude Include="..\..\..\Dumpling\Msc\msc.h" />
     <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
     <ClInclude Include="..\..\..\Potato\character_encoding.h" />
-    <ClInclude Include="..\..\..\Potato\lexical.h" />
-    <ClInclude Include="..\..\..\Potato\parser.h" />
+    <ClInclude Include="..\..\..\Potato\parser_ebnf.h" />
+    <ClInclude Include="..\..\..\Potato\parser_lr0.h" />
+    <ClInclude Include="..\..\..\Potato\parser_nfa.h" />
     <ClInclude Include="..\..\..\Potato\range_set.h" />
     <ClInclude Include="..\..\..\Potato\smart_pointer.h" />
-    <ClInclude Include="..\..\..\Potato\syntax.h" />
     <ClInclude Include="..\..\..\Potato\tmp.h" />
     <ClInclude Include="..\..\..\Potato\tmpcall.h" />
     <ClInclude Include="..\..\..\Potato\tool.h" />

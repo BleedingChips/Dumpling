@@ -37,9 +37,6 @@
     <Filter Include="Dumpling\Msc">
       <UniqueIdentifier>{0c31266a-19fa-4e96-9d3b-8d102801a808}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Dumpling\Mscf">
-      <UniqueIdentifier>{68e4b97d-cee8-42fb-b9a1-d596e19ee854}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Dumpling\FrameWork">
       <UniqueIdentifier>{a72287bd-6e2c-477c-81fb-c80839a3f0a6}</UniqueIdentifier>
     </Filter>
@@ -66,26 +63,20 @@
     <ClCompile Include="..\..\..\Potato\character_encoding.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Potato\lexical.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Potato\parser.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Potato\syntax.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Potato\tool.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf.cpp">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Mscf\mscf_parser.cpp">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\Dumpling\FrameWork\path_system.cpp">
       <Filter>Dumpling\FrameWork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\parser_ebnf.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\parser_lr0.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Potato\parser_nfa.cpp">
+      <Filter>Potato</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -113,19 +104,10 @@
     <ClInclude Include="..\..\..\Potato\character_encoding.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Potato\lexical.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\parser.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Potato\range_set.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Potato\smart_pointer.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Potato\syntax.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Potato\tmp.h">
@@ -140,17 +122,20 @@
     <ClInclude Include="..\..\..\Dumpling\Msc\msc.h">
       <Filter>Dumpling\Msc</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf.h">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Mscf\mscf_parser.h">
-      <Filter>Dumpling\Mscf</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Gui\Dx\math_dx.h">
       <Filter>Dumpling\Gui\Dx</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\FrameWork\path_system.h">
       <Filter>Dumpling\FrameWork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\parser_ebnf.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\parser_lr0.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Potato\parser_nfa.h">
+      <Filter>Potato</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

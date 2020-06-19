@@ -81,7 +81,7 @@ namespace Potato::Encoding
 	{
 		assert(Input != nullptr && InputLength != 0);
 		auto Size = UTF8RequireSpace(Input[0]);
-		if (InputLength > Size)
+		if (InputLength >= Size)
 		{
 			for (std::size_t i = 1; i < Size; ++i)
 			{

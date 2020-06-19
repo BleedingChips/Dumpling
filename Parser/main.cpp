@@ -1,6 +1,8 @@
 #include "../Potato/character_encoding.h"
-#include "../Potato/parser.h"
+#include "../Potato/parser_ebnf.h"
 #include "../Dumpling/FrameWork/path_system.h"
+#include "../Potato/parser_format.h"
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <fstream>
@@ -9,7 +11,6 @@
 
 using namespace Potato::Parser;
 using namespace Potato::Encoding;
-using namespace Potato::Lexical;
 using namespace Dumpling::Path;
 
 template<typename T>
@@ -22,7 +23,7 @@ std::string to_string(T&& t)
 	return "0x" + re;
 }
 
-
+/*
 std::string SbnfToString(Potato::Parser::sbnf const& ref, std::string_view Name, size_t TabCount = 0)
 {
 	std::string Tapstring;
@@ -127,9 +128,38 @@ std::string SbnfToString(Potato::Parser::sbnf const& ref, std::string_view Name,
 	Code += "\t};\n";
 	return std::move(Code);
 }
+*/
+
+
 
 int main()
 {
+
+	auto P = Format::CreatePatternRef(U"sdasd 0x{-hex} sdasdas{{}}sadasdas");
+	auto re = Format::Process(P, 123);
+
+	std::u32string_view OI[] = {
+		{UR"(\s)" },
+		{U"\r\n|\n"},
+		{UR"([a-zA-Z_][a-zA-Z_0-9]*)"},
+		{UR"(:=)"},
+		{UR"(%%%\s*?\n)"},
+		{UR"('.*?[^\\]')"},
+		{UR"(\<[_a-zA-Z][_a-zA-Z0-9]*\>)"},
+	};
+
+	auto PCC = NFA::CreateTableReversal(OI, 6);
+
+	auto String = Format::Process(U"{}", PCC);
+
+
+
+	std::ofstream WTF;
+	
+
+
+
+
 
 	auto Data = std::filesystem::current_path();
 
@@ -164,13 +194,27 @@ int main()
 			break;
 		}
 
-		try {
-			auto MscfSbnfInstance = sbnf::create(Code);
+		/*try*/ {
+
+
+			auto Time = std::chrono::system_clock::now();
+			try {
+				auto MscfSbnfInstance = Ebnf::CreateTable(Code);
+			}
+			catch (Ebnf::Error::ErrorMessage const& EM)
+			{
+				auto Time2 = std::chrono::system_clock::now();
+				auto Dur = Time2 - Time;
+				std::cout << Dur.count() << std::endl;
+			}
+			
+			/*
 			auto DumplingPath = UpSearch(U"Dumpling", *ParserPath);
 			assert(DumplingPath);
 			auto MscfRequirePath = Search(U"mscf_parser.h", *DumplingPath);
 			assert(MscfRequirePath);
 			MscfRequirePath->replace_extension(U".cpp");
+			*/
 
 			std::string TotalCode = R"(
 #include "mscf_parser.h"
@@ -183,24 +227,30 @@ using EdgeType = nfa_storage::EdgeType;
 sbnf const& mscf_sbnf_instance(){
 	static )";
 
-			auto Code = SbnfToString(MscfSbnfInstance, "instance");
+			//auto Code = SbnfToString(MscfSbnfInstance, "instance");
 
-			TotalCode += Code;
+			//TotalCode += Code;
 			TotalCode += R"(
 	return instance;
 }
 )";
-			std::ofstream MscfOutputFile(*MscfRequirePath, std::ios::binary);
+			//std::ofstream MscfOutputFile(*MscfRequirePath, std::ios::binary);
 
-			MscfOutputFile.write(TotalCode.data(), TotalCode.size());
+			//MscfOutputFile.write(TotalCode.data(), TotalCode.size());
 
 
 		}
+		//catch (...)
+		{
+			//throw;
+		}
+		/*
 		catch (Potato::Parser::sbnf::error const& error)
 		{
 			auto Message = EncodingWrapper<char32_t>(error.message).To<wchar_t>();
 			std::wcout << L"error :" << Message << L". in line :" << error.line << L", in Index :" << error.charactor_index << L"." << std::endl;
 		}
+		*/
 
 		
 

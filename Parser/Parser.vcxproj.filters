@@ -30,20 +30,23 @@
     <ClCompile Include="..\Potato\character_encoding.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
-    <ClCompile Include="..\Potato\lexical.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\parser.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Potato\syntax.cpp">
-      <Filter>Potato</Filter>
-    </ClCompile>
     <ClCompile Include="..\Potato\tool.cpp">
       <Filter>Potato</Filter>
     </ClCompile>
     <ClCompile Include="..\Dumpling\FrameWork\path_system.cpp">
       <Filter>Dumpling\Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\parser_ebnf.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\parser_lr0.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\parser_nfa.cpp">
+      <Filter>Potato</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Potato\parser_format.cpp">
+      <Filter>Potato</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -58,19 +61,10 @@
     <ClInclude Include="..\Potato\character_encoding.h">
       <Filter>Potato</Filter>
     </ClInclude>
-    <ClInclude Include="..\Potato\lexical.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Potato\parser.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
     <ClInclude Include="..\Potato\range_set.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\Potato\smart_pointer.h">
-      <Filter>Potato</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Potato\syntax.h">
       <Filter>Potato</Filter>
     </ClInclude>
     <ClInclude Include="..\Potato\tmp.h">
@@ -84,6 +78,18 @@
     </ClInclude>
     <ClInclude Include="..\Dumpling\FrameWork\path_system.h">
       <Filter>Dumpling\Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Potato\parser_ebnf.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Potato\parser_lr0.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Potato\parser_nfa.h">
+      <Filter>Potato</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Potato\parser_format.h">
+      <Filter>Potato</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -146,6 +146,7 @@ namespace Potato::Tool
 		}
 		range_set intersection_cull(range_set& input);
 		std::vector<range, Allocator<range>>& storage() { return m_set; }
+		std::vector<range, Allocator<range>> const& storage() const { return m_set; }
 		bool intersection_find(const range& input) const;
 	private:
 		std::vector<range, Allocator<range>> m_set;

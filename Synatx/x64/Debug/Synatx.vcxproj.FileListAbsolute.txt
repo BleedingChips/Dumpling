@@ -1,2 +1,4 @@
 C:\Users\Tomatoes\Desktop\Synatx\x64\Debug\Synatx.exe
 C:\Users\Tomatoes\Desktop\Synatx\x64\Debug\Synatx.pdb
+D:\Github\Dumpling\Synatx\x64\Debug\Synatx.exe
+D:\Github\Dumpling\Synatx\x64\Debug\Synatx.pdb
