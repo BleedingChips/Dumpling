@@ -1,0 +1,97 @@
+_IGNORE := '\s+|/\*.*?\*/|//.*?\n'    
+Code := '@\{[.\n]*?\}@'
+FloatNumber := '-?[1-9][0-9]*\.[0-9]*'
+IntNumber := '-?[1-9][0-9]*'
+String := '".*?[^\\]"|""'
+Id := '[a-zA-Z_][a-zA-Z_0-9]*'
+
+%%%
+
+$ := <Statement>
+
+<Statement> := <Statement> [ <PropertyStatement> ]
+    := <Statement> ';'
+    :=
+
+<BaseType> := 'int' | 'int2' | 'int3' | 'int4' | 'float' | 'float2' | 'float3' | 'float4' : [1]
+
+<StructDesc> := 'struct' Id '{' { [ ( <BaseType> | Id )  Id ] ';'  } '}' ';'
+
+<BaseValueNumber> := IntNumber | FloatNumber
+    := <BaseType> '(' [  <BaseValueNumber> {',' <BaseValueNumber> } ] ')'
+
+<ShaderType> := ( 'Texture2D' | 'Texture1D' | 'Texture3D' ) [ '<' <BaseType>  '>' ]
+    := ( 'RWTexture1D' | 'RWTexture2D' | 'RWTexture3D' ) '<' <BaseType> '>'
+    := 'StructureBuffer' '<' (Id | <BaseType> ) '>'
+    := 'RWStructureBuffer' '<' (Id | <BaseType> ) '>'
+
+<MateDateElement> := Id [ '=' ( <BaseValueNumber> | String | 'true' | 'false' ) ]
+
+<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ]
+
+<PropertyDefine> := <PropertyDefine> <MateDate> '{' <PropertyDefine> '}'
+    := <PropertyDefine> <MateDate> <BaseType> Id [ '[' IntNumber ']' ] [ '=' <BaseValueNumber> ] ';'
+    := <PropertyDefine> <MateDate> ( Id | <ShaderType> ) Id [ '[' IntNumber ']' ] ';'
+    := <PropertyDefine> ';'
+    :=
+
+<PropertyStatement> := 'property' '{' <PropertyDefine> '}'
+
+/*
+
+<DefineProperty> := <MateDate> <Type> Id { '[' IntNumber ']' } [ '=' <ConstNumber>  ]
+
+<DefinePropertyStatement> := <DefinePropertyStatement> <DefineProperty> ';'
+    := <DefinePropertyStatement> <MateDate> '{' <DefinePropertyStatement> '}'
+    := 
+    := <DefinePropertyStatement> ';'
+
+<ImportStatement> := 'import' String 'as' Id ';'
+
+<PropertyStatement> := 'property' '{' <DefinePropertyStatement>  '}' ';'
+
+<IncludeElement> := Id
+    := <IncludeElement> '.' Id
+
+<IncludeElementList> := <IncludeElement>
+    := <IncludeElementList> ',' <IncludeElement>
+
+<Include> := '[' <IncludeElementList> ']'
+    := '[' ']'
+    :=
+
+<CodeStatement> := 'code' Id <Include> Code ';'
+
+<Conflig> := '<' <MateDateElementList> '>'
+    := '<' '>'
+
+<InoutElementList> := <NumberType> Id
+    := <InoutElementList> ',' <NumberType> Id
+
+<Inout> := '(' <InoutElementList> ')'
+    := '(' ')'
+
+<SectionStatement> := 'section' Id <Include> <Inout> '->' <Inout> Code ';'
+<DefineMarcoStatement> := 'define' Id String ';'
+    := 'define' Id ';'
+
+<MaterialStatementElement> := <MaterialStatementElement> <SectionStatement>
+    := <MaterialStatementElement> <DefineMarcoStatement>
+    := 
+
+<MaterialStatement> := <NullableMateData> 'material' Id 'as' Id <Conflig> '{' <MaterialStatementElement> '}' ';'
+    := <NullableMateData> 'using' 'material' <IncludeElement> 'as' Id <Conflig> ';'
+
+
+
+<StatemenetElement> :=  <StatemenetElement> <ImportStatement>
+    := <StatemenetElement> <CodeStatement>
+    := <StatemenetElement> <MaterialStatement> 
+    := 
+
+<Statement> := <StatemenetElement>
+    := <PropertyStatement> <StatemenetElement>
+
+*/
+
+

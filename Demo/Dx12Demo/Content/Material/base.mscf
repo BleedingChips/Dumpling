@@ -1,0 +1,55 @@
+property{
+    [_instance_only, caterage = "WTF2"]
+    {
+        [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
+        float2 Potato = float2(1.0, 1.0);
+        []{
+            float2 Potato2 = float2(2.0, 2.0);
+            float2 Data[100];
+        }
+    };
+
+    [desc = "DefineWTF"]
+    {
+        float2 Demo = float2(2.0, 1.0);
+        float2 Cc;
+    };
+
+    float Potato;
+    Texture2D<float4> T2;
+    Texture2D<float4> T3;
+}
+
+/*
+import "CS\WTF\GoGo.h" as GoGo;
+
+
+
+code Random [ ] @{
+    float2 Function(float){return float2(1.0, 1.0);} 
+}@;
+
+[]
+material Default as pp <
+    Type = "Data",
+    WTF = 2.0,
+    Data = true,
+    TwoSide = true
+>{
+    section VS [Random, GoGo.WTF] (float2 Position) -> (float4 Color, float2 Texture) @{
+
+    }@;
+
+    section PS [Random] (float4 Color, float2 Texture) -> (float4 SV_Target) @{
+
+    }@;
+};
+
+[]
+using material pp as GogO <
+    Type = "Data",
+    WTF = 2.0,
+    Data = true,
+    TwoSide = true
+>;
+*/

@@ -131,38 +131,44 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Dumpling\FrameWork\path_system.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\aid_win32.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\form_win32.cpp" />
-    <ClCompile Include="..\..\..\Potato\character_encoding.cpp" />
-    <ClCompile Include="..\..\..\Potato\parser_ebnf.cpp" />
-    <ClCompile Include="..\..\..\Potato\parser_lr0.cpp" />
-    <ClCompile Include="..\..\..\Potato\parser_nfa.cpp" />
-    <ClCompile Include="..\..\..\Potato\tool.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\FrameWork\Implement\path_system.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dx12.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dx12_form.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dxgi.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Gui\Win32\win32.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Msc\Implement\mscf.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\CharEncode.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Ebnf.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Lr0.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Nfa.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\StrFormat.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\Potato\Implement\tool.cpp" />
     <ClCompile Include="demo.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\Dumpling\FrameWork\path_system.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\define_dx12.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx12\form_dx12.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dxgi\define_dxgi.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Dx\math_dx.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\aid_win32.h" />
-    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\form_win32.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\msc.h" />
-    <ClInclude Include="..\..\..\Potato\auto_adapter.h" />
-    <ClInclude Include="..\..\..\Potato\character_encoding.h" />
-    <ClInclude Include="..\..\..\Potato\parser_ebnf.h" />
-    <ClInclude Include="..\..\..\Potato\parser_lr0.h" />
-    <ClInclude Include="..\..\..\Potato\parser_nfa.h" />
-    <ClInclude Include="..\..\..\Potato\range_set.h" />
-    <ClInclude Include="..\..\..\Potato\smart_pointer.h" />
-    <ClInclude Include="..\..\..\Potato\tmp.h" />
-    <ClInclude Include="..\..\..\Potato\tmpcall.h" />
-    <ClInclude Include="..\..\..\Potato\tool.h" />
+    <ClInclude Include="..\..\..\Dumpling\FrameWork\Interface\path_system.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\dx12_form.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\dxgi.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\enum_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\math_dx.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\pre_define_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\resource_dx12.h" />
+    <ClInclude Include="..\..\..\Dumpling\Gui\Win32\win32.h" />
+    <ClInclude Include="..\..\..\Dumpling\Msc\Implement\mscf_parser_table.h" />
+    <ClInclude Include="..\..\..\Dumpling\Msc\Interface\msc.h" />
+    <ClInclude Include="..\..\..\Dumpling\Msc\Interface\mscf.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\CharEncode.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Ebnf.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Lr0.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Nfa.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Range.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\StrFormat.h" />
+    <ClInclude Include="..\..\..\Dumpling\Potato\Interface\auto_adapter.h" />
+    <ClInclude Include="..\..\..\Dumpling\Potato\Interface\smart_pointer.h" />
+    <ClInclude Include="..\..\..\Dumpling\Potato\Interface\tmp.h" />
+    <ClInclude Include="..\..\..\Dumpling\Potato\Interface\tmpcall.h" />
+    <ClInclude Include="..\..\..\Dumpling\Potato\Interface\tool.h" />
     <ClInclude Include="Testing.h" />
   </ItemGroup>
   <ItemGroup>
@@ -192,8 +198,8 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Content\base.mscf" />
-    <None Include="..\Content\base.mscfins" />
+    <None Include="..\..\..\Parser\Mscf.ebnf" />
+    <None Include="..\Content\Material\base.mscf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

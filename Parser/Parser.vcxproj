@@ -143,31 +143,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Dumpling\FrameWork\path_system.cpp" />
-    <ClCompile Include="..\Potato\character_encoding.cpp" />
-    <ClCompile Include="..\Potato\parser_ebnf.cpp" />
-    <ClCompile Include="..\Potato\parser_format.cpp" />
-    <ClCompile Include="..\Potato\parser_lr0.cpp" />
-    <ClCompile Include="..\Potato\parser_nfa.cpp" />
-    <ClCompile Include="..\Potato\tool.cpp" />
+    <ClCompile Include="..\Dumpling\FrameWork\Implement\path_system.cpp" />
+    <ClCompile Include="..\Dumpling\PineApple\Implment\CharEncode.cpp" />
+    <ClCompile Include="..\Dumpling\PineApple\Implment\Ebnf.cpp" />
+    <ClCompile Include="..\Dumpling\PineApple\Implment\Lr0.cpp" />
+    <ClCompile Include="..\Dumpling\PineApple\Implment\Nfa.cpp" />
+    <ClCompile Include="..\Dumpling\PineApple\Implment\StrFormat.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="mscf.sbnf" />
+    <ClInclude Include="..\Dumpling\FrameWork\Interface\path_system.h" />
+    <ClInclude Include="..\Dumpling\PineApple\Interface\CharEncode.h" />
+    <ClInclude Include="..\Dumpling\PineApple\Interface\Ebnf.h" />
+    <ClInclude Include="..\Dumpling\PineApple\Interface\Lr0.h" />
+    <ClInclude Include="..\Dumpling\PineApple\Interface\Nfa.h" />
+    <ClInclude Include="..\Dumpling\PineApple\Interface\Range.h" />
+    <ClInclude Include="..\Dumpling\PineApple\Interface\StrFormat.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Dumpling\FrameWork\path_system.h" />
-    <ClInclude Include="..\Potato\auto_adapter.h" />
-    <ClInclude Include="..\Potato\character_encoding.h" />
-    <ClInclude Include="..\Potato\parser_ebnf.h" />
-    <ClInclude Include="..\Potato\parser_format.h" />
-    <ClInclude Include="..\Potato\parser_lr0.h" />
-    <ClInclude Include="..\Potato\parser_nfa.h" />
-    <ClInclude Include="..\Potato\range_set.h" />
-    <ClInclude Include="..\Potato\smart_pointer.h" />
-    <ClInclude Include="..\Potato\tmp.h" />
-    <ClInclude Include="..\Potato\tmpcall.h" />
-    <ClInclude Include="..\Potato\tool.h" />
+    <None Include="Mscf.ebnf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

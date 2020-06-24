@@ -1,3 +1,0 @@
-﻿  parser_nfa.cpp
-D:\Github\Dumpling\Potato\parser_nfa.cpp(508,49): warning C4101: “UAS”: 未引用的局部变量
-  Synatx.vcxproj -> D:\Github\Dumpling\Synatx\x64\Debug\Synatx.exe

@@ -1,9 +1,7 @@
-#include "../../../Potato/parser_ebnf.h"
-#include "../../../Potato/character_encoding.h"
-#include "..//..//..//Dumpling/Gui/Dx12/define_dx12.h"
-#include "..//..//..//Dumpling/Gui/Dx12/form_dx12.h"
-#include "../../../Dumpling/Gui/Dx/math_dx.h"
-#include "../../../Dumpling/FrameWork/path_system.h"
+#include "../../../Dumpling/Gui/Win32/dx12_form.h"
+#include "../../../Dumpling/FrameWork/Interface/path_system.h"
+#include "../../../Dumpling/Msc/Interface/mscf.h"
+#include "../../../Dumpling/PineApple/Interface/CharEncode.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
@@ -19,6 +17,7 @@ using Dxgi::FormatPixel;
 using namespace Dxgi::DataType;
 using Win32::ThrowIfFault;
 using namespace Potato;
+using namespace PineApple;
 
 namespace fs = std::filesystem;
 
@@ -37,19 +36,9 @@ int main()
 	auto Data = LoadEntireFile(*Finded);
 	assert(Data);
 
-	auto [Type, Bytes, Size] = Encoding::FixBinaryWithBom(Data->data(), Data->size());
-	Encoding::EncodingWrapper<char> wrapper(reinterpret_cast<char const*>(Bytes), Size);
-	auto TotalString = wrapper.To<char32_t>();
-	
+	std::u32string AT = CharEncode::Wrapper(Data->data(), Data->size()).To<char32_t>();
+	auto E = Dumpling::Mscf::translate(AT);
 
-	std::stringstream ss;
-	ss << "asdasdasd" << 234 << "\n" << "sdasd";
-	std::string result;
-	ss >> result;
-
-
-
-	auto Resykt = Mscf::translate(TotalString);
 
 	//auto String = LoadEntireBinaryFile();
 

@@ -16,6 +16,11 @@ Texture2D G122;
 Texture2DArray<float4> yui[6];
 RWTexture2D<float4> RT2[9][10];
 
+float Test(Texture2D<float2> p)
+{
+	return 0;
+}
+
 float4 main(
 	float4 poi : POSITION
 ) : SV_TARGET
