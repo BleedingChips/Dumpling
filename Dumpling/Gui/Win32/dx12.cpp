@@ -5,12 +5,70 @@
 namespace Dumpling::Dx12
 {
 
+	std::tuple<D3D12_HEAP_TYPE, D3D12_HEAP_FLAGS> Trans(HeapType Input)
+	{
+		switch (Input)
+		{
+		case HeapType::Texture: {
+			return { D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES };
+		} break;
+		case HeapType::RTDSTexture: {
+			return { D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES };
+		} break;
+		case HeapType::Shader: {
+			return { D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_SHARED };
+		} break;
+		case HeapType::UploadBuffer: {
+			return { D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS };
+		} break;
+		case HeapType::Buffer: {
+			return { D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS };
+		} break;
+		default:assert(false);
+			break;
+		}
+		return { D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS };
+	}
+
+	struct HeadManagerImpCommited : HeadManager
+	{
+		DevicePtr Dev;
+		HeapType type;
+		UINT VisibleNodeMask;
+		HeadManagerImpCommited(DevicePtr ptr, HeapType type, UINT VNM) : Dev(std::move(ptr)), type(type), VisibleNodeMask(VNM) {}
+		virtual HeapType Type() const noexcept override { return type; }
+		virtual Device& GetDevice() noexcept override { return *Dev; }
+		virtual size_t VisibleMask() const noexcept override { return VisibleNodeMask; }
+		virtual HeapPtr Allocate(size_t size, size_t& offset) override
+		{
+			auto [type, flag] = Trans(Type());
+
+
+			D3D12_HEAP_DESC desc{size, D3D12_HEAP_PROPERTIES{ type,
+				D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				D3D12_MEMORY_POOL_UNKNOWN,
+				DeviceNodeMask(*Dev),
+				VisibleNodeMask
+			}, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, flag };
+			HeapPtr heap;
+			HRESULT re =Dev->CreateHeap(&desc, __uuidof(Heap), heap(VoidT{}));
+			Win32::ThrowIfFault(re);
+			offset = 0;
+			return std::move(heap);
+		}
+	};
+
 	void InitDebugLayout()
 	{
 		ComPtr<ID3D12Debug>	debugController;
 		HRESULT re = D3D12GetDebugInterface(__uuidof(ID3D12Debug), debugController(VoidT{}));
 		assert(SUCCEEDED(re));
 		debugController->EnableDebugLayer();
+	}
+
+	HeadManagerPtr CreateCommitedHeap(DevicePtr Dev, HeapType Type, UINT VisibleNodeMask)
+	{
+		return new Win32::ComBaseImplement<HeadManagerImpCommited>( std::move(Dev), Type, VisibleNodeMask | DeviceNodeMask(*Dev));
 	}
 
 	UINT DeviceNodeMask(Device& Dev)
@@ -64,12 +122,51 @@ namespace Dumpling::Dx12
 		return Ptr;
 	}
 
+	ResourcePtr HeadManager::CreateTexture2D(DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap, D3D12_RESOURCE_STATES State)
+	{
+		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_TEXTURE2D, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Width, Height, 1, Mapmap, Format, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
+		D3D12_RESOURCE_ALLOCATION_INFO Info = GetDevice().GetResourceAllocationInfo(VisibleMask(), 1, &Desc);
+		size_t Offset;
+		auto Head = Allocate(Info.SizeInBytes, Offset);
+		ResourcePtr Result;
+		HRESULT re = GetDevice().CreatePlacedResource(Head, Offset, &Desc, State, nullptr, __uuidof(Resource), Result(VoidT{}));
+		Win32::ThrowIfFault(re);
+		return Result;
+	}
+
+	ResourcePtr HeadManager::CreateTexture3DUAV(DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint32_t depth, D3D12_RESOURCE_STATES State)
+	{
+		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_TEXTURE3D, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Width, Height, depth, 1, Format, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS };
+		D3D12_RESOURCE_ALLOCATION_INFO Info = GetDevice().GetResourceAllocationInfo(VisibleMask(), 1, &Desc);
+		size_t Offset;
+		auto Head = Allocate(Info.SizeInBytes, Offset);
+		ResourcePtr Result;
+		HRESULT re = GetDevice().CreatePlacedResource(Head, Offset, &Desc, State, nullptr, __uuidof(Resource), Result(VoidT{}));
+		Win32::ThrowIfFault(re);
+		return Result;
+	}
+
+	ResourcePtr HeadManager::CreateBuffer(uint64_t Width, D3D12_RESOURCE_STATES State)
+	{
+		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Width, 1, 1, 1, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+		D3D12_RESOURCE_ALLOCATION_INFO Info = GetDevice().GetResourceAllocationInfo(VisibleMask(), 1, &Desc);
+		size_t Offset;
+		auto Head = Allocate(Info.SizeInBytes, Offset);
+		ResourcePtr Result;
+		HRESULT re = GetDevice().CreatePlacedResource(Head, Offset, &Desc, State, nullptr, __uuidof(Resource), Result(VoidT{}));
+		Win32::ThrowIfFault(re);
+		return Result;
+	}
+
 	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap, D3D12_RESOURCE_STATES State)
 	{
 		D3D12_HEAP_PROPERTIES Pri{ D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, DeviceNodeMask(Dev), DeviceNodeMask(Dev)};
 		D3D12_RESOURCE_DESC Desc{ D3D12_RESOURCE_DIMENSION_TEXTURE2D, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, Width, Height, 1, Mapmap, Format, DXGI_SAMPLE_DESC {1, 0}, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
 		ResourcePtr Ptr;
 		Dev.CreateCommittedResource(&Pri, D3D12_HEAP_FLAG_NONE, &Desc, State, nullptr, __uuidof(Resource), Ptr(VoidT{}));
+		D3D12_HEAP_FLAGS des22c;
+		D3D12_HEAP_PROPERTIES pro22;
+		Ptr->GetHeapProperties(&pro22, &des22c);
 		return Ptr;
 	}
 
@@ -82,7 +179,7 @@ namespace Dumpling::Dx12
 		return Ptr;
 	}
 
-	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*> Res, D3D12_RESOURCE_STATES OldState, D3D12_RESOURCE_STATES NewState, uint32_t SubResource)
+	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*> Res, ResState OldState, ResState NewState, uint32_t SubResource)
 	{
 		for (auto& ite : Res)
 		{
@@ -92,7 +189,7 @@ namespace Dumpling::Dx12
 					D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					D3D12_RESOURCE_BARRIER_FLAG_NONE
 				};
-				Barr.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{ ite, SubResource, OldState, NewState };
+				Barr.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{ ite, SubResource, *OldState, *NewState };
 				List.ResourceBarrier(1, &Barr);
 			}
 		}

@@ -26,6 +26,7 @@ namespace PineApple::Ebnf
 		size_t state;
 		std::u32string_view string;
 		bool is_terminal;
+		Nfa::Location loc;
 		union {
 			struct {
 				size_t mask;
@@ -33,7 +34,7 @@ namespace PineApple::Ebnf
 			}reduce;
 			struct {
 				std::u32string_view capture;
-				Nfa::Location loc;
+				size_t mask;
 			}shift;
 		};
 		bool IsTerminal() const noexcept { return is_terminal; }
@@ -42,11 +43,14 @@ namespace PineApple::Ebnf
 
 	struct Element : Step
 	{
-		std::tuple<size_t, std::u32string_view, std::any>* datas = nullptr;
-		std::tuple<size_t, std::u32string_view, std::any>& operator[](size_t index) { return datas[index]; }
+		std::tuple<size_t, std::u32string_view, std::any, Nfa::Location>* datas = nullptr;
+		std::tuple<size_t, std::u32string_view, std::any, Nfa::Location>& operator[](size_t index) { return datas[index]; }
+		Nfa::Location GetLocation(size_t index) { return std::get<3>((*this)[index]); }
 		decltype(auto) GetRawData(size_t index) { return std::get<2>((*this)[index]); }
 		template<typename Type>
 		decltype(auto) GetData(size_t index) { return std::any_cast<Type>(std::get<2>((*this)[index])); }
+		template<typename Type>
+		Type* TryGetData(size_t index) { return std::any_cast<Type>(&std::get<2>((*this)[index])); }
 		size_t GetAcception(size_t index) { return std::get<0>((*this)[index]); }
 		std::u32string_view GetString(size_t index) { return std::get<1>((*this)[index]); }
 		Element(Step const& ref) : Step(ref) {}
@@ -103,16 +107,22 @@ namespace PineApple::Ebnf
 			Nfa::Location loc;
 		};
 
-		struct UnaccableToken {
+		struct UnacceptableToken {
 			std::u32string token;
 			Nfa::Location loc;
 		};
 
-		struct UnaccableSyntax {
+		struct UnacceptableSyntax {
 			std::u32string type;
 			std::u32string data;
 			Nfa::Location loction;
 			std::vector<ExceptionStep> exception_step;
+		};
+
+		struct UnacceptableRegex
+		{
+			std::u32string regex;
+			size_t acception_mask;
 		};
 
 		/*

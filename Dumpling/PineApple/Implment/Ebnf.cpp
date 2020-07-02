@@ -115,7 +115,9 @@ namespace PineApple::Ebnf
 			auto Steps = Lr0::Process(Tab.lr0_table, Symbols.data(), Symbols.size());
 			std::vector<Step> AllStep;
 			AllStep.reserve(Steps.steps.size());
-			int TemporaryUsed = 0;
+			Nfa::Location LastLocation;
+			size_t DataCount = 0;
+			std::vector<std::tuple<size_t, size_t>> TemporaryNoTerminal;
 			for (auto& Ite : Steps.steps)
 			{
 				Step Result{};
@@ -127,19 +129,42 @@ namespace PineApple::Ebnf
 					if (Result.is_terminal)
 					{
 						auto& DatasRef = Datas[Ite.shift.token_index];
-						Result.shift.loc = DatasRef.location;
+						Result.loc = DatasRef.location;
+						LastLocation = DatasRef.location;
 						Result.shift.capture = DatasRef.march.capture;
+						Result.shift.mask = DatasRef.march.mask;
+						DataCount += 1;
 					}
 					else {
 						Result.reduce.mask = Ite.reduce.mask;
-						Result.reduce.production_count = static_cast<size_t>(static_cast<int>(Ite.reduce.production_count) + TemporaryUsed);
-						TemporaryUsed = 0;
+						size_t ProCount = Ite.reduce.production_count;
+						size_t Used = ProCount;
+						while (!TemporaryNoTerminal.empty())
+						{
+							auto [Index, Count] = *TemporaryNoTerminal.rbegin();
+							if (Index + ProCount >= DataCount)
+							{
+								TemporaryNoTerminal.pop_back();
+								Used += Count;
+								Used -= 1;
+							}
+							else
+								break;
+						}
+						assert(DataCount >= ProCount);
+						DataCount -= ProCount;
+						DataCount += 1;
+						Result.reduce.production_count = Used;
+						Result.loc = LastLocation;
 					}
 					AllStep.push_back(Result);
 				}
 				else {
 					assert(Result.IsNoterminal());
-					TemporaryUsed += static_cast<int>(Ite.reduce.production_count) - 1;
+					TemporaryNoTerminal.push_back({ DataCount, Ite.reduce.production_count});
+					assert(DataCount >= Ite.reduce.production_count);
+					DataCount -= Ite.reduce.production_count;
+					DataCount += 1;
 				}
 			}
 			return { std::move(AllStep) };
@@ -165,7 +190,8 @@ namespace PineApple::Ebnf
 					}
 					else {
 						step.production_mask = ite.reduce.mask;
-						step.production_count = static_cast<size_t>(static_cast<int>(ite.reduce.production_count) + TemporaryUsed);
+						assert(ite.reduce.production_count >= TemporaryUsed);
+						step.production_count = ite.reduce.production_count + TemporaryUsed;
 						TemporaryUsed = 0;
 					}
 					re.push_back(step);
@@ -175,13 +201,13 @@ namespace PineApple::Ebnf
 					TemporaryUsed += static_cast<int>(ite.reduce.production_count) - 1;
 				}
 			}
-			throw Error::UnaccableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.index].march.capture),Datas[Symbol.index].location, std::move(re) };
+			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.index].march.capture),Datas[Symbol.index].location, std::move(re) };
 		}
 	}
 
 	std::any History::operator()(std::any(*Function)(void*, Element&), void* FunctionBody) const
 	{
-		std::vector<std::tuple<size_t, std::u32string_view, std::any>> Storage;
+		std::vector<std::tuple<size_t, std::u32string_view, std::any, Nfa::Location>> Storage;
 		int append = 0;
 		for (auto& ite : steps)
 		{
@@ -190,15 +216,25 @@ namespace PineApple::Ebnf
 				Element Re(ite);
 				Re.datas = nullptr;
 				auto Result = (*Function)(FunctionBody, Re);
-				Storage.push_back({ ite.state, ite.string, std::move(Result) });
+				Storage.push_back({ ite.state, ite.string, std::move(Result), ite.loc });
 			}
 			else {
 				Element Re(ite);
-				size_t CurrentAdress = Storage.size() - (ite.reduce.production_count + append);
+				size_t TotalUsed = ite.reduce.production_count + append;
+				size_t CurrentAdress = Storage.size() - TotalUsed;
 				Re.datas = Storage.data() + CurrentAdress;
+				if (TotalUsed >= 1)
+				{
+					Re.loc = std::get<3>(Re.datas[0]);
+					auto Tar = std::get<3>(Re.datas[TotalUsed - 1]);
+					Re.loc.length = Tar.total_index - Re.loc.total_index + Tar.length;
+				}
+				else {
+					Re.loc = ite.loc;
+				}
 				auto Result = (*Function)(FunctionBody, Re);
 				Storage.resize(CurrentAdress);
-				Storage.push_back({ Re.state, Re.string, std::move(Result) });
+				Storage.push_back({ Re.state, Re.string, std::move(Result), Re.loc });
 			}
 		}
 		assert(Storage.size() == 1);
@@ -224,7 +260,7 @@ namespace PineApple::Ebnf
 				}
 			}
 			else
-				throw Error::UnaccableToken{ {}, Loc };
+				throw Error::UnacceptableToken{ {}, Loc };
 		}
 		return { std::move(R1), std::move(R2) };
 	}
@@ -249,12 +285,12 @@ namespace PineApple::Ebnf
 			{T::RS_Brace, UR"(\))"},
 			{T::Colon, UR"(:)"},
 			{T::Or, UR"(\|)"},
-			{T::Number, UR"([1-9][0-9]*)"},
+			{T::Number, UR"([1-9][0-9]*|0)"},
 			{T::Command, UR"(/\*[.\n]*?\*/|//.*?\n)"},
 		};
 
 		std::map<std::u32string, size_t> symbol_to_index;
-		std::vector<std::tuple<std::u32string, size_t>> symbol_rex;
+		std::vector<std::tuple<std::u32string, size_t, size_t>> symbol_rex;
 
 		symbol_to_index.insert({ U"_IGNORE", 0 });
 
@@ -264,7 +300,7 @@ namespace PineApple::Ebnf
 		{
 
 			static Nfa::Table nfa_table = ([]() -> Nfa::Table {
-				std::vector<T> RequireList = { T::Terminal, T::Equal, T::Mask, T::Rex, T::Line, T::Command, T::Empty };
+				std::vector<T> RequireList = { T::LM_Brace, T::RM_Brace, T::Number, T::Colon, T::Terminal, T::Equal, T::Mask, T::Rex, T::Line, T::Command, T::Empty };
 				std::vector<size_t> States;
 				std::vector<std::u32string_view> RexStroage;
 				for (auto& ite : RequireList)
@@ -272,18 +308,19 @@ namespace PineApple::Ebnf
 					States.push_back(static_cast<size_t>(ite));
 					RexStroage.push_back(Rexs[ite]);
 				}
-				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), RequireList.size());
+				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), States.data(), RequireList.size());
 			}());
 
 			static Lr0::Table lr0_instance = Lr0::CreateTable(
 				*NT::Statement, {
-					{{*NT::Statement, *NT::Statement, *T::Terminal, *T::Equal, *T::Rex, *T::Line}, 1},
+					{{*NT::Statement, *NT::Statement, *T::Terminal, *T::Equal, *T::Rex, *NT::FunctionEnum, *T::Line}, 1},
 					{{*NT::Statement}, 3},
+					{{*NT::FunctionEnum, *T::Colon, *T::LM_Brace, *T::Number, *T::RM_Brace}, 5},
+					{{*NT::FunctionEnum}, 6},
 					//{{*SYM::Statement,*SYM::Statement,  *SYM::Mask}},
 					{{*NT::Statement,*NT::Statement,  *T::Line}, 4}
 				}, {}
 			);
-
 
 			auto [Symbols, Elements] = EbnfLexer(nfa_table, code, { static_cast<size_t>(T::Empty), static_cast<size_t>(T::Command) }, Loc);
 			try {
@@ -300,6 +337,12 @@ namespace PineApple::Ebnf
 							auto re = Elements[input.shift.token_index].march.capture;
 							return  std::u32string_view(re.data() + 1, re.size() - 2);
 						}break;
+						case* T::Number: {
+							size_t Number = 0;
+							for (auto ite : Elements[input.shift.token_index].march.capture)
+								Number = Number * 10 + ite - U'0';
+							return Number;
+						} break;
 						default:break;
 						}
 					}
@@ -310,8 +353,14 @@ namespace PineApple::Ebnf
 							auto Token = input.GetData<std::u32string_view>(1);
 							auto Rex = input.GetData<std::u32string_view>(3);
 							auto re = symbol_to_index.insert({ std::u32string(Token), static_cast<size_t>(symbol_to_index.size()) });
-							symbol_rex.push_back({ std::u32string(Rex) , re.first->second });
+							symbol_rex.push_back({ std::u32string(Rex), re.first->second, input.GetData<size_t>(4) });
 						}break;
+						case 5: {
+							return input.GetData<size_t>(2);
+						}break;
+						case 6: {
+							return std::numeric_limits<size_t>::max();
+						} break;
 						case 4:
 							return false;
 							break;
@@ -324,7 +373,7 @@ namespace PineApple::Ebnf
 			catch (Lr0::Error::UnaccableSymbol const& US)
 			{
 				auto P = Elements[US.index];
-				throw Error::UnaccableToken{ std::u32string(P.march.capture), P.location};
+				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location};
 			}
 			
 		}
@@ -358,7 +407,7 @@ namespace PineApple::Ebnf
 					States.push_back(static_cast<size_t>(ite));
 					RexStroage.push_back(Rexs[ite]);
 				}
-				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), RequireList.size());
+				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), States.data(), RequireList.size());
 			}());
 
 
@@ -452,7 +501,7 @@ namespace PineApple::Ebnf
 										}
 									rex.push_back(string[i]);
 								}
-								symbol_rex.push_back({ std::move(rex), re.first->second });
+								symbol_rex.push_back({ std::move(rex), re.first->second, std::numeric_limits<size_t>::max() });
 							}
 							return Token{ Symbol(re.first->second, Lr0::TerminalT{}), element };
 						}break;
@@ -581,7 +630,7 @@ namespace PineApple::Ebnf
 			catch (Lr0::Error::UnaccableSymbol const& US)
 			{
 				auto P = Elements[US.index];
-				throw Error::UnaccableToken{ std::u32string(P.march.capture), P.location };
+				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location };
 			}
 
 		}
@@ -600,7 +649,7 @@ namespace PineApple::Ebnf
 					States.push_back(static_cast<size_t>(ite));
 					RexStroage.push_back(Rexs[ite]);
 				}
-				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), RequireList.size());
+				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), States.data(), RequireList.size());
 			}());
 
 			static Lr0::Table lr0_instance = Lr0::CreateTable(
@@ -669,7 +718,7 @@ namespace PineApple::Ebnf
 			catch (Lr0::Error::UnaccableSymbol const& US)
 			{
 				auto P = Elements[US.index];
-				throw Error::UnaccableToken{ std::u32string(P.march.capture), P.location };
+				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location };
 			}
 		}
 
@@ -698,13 +747,15 @@ namespace PineApple::Ebnf
 		try {
 			std::vector<std::u32string_view> Rexs;
 			std::vector<size_t> MappingSize;
+			std::vector<size_t> MappingMask;
 			for (auto ite = symbol_rex.rbegin(); ite != symbol_rex.rend(); ++ite)
 			{
-				auto& [str, index] = *ite;
+				auto& [str, index, mask] = *ite;
 				Rexs.push_back(str);
 				MappingSize.push_back(index);
+				MappingMask.push_back(mask);
 			}
-			Nfa::Table NFATable = Nfa::CreateTableFromRex(Rexs.data(), MappingSize.data(), MappingSize.size());
+			Nfa::Table NFATable = Nfa::CreateTableFromRex(Rexs.data(), MappingSize.data(), MappingMask.data(), MappingSize.size());
 			Lr0::Table Lr0Table = Lr0::CreateTable(
 				*start_symbol, productions, std::move(operator_priority)
 			);
@@ -712,7 +763,7 @@ namespace PineApple::Ebnf
 		}
 		catch (Nfa::Error::UnaccaptableRexgex const& ref)
 		{
-			__debugbreak();
+			throw Error::UnacceptableRegex{ref.Regex, ref.AccepetableMask};
 		}
 		catch (Lr0::Error::NoterminalUndefined const NU)
 		{

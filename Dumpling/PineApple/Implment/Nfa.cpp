@@ -23,21 +23,25 @@ namespace PineApple::Nfa
 			while (!ForceBreak && index < c)
 			{
 				auto cur_index = index++;
-				auto [Type, i1, i2] = Ref.Edges[s + cur_index];
+				auto [Type, i1, i2, i3] = Ref.Edges[s + cur_index];
 				switch (Type)
 				{
 				case static_cast<size_t>(Table::EdgeType::Comsume): {
-					auto& edge_ref = Ref.ComsumeEdge[i1];
-					if (edge_ref.intersection_find({ Input, Input + 1 }))
+					auto* edge_ref = Ref.ComsumeEdge.data() + i1;
+					for (size_t i = 0; i < i2; ++i)
 					{
-						search_stack.push_back({ i2, 0, {code.data() + 1, code.size() - 1} });
-						ForceBreak = true;
+						if (Ref.ComsumeEdge[i + i1].inside(Input))
+						{
+							search_stack.push_back({ i3, 0, {code.data() + 1, code.size() - 1} });
+							ForceBreak = true;
+							break;
+						}
 					}
 				} break;
 				case static_cast<size_t>(Table::EdgeType::Acception): {
 					search_stack.clear();
-					search_stack.push_back({ i2, 0, code });
-					Acception = MarchElement{ i1, {String.data(), String.size() - code.size()}, code };
+					search_stack.push_back({ i3, 0, code });
+					Acception = MarchElement{ i1, i2, {String.data(), String.size() - code.size()}, code };
 					ForceBreak = true;
 				} break;
 				default: {assert(false); } break;
@@ -82,6 +86,7 @@ namespace PineApple::Nfa
 					Loc.start_index = 0;
 					++Loc.line;
 				}
+				Loc.length = Re->capture.size();
 			}
 			return Result;
 		}
@@ -306,7 +311,7 @@ namespace PineApple::Nfa
 
 		struct epsilon { size_t state; };
 		struct comsume { size_t state; range_set require; };
-		struct acception { size_t state; size_t acception_state; };
+		struct acception { size_t state; size_t acception_state; size_t acception_mask; };
 
 		using edge_t = std::variant<epsilon, comsume, acception>;
 
@@ -314,7 +319,7 @@ namespace PineApple::Nfa
 
 		struct node { std::vector<edge_t> edge; };
 
-		nfa& append_rex(std::u32string_view rex, size_t accept_state);
+		nfa& append_rex(std::u32string_view rex, size_t accept_state, size_t accept_mask);
 		static nfa create_from_rexs(std::u32string_view const* input, size_t length = 0);
 		static nfa create_from_rex(std::u32string_view Rex, size_t);
 		const node& operator[](size_t index) const { return nodes[index]; }
@@ -341,7 +346,7 @@ namespace PineApple::Nfa
 		return size;
 	}
 
-	nfa& nfa::append_rex(std::u32string_view rex, size_t accept_state)
+	nfa& nfa::append_rex(std::u32string_view rex, size_t accept_state, size_t accept_mask)
 	{
 		auto& result = *this;
 		bool SelfIndex = false;
@@ -501,14 +506,14 @@ namespace PineApple::Nfa
 			assert(Result.has_value());
 			auto end = result.back_construction({});
 			auto [s1, s2] = std::any_cast<std::tuple<size_t, size_t>>(Result);
-			result[s2].edge.push_back(acception{ end, accept_state });
+			result[s2].edge.push_back(acception{ end, accept_state, accept_mask });
 			auto& TopNode = result[0];
 			TopNode.edge.push_back(epsilon{ s1 });
 			return *this;
 		}
 		catch (Lr0::Error::UnaccableSymbol const& UAS)
 		{
-			throw Error::UnaccaptableRexgex{ std::u32string(rex), accept_state, UAS.index };
+			throw Error::UnaccaptableRexgex{ std::u32string(rex), accept_state, accept_mask, UAS.index };
 		}
 	}
 
@@ -533,7 +538,7 @@ namespace PineApple::Nfa
 					auto& acc = std::get<nfa::acception>(*ite);
 					MeetAcception = true;
 					auto find_re = mapping.insert({ {acc.state}, mapping.size() });
-					result.push_back(nfa::acception{ find_re.first->second, acc.acception_state });
+					result.push_back(nfa::acception{ find_re.first->second, acc.acception_state, acc.acception_mask });
 				}
 				++ite;
 			}
@@ -693,7 +698,7 @@ namespace PineApple::Nfa
 						
 						auto ref2 = std::move(std::get<acception>(ite));
 						Accept = mapping[ref2.state];
-						ref.edge.push_back(acception{ *Accept, ref2.acception_state });
+						ref.edge.push_back(acception{ *Accept, ref2.acception_state, ref2.acception_mask });
 					}
 				}
 				if (Accept)
@@ -726,13 +731,13 @@ namespace PineApple::Nfa
 					{
 						auto& ref = std::get<comsume>(ite2);
 						size_t comsume_index = re.ComsumeEdge.size();
-						re.ComsumeEdge.push_back(std::move(ref.require));
-						re.Edges.push_back({ static_cast<size_t>(Table::EdgeType::Comsume), comsume_index, ref.state});
+						re.ComsumeEdge.insert(re.ComsumeEdge.end(), ref.require.begin(), ref.require.end());
+						re.Edges.push_back({ static_cast<size_t>(Table::EdgeType::Comsume), comsume_index, ref.require.size(), ref.state});
 					}
 					else if (std::holds_alternative<acception>(ite2))
 					{
 						auto& ref = std::get<acception>(ite2);
-						re.Edges.push_back({ static_cast<size_t>(Table::EdgeType::Acception), ref.acception_state, ref.state });
+						re.Edges.push_back({ static_cast<size_t>(Table::EdgeType::Acception), ref.acception_state, ref.acception_mask, ref.state });
 					}
 					else
 						assert(false);
@@ -748,15 +753,15 @@ namespace PineApple::Nfa
 	{
 		nfa result;
 		for (size_t i = 0; i < input_length; ++i)
-			result.append_rex(input[i], i);
+			result.append_rex(input[i], i, i);
 		return result.simplify();
 	}
 
-	Table CreateTableFromRex(std::u32string_view const* input, size_t const* state, size_t input_length)
+	Table CreateTableFromRex(std::u32string_view const* input, size_t const* state, size_t const* mask, size_t input_length)
 	{
 		nfa result;
 		for (size_t i = 0; i < input_length; ++i)
-			result.append_rex(input[i], state[i]);
+			result.append_rex(input[i], state[i], mask[i]);
 		return result.simplify();
 	}
 
@@ -764,15 +769,15 @@ namespace PineApple::Nfa
 	{
 		nfa result;
 		for (size_t i = input_length; i >= 1; --i)
-			result.append_rex(input[i -  1], i -  1);
+			result.append_rex(input[i -  1], i - 1, i-1);
 		return result.simplify();
 	}
 
-	Table CreateTableFromRexReversal(std::u32string_view const* input, size_t const* state, size_t input_length)
+	Table CreateTableFromRexReversal(std::u32string_view const* input, size_t const* state, size_t const* mask, size_t input_length)
 	{
 		nfa result;
 		for (size_t i = input_length; i >= 1; --i)
-			result.append_rex(input[i - 1], state[i - 1]);
+			result.append_rex(input[i - 1], state[i - 1], mask[i-1]);
 		return result.simplify();
 	}
 	
@@ -791,14 +796,6 @@ namespace PineApple::StrFormat
 				Result += Process(pat, ite);
 			Result += U'}';
 			return std::move(Result);
-		}
-	};
-
-	template<> struct Formatter<Nfa::Table::RangeSet>
-	{
-		std::u32string operator()(std::u32string_view par, Nfa::Table::RangeSet const& RS)
-		{
-			return Formatter<std::remove_cv_t<std::remove_reference_t<decltype(RS.storage())>>>{}(par, RS.storage());
 		}
 	};
 
@@ -821,13 +818,13 @@ namespace PineApple::StrFormat
 		}
 	};
 
-	template<> struct Formatter<std::tuple<size_t, size_t, size_t>>
+	template<> struct Formatter<std::tuple<size_t, size_t, size_t, size_t>>
 	{
-		std::u32string operator()(std::u32string_view, std::tuple<size_t, size_t, size_t> RS)
+		std::u32string operator()(std::u32string_view, std::tuple<size_t, size_t, size_t, size_t> RS)
 		{
-			static auto pat = CreatePatternRef(U"{{{}, {}, {}}}");
-			auto [a, b, c] = RS;
-			return Process(pat, a, b ,c);
+			static auto pat = CreatePatternRef(U"{{{}, {}, {}, 0x{-hex}}}");
+			auto [a, b, c, d] = RS;
+			return Process(pat, a, b ,c, d);
 		}
 	};
 

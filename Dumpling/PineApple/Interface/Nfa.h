@@ -15,19 +15,20 @@ namespace PineApple::Nfa
 			Acception,
 			Comsume,
 		};
-		std::vector<RangeSet> ComsumeEdge;
-		std::vector<std::tuple<size_t, size_t, size_t>> Edges;
+		std::vector<RangeSet::Range> ComsumeEdge;
+		std::vector<std::tuple<size_t, size_t, size_t, size_t>> Edges;
 		std::vector<std::tuple<size_t, size_t>> Nodes;
 	};
 
-	Table CreateTableFromRex(std::u32string_view const* input, size_t const* state, size_t input_length);
+	Table CreateTableFromRex(std::u32string_view const* input, size_t const* state, size_t const* mask, size_t input_length);
 	Table CreateTableFromRex(std::u32string_view const* input, size_t input_length);
 	Table CreateTableFromRexReversal(std::u32string_view const* input, size_t input_length);
-	Table CreateTableFromRexReversal(std::u32string_view const* input, size_t const* state, size_t input_length);
+	Table CreateTableFromRexReversal(std::u32string_view const* input, size_t const* state, size_t const* mask, size_t input_length);
 
 	struct MarchElement
 	{
 		size_t acception;
+		size_t mask;
 		std::u32string_view capture;
 		std::u32string_view last_string;
 	};
@@ -39,6 +40,7 @@ namespace PineApple::Nfa
 		size_t start_index = 0;
 		size_t line = 0;
 		size_t total_index = 0;
+		size_t length = 0;
 	};
 
 	struct DocumenetMarchElement
@@ -55,6 +57,7 @@ namespace PineApple::Nfa
 		struct UnaccaptableRexgex {
 			std::u32string Regex;
 			size_t AccepetableState;
+			size_t AccepetableMask;
 			size_t Index;
 		};
 

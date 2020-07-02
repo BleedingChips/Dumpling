@@ -34,8 +34,6 @@ namespace PineApple::Range
 			static bool big(const Storage& i1, const Storage& i2) { return small(i2, i1); }
 			static bool big_equal(const Storage& i1, const Storage& i2) { return !small(i1, i2); }
 			
-
-
 			Storage left;
 			Storage right;
 			bool operator<(const Range& input) { return Less{}(left, input.left); }
@@ -110,6 +108,8 @@ namespace PineApple::Range
 					}
 				}
 			}
+
+			bool inside(Storage Input) const noexcept { return big_equal(Input, left) && small(Input, right); }
 
 			auto operator&(const Range& include) const { return intersection_set(include); }
 		};

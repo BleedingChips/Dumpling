@@ -18,6 +18,7 @@ using namespace Dxgi::DataType;
 using Win32::ThrowIfFault;
 using namespace Potato;
 using namespace PineApple;
+using namespace Dx12;
 
 namespace fs = std::filesystem;
 
@@ -43,59 +44,18 @@ int main()
 	//auto String = LoadEntireBinaryFile();
 
 
-
-
 #ifdef _DEBUG
 	Dx12::InitDebugLayout();
 #endif
 
-	fs::path resource_path;
-
-#ifdef _DEBUG
-#ifdef _WIN64
-	resource_path = u"..\\x64\\debug\\";
-#else
-	resource_path = U"..\\debug\\";
-#endif
-#else
-#ifdef _WIN64
-	resource_path = U"..\\x64\\Release\\";
-#else
-	resource_path = U"..\\Release\\";
-#endif
-#endif
+	//auto Cur = std::filesystem::current_path();
+	auto Cur = *Path::UpSearch(U"Demo");
+	auto Target = *Path::Search(U"DFGenerator.cso", Cur);
+	auto CSData = *Path::LoadEntireFile(Target);
 
 
-
-	std::filesystem::path P = U"$:asdasda.txt";
-
-	auto  p3 = P.root_name();
-	auto  p2 = P.root_path();
-
-
-	std::filesystem::path CurPath = std::filesystem::current_path();
-
-
-	//Win32::SearchVisualStudioPath();
-	//return 0;
-
-	auto p = fs::current_path();
-
-	auto load_file = [&](const char32_t* input_path) {
-		auto path = resource_path;
-		path.append(input_path);
-		auto total_path = fs::absolute(path);
-		std::ifstream input(path, std::ios::binary);
-		assert(input.is_open());
-		size_t file_size = fs::file_size(path);
-		std::vector<std::byte> all_buffer;
-		all_buffer.resize(file_size);
-		input.read(reinterpret_cast<char*>(all_buffer.data()), all_buffer.size());
-		return std::move(all_buffer);
-	};
-
-	std::vector<std::byte> vs_shader = load_file(U"VertexShader.cso");
-	std::vector<std::byte> ps_shader = load_file(U"PixelShader.cso");
+	auto vs_shader = *Path::LoadEntireFile(*Path::Search(U"VertexShader.cso", Cur));
+	auto ps_shader = *Path::LoadEntireFile(*Path::Search(U"PixelShader.cso", Cur));
 
 	Dx12::ComPtr<ID3D12ShaderReflection> Ref;
 	HRESULT rer = D3DReflect(ps_shader.data(), ps_shader.size(), __uuidof(ID3D12ShaderReflection), Ref(Dx12::VoidT{}));
@@ -128,17 +88,40 @@ int main()
 		volatile int k = 0;
 	}
 
-
-	//auto [Reflect, ReR] = D3DReflect(ps_shader.data(), ps_shader.size());
-
-	auto path = resource_path;
-	path.append(U"PixelShader.cso");
-	auto total_path = fs::absolute(path);
-
 	auto Dev = Dx12::CreateDevice();
 	auto Que = Dx12::CreateCommandQueue(*Dev, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto Allo = Dx12::CreateCommandAllocator(*Dev, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto Command = Dx12::CreateGraphicCommandList(*Dev, *Allo, D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto Heap = Dx12::CreateCommitedHeap(Dev, Dx12::HeapType::Texture, 0);
+	auto Texture2 = Heap->CreateTexture3DUAV(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 256, 256, 256);
+	std::vector<std::array<float, 4>> AllBuffer{ {1.0, 1.0, 1.0, 1.0} };
+	
+	size_t Length = AllBuffer.size() * sizeof(decltype(AllBuffer)::value_type);
+	auto BufferHeap = Dx12::CreateCommitedHeap(Dev, Dx12::HeapType::Buffer);
+	auto Buffer = BufferHeap->CreateBuffer(Length);
+	auto UploadHeap = Dx12::CreateCommitedHeap(Dev, Dx12::HeapType::UploadBuffer);
+	auto UploadBuffer = UploadHeap->CreateBuffer(Length);
+	auto Re = Dx12::MappingBuffer(*UploadBuffer, 0, 0, Length, [&](std::byte* Data) {
+		std::memcpy(Data, AllBuffer.data(), Length);
+	});
+	
+
+	Dx12::ChangeState(*Command, { UploadBuffer }, ResState::Common, ResState::CopySour);
+	Dx12::ChangeState(*Command, { Buffer }, ResState::Common, ResState::CopyDest);
+
+	Command->CopyBufferRegion(UploadBuffer, 0, Buffer, 0, Length);
+
+	Dx12::ChangeState(*Command, { UploadBuffer }, ResState::CopySour, ResState::Common);
+	Dx12::ChangeState(*Command, { Buffer }, ResState::CopyDest, ResState::PixelShaderRes);
+
+
+
+
+	D3D12_ROOT_SIGNATURE_DESC1 Desc1;
+
+	D3D12SerializeVersionedRootSignature(    );
+
+
 	auto Form = Dx12::CreateForm(*Que);
 	std::atomic_bool Exit = false;
 	Form->OverwriteEventFunction([&](HWND, UINT msg, WPARAM, LPARAM) -> std::optional<LRESULT> {
@@ -161,10 +144,7 @@ int main()
 
 	auto Texture = Dx12::CreateTexture2DConst(*Dev, DXGI_FORMAT_R32G32B32A32_FLOAT, 1024, 1024, 1);
 	auto UpLoadBuffer = Dx12::CreateUploadBuffer(*Dev, 1024 * 1024 * 128);
-	auto Re = Dx12::MappingBuffer(*UpLoadBuffer, 0, 0, 1024 * 1024 * 128, [](std::byte* Data) {
-		for (size_t i = 0; i < 1024 * 1024 * 128; ++i)
-			*reinterpret_cast<uint8_t*>(Data + i) = 0;
-	});
+	
 	Dx12::ChangeState(*Command, { Texture }, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 	//Dx12::ChangeState(*Command, { UpLoadBuffer }, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	auto Fence = Dx12::CreateFence(*Dev);

@@ -1,5 +1,5 @@
 property{
-    [_instance_only, caterage = "WTF2"]
+    [min = float2(1.0, 1.0)]
     {
         [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
         float2 Potato = float2(1.0, 1.0);

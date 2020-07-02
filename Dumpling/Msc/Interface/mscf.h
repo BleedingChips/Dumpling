@@ -5,42 +5,48 @@
 #include <string>
 #include <map>
 #include <set>
+#include <array>
 namespace Dumpling::Mscf
 {
 
-	enum class BaseDataType
+	enum class VariableType
 	{
-		Int,
-		Float,
+		Base,
 		Texture,
 		RWTexture,
-		StructBuf,
-		RWStructBuf
+		Struct,
+		RWStruct,
 	};
 
-	struct NamedValue
+	enum class StorageType
 	{
-		BaseDataType type;
+		Unorm,
+		UUnorm,
+		UInt,
+		Int,
+		Float,
+		Custom,
+	};
+
+	struct VariableDesc
+	{
+		VariableType v_type;
+		StorageType s_type;
 		size_t channel;
-		std::array<std::byte, sizeof(float) * 4> datas;
-	};
-
-	struct CustomType
-	{
 		size_t size;
-		size_t aligned_size;
+		size_t align;
+		size_t array_size;
+		size_t default_value_index;
 	};
 
-	struct MateData
+	struct ConstVariable
 	{
-		std::map<std::u32string, NamedValue> mate_datas;
-		std::set<std::u32string> flags;
-	};
-
-	struct PropertySolt
-	{
-		NamedValue value;
-		MateData matedatas;
+		VariableDesc desc;
+		union 
+		{
+			std::array<std::byte, sizeof(float) * 4> datas;
+			std::u32string_view str;
+		};
 	};
 
 	struct mscf : Msc::mscf_interface
@@ -49,4 +55,5 @@ namespace Dumpling::Mscf
 	};
 
 	mscf translate(std::u32string const& code);
+
 }

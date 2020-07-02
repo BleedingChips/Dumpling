@@ -20,6 +20,9 @@ namespace Dumpling::Dx12
 	using Fence = ID3D12Fence1;
 	using FencePtr = ComPtr<Fence>;
 
+	using Heap = ID3D12Heap;
+	using HeapPtr = ComPtr<Heap>;
+
 	using CommandQueue = ID3D12CommandQueue;
 	using CommandQueuePtr = ComPtr<CommandQueue>;
 	using CommandAllocator = ID3D12CommandAllocator;
@@ -28,7 +31,7 @@ namespace Dumpling::Dx12
 	using GraphicCommandListPtr = ComPtr<GraphicCommandList>;
 	using CommandList = ID3D12CommandList;
 	using Resource = ID3D12Resource;
-	using ResourcePtr = ComPtr<Resource>;
+	//using ResourcePtr = ComPtr<Resource>;
 	
 	using DescriptorHeap = ID3D12DescriptorHeap;
 	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
@@ -44,7 +47,78 @@ namespace Dumpling::Dx12
 
 	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
 	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
-	using ResourcePtr = ComPtr<ID3D12Resource>;
+
+	enum class ResState
+	{
+		Common = D3D12_RESOURCE_STATE_COMMON,
+		VertexAndConstantBuffer = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+		IndexBuffer = D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		RenderTarget = D3D12_RESOURCE_STATE_RENDER_TARGET,
+		UA = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		DepthWrite = D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		DepthRead = D3D12_RESOURCE_STATE_DEPTH_READ,
+		NoPixelShaderRes = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		PixelShaderRes = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		StreamOut = D3D12_RESOURCE_STATE_STREAM_OUT,
+		Indirect = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+		CopyDest = D3D12_RESOURCE_STATE_COPY_DEST,
+		CopySour = D3D12_RESOURCE_STATE_COPY_SOURCE,
+		ResolveDest = D3D12_RESOURCE_STATE_RESOLVE_DEST,
+		ResolveSource = D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+		Present = D3D12_RESOURCE_STATE_PRESENT,
+	};
+
+	constexpr inline D3D12_RESOURCE_STATES operator*(ResState Rs) { return static_cast<D3D12_RESOURCE_STATES>(Rs); }
+
+	struct ComResourceWrapper
+	{
+		static void add_ref(ID3D12Resource* com) { com->AddRef(); }
+		static void sub_ref(ID3D12Resource* com) { com->Release(); }
+
+		ID3D12Resource** operator ()(ID3D12Resource*& pi)
+		{
+			if (pi != nullptr)
+			{
+				sub_ref(pi);
+				pi = nullptr;
+			}
+			return &pi;
+		}
+
+		void** operator ()(ID3D12Resource*& pi, VoidT)
+		{
+			return reinterpret_cast<void**>(this->operator()(pi));
+		}
+	};
+
+	using ResourcePtr = Potato::Tool::intrusive_ptr<ID3D12Resource, ComResourceWrapper>;
+
+	enum class HeapType : uint8_t
+	{
+		Texture,
+		RTDSTexture,
+		UploadBuffer,
+		Shader,
+		Buffer,
+	};
+
+	constexpr decltype(auto) operator*(HeapType type) { return static_cast<decltype(D3D12_HEAP_TYPE_DEFAULT)>(type); }
+
+	struct HeadManager : Win32::ComBaseInterface
+	{
+		virtual HeapType Type() const noexcept = 0;
+		virtual HeapPtr Allocate(size_t size, size_t& offset) = 0;
+		virtual Device& GetDevice() noexcept = 0;
+		virtual size_t VisibleMask() const noexcept = 0;
+		ResourcePtr CreateTexture2D(DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap = 0, D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON);
+		ResourcePtr CreateTexture3DUAV(DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint32_t depth, D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON);
+		ResourcePtr CreateBuffer(uint64_t Width, D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON);
+	};
+	//struct HeadManager
+
+	using HeadManagerPtr = ComPtr<HeadManager>;
+
+	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
 
 	UINT DeviceNodeMask(Device& Dev);
 	DevicePtr CreateDevice(uint8_t AdapterIndex = 0, D3D_FEATURE_LEVEL Level = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1);
@@ -52,7 +126,9 @@ namespace Dumpling::Dx12
 	CommandQueuePtr CreateCommandQueue(Device& Dev, D3D12_COMMAND_LIST_TYPE Type, D3D12_COMMAND_QUEUE_PRIORITY Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAGS Flags = D3D12_COMMAND_QUEUE_FLAG_NONE);
 	CommandAllocatorPtr CreateCommandAllocator(Device& Dev, D3D12_COMMAND_LIST_TYPE Type);
 	GraphicCommandListPtr CreateGraphicCommandList(Device& Dev, CommandAllocator& allocator, D3D12_COMMAND_LIST_TYPE Type);
+	HeadManagerPtr CreateCommitedHeap(DevicePtr Dev, HeapType Type, UINT VisibleNodeMask = 0);
 	ResourcePtr CreateTexture2DConst(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap = 0, D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON);
+	ResourcePtr CreateTexture3DUAV(Device& Dev, DXGI_FORMAT Format, uint64_t Width, uint32_t Height, uint16_t Mapmap = 0, D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON);
 	ResourcePtr CreateUploadBuffer(Device& Dev, uint64_t Length);
 	template<typename Function>
 	bool MappingBuffer(Resource& Res, UINT SubResource, size_t Begin, size_t Length, Function&& F)
@@ -71,7 +147,7 @@ namespace Dumpling::Dx12
 		}
 		return false;
 	}
-	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*>, D3D12_RESOURCE_STATES OldState, D3D12_RESOURCE_STATES NewState, uint32_t SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+	void ChangeState(GraphicCommandList& List, std::initializer_list<Resource*>, ResState OldState, ResState NewState, uint32_t SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 	void InitDebugLayout();
 
 	enum class ResourceType 

@@ -39,6 +39,19 @@ namespace Dumpling::Win32
 		Wrapper<SourceType> self_add_pos(SourceType* type) noexcept { return Wrapper<SourceType>{type}; }
 	};
 
+	struct ComBaseInterface {
+		virtual void AddRef() const noexcept = 0;
+		virtual void Release() const noexcept = 0;
+	};
+
+	template<typename Type> struct ComBaseImplement : Type {
+		using Type::Type;
+		virtual void AddRef() const noexcept override { m_Ref.add_ref(); }
+		virtual void Release() const noexcept override { if (m_Ref.sub_ref()) delete static_cast<const Type*>(this); }
+	private:
+		mutable Potato::Tool::atomic_reference_count m_Ref;
+	};
+
 	template<typename Type> struct ComBase {
 		void AddRef() const noexcept { m_Ref.add_ref(); }
 		void Release() const noexcept { if (m_Ref.sub_ref()) delete static_cast<const Type*>(this); }
@@ -98,6 +111,11 @@ namespace Dumpling::Win32
 		struct HRESULTError {
 			HRESULT m_result;
 		};	
+	}
+
+	inline void ThrowIfFault(HRESULT input) {
+		if (!SUCCEEDED(input))
+			throw Error::HRESULTError{ input };
 	}
 
 	template<typename Return> Return ThrowIfFault(std::tuple<Return, HRESULT> input) {
