@@ -435,4 +435,22 @@ namespace Potato::Tool
 		Implement::sequence_call_implement<0, std::tuple_size_v<std::remove_reference_t<Tuple>>>{}(std::forward<Function>(f), std::forward<Tuple>(type));
 	}
 
+	template<typename Type> struct span {
+		Type* data() noexcept { return pointer; }
+		Type const* data() const noexcept { return pointer; }
+		size_t size() const noexcept { return count; }
+		span(Type* data, size_t size) : pointer(data), count(size) {}
+		span(const span&) = default;
+		span() = default;
+		operator bool() const noexcept { return pointer != nullptr && count != 0; }
+		span& operator=(span const&) = default;
+		bool operator==(span const& input) const noexcept { return pointer == input.pointer && count == input.count; }
+		bool operator<(span const& input) const noexcept { return pointer < input.pointer || ( pointer == input.pointer && count < input.count); }
+		Type& operator[](size_t index) noexcept { return pointer[index]; }
+		Type const& operator[](size_t index) const noexcept { return pointer[index]; }
+	private:
+		Type* pointer;
+		size_t count;
+	};
+
 }

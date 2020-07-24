@@ -153,7 +153,10 @@ namespace Dumpling::Dx12
 		size_t Offset;
 		auto Head = Allocate(Info.SizeInBytes, Offset);
 		ResourcePtr Result;
-		HRESULT re = GetDevice().CreatePlacedResource(Head, Offset, &Desc, State, nullptr, __uuidof(Resource), Result(VoidT{}));
+		D3D12_RESOURCE_STATES state = *ResState::Common;
+		if (Type() == HeapType::UploadBuffer)
+			state = *ResState::GenericRead;
+		HRESULT re = GetDevice().CreatePlacedResource(Head, Offset, &Desc, state, nullptr, __uuidof(Resource), Result(VoidT{}));
 		Win32::ThrowIfFault(re);
 		return Result;
 	}
@@ -271,6 +274,96 @@ namespace Dumpling::Dx12
 			}
 		}
 		return false;
+	}
+
+	void CreateRootSignature(std::vector<Potato::Tool::span<std::byte>> Type)
+	{
+
+
+		struct Element 
+		{
+			D3D12_DESCRIPTOR_RANGE_TYPE Type;
+			size_t regeister;
+			size_t space;
+			size_t offset;
+			size_t size;
+		};
+
+		D3D12_ROOT_SIGNATURE_DESC1 Desc1;
+		D3D12_ROOT_PARAMETER1 Paras;
+		std::array<std::vector<D3D12_DESCRIPTOR_RANGE1>, D3D12_SHVER_COMPUTE_SHADER + 1> AllInputRange;
+
+		for (auto code : Type)
+		{
+			std::vector<D3D12_DESCRIPTOR_RANGE1> AllRange;
+			Dx12::ComPtr<ID3D12ShaderReflection> Ref;
+			HRESULT re = D3DReflect(code.data(), code.size(), __uuidof(ID3D12ShaderReflection), Ref(VoidT{}));
+			Win32::ThrowIfFault(re);
+			D3D12_SHADER_DESC Desc;
+			Ref->GetDesc(&Desc);
+			auto Type = (Desc.Version & 0xFFFF0000) >> 16;
+			auto& ref = AllInputRange[Type];
+
+			for (size_t i = 0; i < Desc.BoundResources; ++i)
+			{
+				D3D12_SHADER_INPUT_BIND_DESC Desc;
+				Ref->GetResourceBindingDesc(i, &Desc);
+				switch (Desc.Type)
+				{
+				case D3D_SIT_STRUCTURED:
+				case D3D_SIT_TBUFFER:
+				case D3D_SIT_TEXTURE: {
+					D3D12_DESCRIPTOR_RANGE1 De{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, Desc.BindCount, Desc.BindPoint, Desc.Space, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0 };
+					ref.push_back(De);
+				} break;
+				case D3D_SIT_UAV_RWBYTEADDRESS:
+				case D3D_SIT_UAV_RWSTRUCTURED:
+				case D3D_SIT_UAV_APPEND_STRUCTURED:
+				case D3D_SIT_UAV_CONSUME_STRUCTURED:
+				case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+				case D3D_SIT_UAV_RWTYPED: {
+					D3D12_DESCRIPTOR_RANGE1 De{ D3D12_DESCRIPTOR_RANGE_TYPE_UAV, Desc.BindCount, Desc.BindPoint, Desc.Space, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0 };
+					ref.push_back(De);
+				}break;
+				case D3D_SIT_BYTEADDRESS:
+				case D3D_SIT_CBUFFER: {
+					D3D12_DESCRIPTOR_RANGE1 De{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, Desc.BindCount, Desc.BindPoint, Desc.Space, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0 };
+					ref.push_back(De);
+				} break;
+				case D3D_SIT_SAMPLER: {
+					D3D12_DESCRIPTOR_RANGE1 De{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, Desc.BindCount, Desc.BindPoint, Desc.Space, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0 };
+					ref.push_back(De);
+				} break;
+				}
+			}
+
+			size_t start = 0;
+			while (start < ref.size())
+			{
+
+			}
+
+
+			//AllInputRange[]
+
+			for (size_t i = 0; i < Desc.ConstantBuffers; ++i)
+			{
+				auto Buffer = Ref->GetConstantBufferByIndex(i);
+				D3D12_SHADER_BUFFER_DESC Desc;
+				Buffer->GetDesc(&Desc);
+				for (size_t k = 0; k < Desc.Variables; ++k)
+				{
+					auto Ref = Buffer->GetVariableByIndex(k);
+					if (Ref != nullptr)
+					{
+						D3D12_SHADER_VARIABLE_DESC Desc2;
+						Ref->GetDesc(&Desc2);
+						volatile int k = 0;
+					}
+				}
+				volatile int k = 0;
+			}
+		}
 	}
 
 	

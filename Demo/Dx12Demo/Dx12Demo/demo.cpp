@@ -53,9 +53,12 @@ int main()
 	auto Target = *Path::Search(U"DFGenerator.cso", Cur);
 	auto CSData = *Path::LoadEntireFile(Target);
 
-
 	auto vs_shader = *Path::LoadEntireFile(*Path::Search(U"VertexShader.cso", Cur));
 	auto ps_shader = *Path::LoadEntireFile(*Path::Search(U"PixelShader.cso", Cur));
+
+	Potato::Tool::span<std::byte> b(ps_shader.data(), ps_shader.size());
+
+	Dumpling::Dx12::CreateRootSignature({ b });
 
 	Dx12::ComPtr<ID3D12ShaderReflection> Ref;
 	HRESULT rer = D3DReflect(ps_shader.data(), ps_shader.size(), __uuidof(ID3D12ShaderReflection), Ref(Dx12::VoidT{}));
@@ -68,7 +71,6 @@ int main()
 		Ref->GetResourceBindingDesc(i, &Desc);
 		volatile int k = 0;
 	}
-
 
 	for (size_t i = 0; i < Desc.ConstantBuffers; ++i)
 	{
@@ -119,7 +121,7 @@ int main()
 
 	D3D12_ROOT_SIGNATURE_DESC1 Desc1;
 
-	D3D12SerializeVersionedRootSignature(    );
+	//D3D12SerializeVersionedRootSignature(    );
 
 
 	auto Form = Dx12::CreateForm(*Que);
@@ -145,7 +147,7 @@ int main()
 	auto Texture = Dx12::CreateTexture2DConst(*Dev, DXGI_FORMAT_R32G32B32A32_FLOAT, 1024, 1024, 1);
 	auto UpLoadBuffer = Dx12::CreateUploadBuffer(*Dev, 1024 * 1024 * 128);
 	
-	Dx12::ChangeState(*Command, { Texture }, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	//Dx12::ChangeState(*Command, { Texture }, ResState::Common, ResState::);
 	//Dx12::ChangeState(*Command, { UpLoadBuffer }, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	auto Fence = Dx12::CreateFence(*Dev);
 	//Command->CopyBufferRegion(Texture, 0, UpLoadBuffer, 0, 1024 * 1024 * 128);

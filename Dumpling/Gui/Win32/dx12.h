@@ -66,6 +66,7 @@ namespace Dumpling::Dx12
 		ResolveDest = D3D12_RESOURCE_STATE_RESOLVE_DEST,
 		ResolveSource = D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
 		Present = D3D12_RESOURCE_STATE_PRESENT,
+		GenericRead = D3D12_RESOURCE_STATE_GENERIC_READ
 	};
 
 	constexpr inline D3D12_RESOURCE_STATES operator*(ResState Rs) { return static_cast<D3D12_RESOURCE_STATES>(Rs); }
@@ -198,8 +199,13 @@ namespace Dumpling::Dx12
 
 	inline ResourceDescriptor CreateResourceDescriptor(Device& Dev, DescriptorMappingPtr Ptr) { return ResourceDescriptor{Dev, std::move(Ptr)}; }
 
+	enum class ShaderType
+	{
+		VS,
+		PS
+	};
 
-
+	void CreateRootSignature(std::vector<Potato::Tool::span<std::byte>> Type);
 
 
 	/*
