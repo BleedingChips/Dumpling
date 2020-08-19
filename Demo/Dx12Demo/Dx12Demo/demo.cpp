@@ -58,7 +58,7 @@ int main()
 
 	Potato::Tool::span<std::byte> b(ps_shader.data(), ps_shader.size());
 
-	Dumpling::Dx12::CreateRootSignature({ b });
+	//Dumpling::Dx12::CreateRootSignature({ b });
 
 	Dx12::ComPtr<ID3D12ShaderReflection> Ref;
 	HRESULT rer = D3DReflect(ps_shader.data(), ps_shader.size(), __uuidof(ID3D12ShaderReflection), Ref(Dx12::VoidT{}));
@@ -155,7 +155,7 @@ int main()
 	ID3D12CommandList* List[] = { Command };
 	Que->ExecuteCommandLists(1, List);
 	Que->Signal(Fence, 1);
-	while (Fence->GetCompletedValue() != 1);
+	//while (Fence->GetCompletedValue() != 1);
 
 	while (!Exit)
 	{

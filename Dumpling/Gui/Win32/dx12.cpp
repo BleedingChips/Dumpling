@@ -211,7 +211,7 @@ namespace Dumpling::Dx12
 				++SamplerCount;
 			else
 				++ResourceCount;
-			auto Result = TemplateMapping.insert({ std::tuple<ResourceType, std::string>{Type, std::move(Name)}, Index });
+			auto Result = TemplateMapping.insert({ std::tuple<ResourceType, std::string>{Type, Name}, Index });
 			if (Result.second)
 				++Index;
 		}

@@ -176,7 +176,7 @@ namespace PineApple::Ebnf
 			std::vector<Error::ExceptionStep> re;
 			int TemporaryUsed = 0;
 			re.reserve(Symbol.backup_step.size());
-			for (auto ite : Symbol.backup_step)
+			for (auto& ite : Symbol.backup_step)
 			{
 				Error::ExceptionStep step;
 				step.Name = Tab.FindSymbolString(ite.value.Index(), ite.IsTerminal());
@@ -201,7 +201,12 @@ namespace PineApple::Ebnf
 					TemporaryUsed += static_cast<int>(ite.reduce.production_count) - 1;
 				}
 			}
-			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.index].march.capture),Datas[Symbol.index].location, std::move(re) };
+			if (Str.empty())
+			{
+				Nfa::Location loc = (Symbol.index > 0) ? Datas[Symbol.index - 1].location : Nfa::Location{};
+				throw Error::UnacceptableSyntax{ U"$_Eof", U"$_Eof", loc, std::move(re) };
+			}
+			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.symbol.Index()].march.capture),Datas[Symbol.symbol.Index()].location, std::move(re) };
 		}
 	}
 
@@ -308,7 +313,7 @@ namespace PineApple::Ebnf
 					States.push_back(static_cast<size_t>(ite));
 					RexStroage.push_back(Rexs[ite]);
 				}
-				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), States.data(), RequireList.size());
+				return Nfa::CreateTableFromRex(RexStroage.data(), States.data(), States.data(), RequireList.size());
 			}());
 
 			static Lr0::Table lr0_instance = Lr0::CreateTable(
@@ -407,7 +412,7 @@ namespace PineApple::Ebnf
 					States.push_back(static_cast<size_t>(ite));
 					RexStroage.push_back(Rexs[ite]);
 				}
-				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), States.data(), RequireList.size());
+				return Nfa::CreateTableFromRex(RexStroage.data(), States.data(), States.data(), RequireList.size());
 			}());
 
 
@@ -649,7 +654,7 @@ namespace PineApple::Ebnf
 					States.push_back(static_cast<size_t>(ite));
 					RexStroage.push_back(Rexs[ite]);
 				}
-				return Nfa::CreateTableFromRexReversal(RexStroage.data(), States.data(), States.data(), RequireList.size());
+				return Nfa::CreateTableFromRex(RexStroage.data(), States.data(), States.data(), RequireList.size());
 			}());
 
 			static Lr0::Table lr0_instance = Lr0::CreateTable(
@@ -771,10 +776,6 @@ namespace PineApple::Ebnf
 				if(ite.second == NU.value.Index())
 					throw Error::UndefinedNoterminal{std::u32string(ite.first)};
 			throw Error::UndefinedNoterminal{ std::u32string(U"$UnknowSymbol") };
-		}
-		catch (...)
-		{
-			throw;
 		}
 	}
 }
