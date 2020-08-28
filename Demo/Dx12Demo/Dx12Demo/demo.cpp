@@ -2,6 +2,7 @@
 #include "../../../Dumpling/FrameWork/Interface/path_system.h"
 #include "../../../Dumpling/Msc/Interface/mscf.h"
 #include "../../../Dumpling/PineApple/Interface/CharEncode.h"
+#include "../../../Dumpling/PineApple/Interface/Variable.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
@@ -11,6 +12,8 @@
 #include <d3d12shader.h>
 #include <d3dcompiler.h>
 #include <sstream>
+
+
 using namespace Dumpling;
 using Dxgi::FormatPixel;
 
@@ -22,11 +25,38 @@ using namespace Dx12;
 
 namespace fs = std::filesystem;
 
-#include <iostream>
+
+using namespace PineApple::VariableManager;
+
+namespace PineApple::VariableManager
+{
+	template<> struct TypeInfoPattern<float> { std::u32string_view operator()() const { return U"float"; } };
+	template<> struct TypeInfoPattern<uint32_t> { std::u32string_view operator()() const { return U"uint32_t"; } };
+	template<> struct TypeInfoPattern<char> { std::u32string_view operator()() const { return U"char"; } };
+}
 
 
 int main()
 {
+
+	uint32_t da = 14;
+
+	auto P = Variable::Make(U"WTF", da);
+	float POP = 1.00f;
+	auto P2 = Variable::Make(U"WTF22", POP);
+	auto P3 = Variable::Make(U"Go", 'c');
+	std::vector<Variable> lik = { P, P2, P3 };
+	TypeInfoStorageLinker linker;
+	auto result = linker.Link(U"Fuck", lik.data(), lik.size());
+	return 0;
+
+	
+
+
+
+
+
+
 
 	using namespace Dumpling::Path;
 

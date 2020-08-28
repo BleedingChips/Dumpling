@@ -51,7 +51,7 @@ namespace Dumpling::Mscf
 using namespace PineApple;
 using namespace Dumpling;
 
-bool UsedDirectCode = false;
+bool UsedDirectCode = true;
 
 int main()
 {

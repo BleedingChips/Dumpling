@@ -8,7 +8,6 @@
 #include <array>
 namespace Dumpling::Mscf
 {
-
 	enum class VariableType
 	{
 		Base,

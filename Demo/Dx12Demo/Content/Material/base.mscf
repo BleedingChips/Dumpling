@@ -5,7 +5,7 @@ property{
         float2 Potato = float2(1.0, 1.0);
         []{
             float2 Potato2 = float2(2.0, 2.0);
-            float2 Data[100];
+            float2 Data[100] = {0.0, 0.0, 0.0, 0.0, 0.0};
         }
     };
 
@@ -23,8 +23,6 @@ property{
 /*
 import "CS\WTF\GoGo.h" as GoGo;
 
-
-
 code Random [ ] @{
     float2 Function(float){return float2(1.0, 1.0);} 
 }@;
@@ -36,11 +34,11 @@ material Default as pp <
     Data = true,
     TwoSide = true
 >{
-    section VS [Random, GoGo.WTF] (float2 Position) -> (float4 Color, float2 Texture) @{
+    section VS [Random, GoGo.WTF] (float2 Position, out float4 Color, out float2 Texture) @{
 
     }@;
 
-    section PS [Random] (float4 Color, float2 Texture) -> (float4 SV_Target) @{
+    section PS [Random] (float4 Color, out float2 Texture, out float4 SV_Target) @{
 
     }@;
 };

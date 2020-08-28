@@ -1,6 +1,8 @@
 #include "../Interface/mscf.h"
 #include "mscf_parser_table.h"
 #include "../../PineApple/Interface/CharEncode.h"
+#include <array>
+
 float StringToFloat(std::u32string_view Input)
 {
 	auto str = CharEncode::Wrapper(Input).To<char>();
@@ -74,6 +76,46 @@ namespace Dumpling::Mscf
 		return Ins;
 	};
 
+	enum class VALUE_TYPE
+	{
+		INT,
+		FLOAT,
+		CUSTOM,
+	};
+
+	struct TypeDescriptionManager
+	{
+		struct TypeDescription;
+
+		struct MemberValueDescription
+		{
+			std::u32string_view Name;
+			TypeDescription* Description;
+			size_t offset;
+		};
+
+		struct TypeDescription
+		{
+			VALUE_TYPE type;
+			size_t align_size;
+			size_t data_size;
+			std::vector<MemberValueDescription> Member;
+			std::vector<std::byte> default_data;
+		};
+		std::map<std::u32string_view, TypeDescription> AllTypeDescription;
+	};
+
+	/*
+	struct TypeDescription
+	{
+		VALUE_TYPE type;
+		size_t align_size;
+		size_t data_size;
+		std::map<std::u32string_view, TypeDescription>  
+	};
+
+	std::map<std::u32string_view, >
+	*/
 	mscf translate(std::u32string const& code)
 	{
 		auto& Mref = MscfEbnfInstance();
@@ -97,7 +139,35 @@ namespace Dumpling::Mscf
 				auto datas = E.datas;
 				switch (mask)
 				{
-				case 4: {
+				case 1: return E[0].MoveData();
+				case 2: return E[0].MoveData();
+				case 3: return {};
+				case 4: return E[0].MoveData();
+				case 5: return true;
+				case 6: return false;
+				case 7: return E[0].MoveData();
+				case 8: return E[0].MoveData();
+				case 9: {
+					std::vector<std::any> AllData;
+					for (size_t i = 0; i < count; ++i)
+					{
+
+					}
+
+
+
+
+					//auto RequireType = E[0].GetData<std::u32string_view>();
+					//std::vector<std::any> AllData;
+					/*
+					for (size_t i = 0; i < count; ++i)
+					{
+						if(E.)
+					}
+					*/
+				}
+					/*
+				case 10: return E.GetRawData(0);
 					if (auto ptr = E.TryGetData<int>(0); ptr != nullptr)
 					{
 						ConstVariable re{ {VariableType::Base, StorageType::Int, 1, sizeof(int), alignof(int), 1, 0}};
@@ -156,9 +226,12 @@ namespace Dumpling::Mscf
 					} break;
 					default:
 						break;
+						
 					}
 					return Result;
+					
 				} break;
+				*/
 				}
 			}
 			return {};

@@ -13,24 +13,32 @@ $ := <Statement>
     := <Statement> ';' : [2]
     := : [3]
 
-<BaseValueNumber> := IntNumber | FloatNumber : [4]
-    := Id '(' [  <BaseValueNumber> {',' <BaseValueNumber> } ] ')' : [5]
+<BaseConstValue> := IntNumber | FloatNumber : [4]
+    := 'true' : [5]
+    := 'false': [6]
+    := String : [7]
 
+<BaseValueNumber> := <BaseConstValue> : [8]
+    := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [9]
+    := String : [10]
 
-<VariableDefine> := Id [ '<' Id '>' ] Id [ '[' IntNumber ']' ] [ '=' ( String | 'true' | 'false' | <BaseValueNumber> ) ] : [6]
+<DefineVariable> := Id [ '<' Id '>' ] Id : [11]
+    := Id [ '<' Id '>' ] Id '[' IntNumber ']' : [12]
 
-<StructDesc> := 'struct' Id '{' { <VariableDefine> | ';' } '}' ';' : [7]
+<DefineOrInitVariable> := <DefineVariable> [ '=' <BaseValueNumber> ] : [13]
 
-<MateDateElement> := Id [ '=' ( <BaseValueNumber> | String | 'true' | 'false' ) ]
+<StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [14]
 
-<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ]
+<MateDateElement> := Id [ '=' <BaseValueNumber> ] : [15]
 
-<PropertyDefine> := <PropertyDefine> <MateDate> '{' <PropertyDefine> '}'
-    := <PropertyDefine> <MateDate> <VariableDefine> ';'
-    := <PropertyDefine> ';'
-    :=
+<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [16]
 
-<PropertyStatement> := 'property' '{' <PropertyDefine> '}'
+<PropertyDefine> := <PropertyDefine> <MateDate> '{' <PropertyDefine> '}' : [17]
+    := <PropertyDefine> <MateDate> <VariableDefine> ';' : [18]
+    := <PropertyDefine> ';' : [19]
+    := : [20]
+
+<PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [21]
 
 /*
 
@@ -60,13 +68,15 @@ $ := <Statement>
 <Conflig> := '<' <MateDateElementList> '>'
     := '<' '>'
 
-<InoutElementList> := <NumberType> Id
-    := <InoutElementList> ',' <NumberType> Id
+<InOutFlag> := 'in'
+    := 'out'
+    :=
 
-<Inout> := '(' <InoutElementList> ')'
-    := '(' ')'
+<InoutElementList> := <InOutFlag> 'in' <NumberType> Id
+    := <InoutElementList> ',' <InOutFlag> <NumberType> Id
 
-<SectionStatement> := 'section' Id <Include> <Inout> '->' <Inout> Code ';'
+<SectionStatement> := 'section' Id <Include> '(' [<InoutElementList>] ')' Code ';'
+
 <DefineMarcoStatement> := 'define' Id String ';'
     := 'define' Id ';'
 

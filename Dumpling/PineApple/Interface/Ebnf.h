@@ -43,16 +43,22 @@ namespace PineApple::Ebnf
 
 	struct Element : Step
 	{
-		std::tuple<size_t, std::u32string_view, std::any, Nfa::Location>* datas = nullptr;
-		std::tuple<size_t, std::u32string_view, std::any, Nfa::Location>& operator[](size_t index) { return datas[index]; }
-		Nfa::Location GetLocation(size_t index) { return std::get<3>((*this)[index]); }
-		decltype(auto) GetRawData(size_t index) { return std::get<2>((*this)[index]); }
-		template<typename Type>
-		decltype(auto) GetData(size_t index) { return std::any_cast<Type>(std::get<2>((*this)[index])); }
-		template<typename Type>
-		Type* TryGetData(size_t index) { return std::any_cast<Type>(&std::get<2>((*this)[index])); }
-		size_t GetAcception(size_t index) { return std::get<0>((*this)[index]); }
-		std::u32string_view GetString(size_t index) { return std::get<1>((*this)[index]); }
+		struct Property
+		{
+			size_t accept_index;
+			std::u32string_view capture;
+			std::any data;
+			Nfa::Location location;
+
+			template<typename Type>
+			decltype(auto) GetData(size_t index) { return std::any_cast<Type>((*this)[index].data); }
+			template<typename Type>
+			Type* TryGetData(size_t index) { return std::any_cast<Type>(&data); }
+			std::any MoveData() { return std::move(data); }
+		};
+		Property* datas = nullptr;
+		Property& operator[](size_t index) { return datas[index]; }
+
 		Element(Step const& ref) : Step(ref) {}
 	};
 

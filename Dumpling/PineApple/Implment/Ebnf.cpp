@@ -212,7 +212,7 @@ namespace PineApple::Ebnf
 
 	std::any History::operator()(std::any(*Function)(void*, Element&), void* FunctionBody) const
 	{
-		std::vector<std::tuple<size_t, std::u32string_view, std::any, Nfa::Location>> Storage;
+		std::vector<Element::Property> Storage;
 		int append = 0;
 		for (auto& ite : steps)
 		{
@@ -230,8 +230,8 @@ namespace PineApple::Ebnf
 				Re.datas = Storage.data() + CurrentAdress;
 				if (TotalUsed >= 1)
 				{
-					Re.loc = std::get<3>(Re.datas[0]);
-					auto Tar = std::get<3>(Re.datas[TotalUsed - 1]);
+					Re.loc = Re[0].location;
+					auto Tar = Re[TotalUsed - 1].location;
 					Re.loc.length = Tar.total_index - Re.loc.total_index + Tar.length;
 				}
 				else {
@@ -243,7 +243,7 @@ namespace PineApple::Ebnf
 			}
 		}
 		assert(Storage.size() == 1);
-		return std::move(std::get<2>(Storage[0]));
+		return std::move(Storage[0].data);
 	}
 
 	std::tuple<std::vector<Symbol>, std::vector<Nfa::DocumenetMarchElement>> EbnfLexer(Nfa::Table const& table, std::u32string_view& input, std::set<size_t> const& Remove, Nfa::Location& Loc)
@@ -377,6 +377,7 @@ namespace PineApple::Ebnf
 			}
 			catch (Lr0::Error::UnaccableSymbol const& US)
 			{
+				assert(Elements.size() > US.index);
 				auto P = Elements[US.index];
 				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location};
 			}
@@ -639,7 +640,6 @@ namespace PineApple::Ebnf
 			}
 
 		}
-
 
 		std::vector<Lr0::OpePriority> operator_priority;
 		// step3

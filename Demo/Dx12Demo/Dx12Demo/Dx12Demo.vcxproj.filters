@@ -105,6 +105,9 @@
     <ClCompile Include="..\..\..\Dumpling\Msc\Implement\mscf.cpp">
       <Filter>Dumpling\Msc\Implement</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Variable.cpp">
+      <Filter>Dumpling\PineApple\Implement</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Testing.h">
@@ -178,6 +181,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Msc\Implement\mscf_parser_table.h">
       <Filter>Dumpling\Msc\Implement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Variable.h">
+      <Filter>Dumpling\PineApple\Interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
