@@ -51,9 +51,9 @@ namespace PineApple::Ebnf
 			Nfa::Location location;
 
 			template<typename Type>
-			decltype(auto) GetData(size_t index) { return std::any_cast<Type>((*this)[index].data); }
+			decltype(auto) GetData() { return std::any_cast<Type>(data); }
 			template<typename Type>
-			Type* TryGetData(size_t index) { return std::any_cast<Type>(&data); }
+			Type* TryGetData() { return std::any_cast<Type>(&data); }
 			std::any MoveData() { return std::move(data); }
 		};
 		Property* datas = nullptr;

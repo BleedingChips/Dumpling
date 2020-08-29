@@ -12,13 +12,18 @@ float StringToFloat(std::u32string_view Input)
 	return Result;
 }
 
-int StringToInt(std::u32string_view Input)
+int32_t StringToInt(std::u32string_view Input)
 {
 	auto str = CharEncode::Wrapper(Input).To<char>();
-	int Result;
+	int32_t Result;
 	sscanf_s(str.c_str(), "%i", &Result);
 	return Result;
 }
+
+static Variable::Pattern<float> float_pattern(U"float");
+static Variable::Pattern<int32_t> int_pattern(U"int");
+static Variable::Pattern<int32_t> bool_pattern(U"bool");
+static Variable::Pattern<std::u32string_view> string_view_pattern(U"bool");
 
 namespace Dumpling::Mscf
 {
@@ -36,7 +41,9 @@ namespace Dumpling::Mscf
 			{
 				switch (E.shift.mask)
 				{
-				case 0: { return StringToFloat(E.shift.capture); }
+				case 0: { 
+					return StringToFloat(E.shift.capture);
+				}
 				case 1: return StringToInt(E.shift.capture);
 				default: return E.shift.capture;
 				}
@@ -55,7 +62,19 @@ namespace Dumpling::Mscf
 				case 5: return true;
 				case 6: return false;
 				case 7: return E[0].MoveData();
-				case 8: return E[0].MoveData();
+				case 8: {
+					auto& ref = E[0];
+					if (auto P = ref.TryGetData<float>(); P != nullptr)
+						return float_pattern.Construct(*P);
+					else if (auto P = ref.TryGetData<int32_t>(); P != nullptr)
+						return int_pattern.Construct(*P);
+					else if (auto P = ref.TryGetData<bool>(); P != nullptr)
+						return bool_pattern.Construct(*P);
+					else if (auto P = ref.TryGetData<std::u32string_view>(); P != nullptr)
+						return string_view_pattern.Construct(*P);
+					assert(false);
+					return {};
+				} break;
 				case 9: {
 					std::vector<std::any> AllData;
 					for (size_t i = 0; i < count; ++i)
