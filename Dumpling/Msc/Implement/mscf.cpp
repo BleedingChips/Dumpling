@@ -1,6 +1,7 @@
 #include "../Interface/mscf.h"
 #include "mscf_parser_table.h"
 #include "../../PineApple/Interface/CharEncode.h"
+#include "../../PineApple/Interface/Variable.h"
 #include <array>
 
 float StringToFloat(std::u32string_view Input)
@@ -22,100 +23,8 @@ int StringToInt(std::u32string_view Input)
 namespace Dumpling::Mscf
 {
 
-	std::array<float, 4> ConstVariableToFloat(ConstVariable const& input)
-	{
-		assert(input.desc.v_type == VariableType::Base);
-		std::array<float, 4> result;
-		switch (input.desc.s_type)
-		{
-		case StorageType::Float: {
-			auto tar_datas = reinterpret_cast<float const*>(input.datas.data());
-			for (size_t i = 0; i < 4; ++i)
-				result[i] = tar_datas[i];
-		} break;
-		case StorageType::Int: {
-			auto tar_datas = reinterpret_cast<int const*>(input.datas.data());
-			for (size_t i = 0; i < 4; ++i)
-				result[i] = tar_datas[i];
-		} break;
-		default: break;
-		}
-		return result;
-	}
-
-	std::array<int, 4> ConstVariableToInt(ConstVariable const& input)
-	{
-		assert(input.desc.v_type == VariableType::Base);
-		std::array<int, 4> result;
-		switch (input.desc.s_type)
-		{
-		case StorageType::Float: {
-			auto tar_datas = reinterpret_cast<float const*>(input.datas.data());
-			for (size_t i = 0; i < 4; ++i)
-				result[i] = tar_datas[i];
-		} break;
-		case StorageType::Int: {
-			auto tar_datas = reinterpret_cast<int const*>(input.datas.data());
-			for (size_t i = 0; i < 4; ++i)
-				result[i] = tar_datas[i];
-		} break;
-		default: break;
-		}
-		return result;
-	}
 
 
-	std::map<std::u32string_view, VariableDesc> const& DefaultInsideType()
-	{
-		static std::map<std::u32string_view, VariableDesc> Ins = {
-			{U"float", {VariableType::Base, StorageType::Float, 1, sizeof(float), alignof(float), 1, std::numeric_limits<size_t>::max()}},
-			{U"float2", {VariableType::Base, StorageType::Float, 2, sizeof(float), alignof(float), 1, std::numeric_limits<size_t>::max()}},
-			{U"float3", {VariableType::Base, StorageType::Float, 3, sizeof(float), alignof(float), 1, std::numeric_limits<size_t>::max()}},
-			{U"float4", {VariableType::Base, StorageType::Float, 4, sizeof(float), alignof(float), 1, std::numeric_limits<size_t>::max()}},
-		};
-		return Ins;
-	};
-
-	enum class VALUE_TYPE
-	{
-		INT,
-		FLOAT,
-		CUSTOM,
-	};
-
-	struct TypeDescriptionManager
-	{
-		struct TypeDescription;
-
-		struct MemberValueDescription
-		{
-			std::u32string_view Name;
-			TypeDescription* Description;
-			size_t offset;
-		};
-
-		struct TypeDescription
-		{
-			VALUE_TYPE type;
-			size_t align_size;
-			size_t data_size;
-			std::vector<MemberValueDescription> Member;
-			std::vector<std::byte> default_data;
-		};
-		std::map<std::u32string_view, TypeDescription> AllTypeDescription;
-	};
-
-	/*
-	struct TypeDescription
-	{
-		VALUE_TYPE type;
-		size_t align_size;
-		size_t data_size;
-		std::map<std::u32string_view, TypeDescription>  
-	};
-
-	std::map<std::u32string_view, >
-	*/
 	mscf translate(std::u32string const& code)
 	{
 		auto& Mref = MscfEbnfInstance();

@@ -4,7 +4,7 @@
 #include <vector>
 #include <optional>
 #include <assert.h>
-namespace PineApple::VariableManager
+namespace PineApple::Variable
 {
 	namespace Error
 	{
@@ -19,26 +19,26 @@ namespace PineApple::VariableManager
 		};
 	}
 
-	enum class VariablePropertyFlag
+	enum class PropertyFlag
 	{
 		Value = 0b1,
 		Array = 0b10,
 		Pointer = 0b100,
 	};
 
-	constexpr VariablePropertyFlag operator&(VariablePropertyFlag i1, VariablePropertyFlag i2)
+	constexpr PropertyFlag operator&(PropertyFlag i1, PropertyFlag i2)
 	{
-		return static_cast<VariablePropertyFlag>(static_cast<size_t>(i1) & static_cast<size_t>(i2));
+		return static_cast<PropertyFlag>(static_cast<size_t>(i1) & static_cast<size_t>(i2));
 	}
 
-	constexpr VariablePropertyFlag operator|(VariablePropertyFlag i1, VariablePropertyFlag i2)
+	constexpr PropertyFlag operator|(PropertyFlag i1, PropertyFlag i2)
 	{
-		return static_cast<VariablePropertyFlag>(static_cast<size_t>(i1) | static_cast<size_t>(i2));
+		return static_cast<PropertyFlag>(static_cast<size_t>(i1) | static_cast<size_t>(i2));
 	}
 
-	struct VariableProperty
+	struct Property
 	{
-		using Flag = VariablePropertyFlag;
+		using Flag = PropertyFlag;
 		Flag flag = Flag::Value;
 		size_t array_count = 1;
 		constexpr bool Is(Flag flag) const { return (this->flag & flag) == flag; }
@@ -64,62 +64,94 @@ namespace PineApple::VariableManager
 		size_t size;
 	};
 
-	template<class Type> struct TypeInfoPattern { std::u32string_view operator()() const; };
+	template<typename Type>
+	std::vector<std::byte> ToData(Type const& P)
+	{
+		using PureType = std::remove_cvref_t<Type>;
+		std::vector<std::byte> Result;
+		size_t size = sizeof(PureType);
+		std::vector<std::byte> datas(size);
+		std::memcpy(datas.data(), reinterpret_cast<std::byte const*>(&P), size);
+		return std::move(datas);
+	}
 
-	struct Variable
+	template<typename Type>
+	std::vector<std::byte> ToArrayData(Type const* data, size_t array_count)
+	{
+		using PureType = std::remove_cvref_t<Type>;
+		std::vector<std::byte> Result;
+		size_t size = sizeof(PureType) * array_count;
+		std::vector<std::byte> datas(size);
+		if(data != nullptr)
+			std::memcpy(datas.data(), reinterpret_cast<std::byte const*>(data), size);
+		return std::move(datas);
+	}
+
+	template<typename Type>
+	std::vector<std::byte> ToZeroData() {
+		return ToArrayData<Type>(nullptr, 0);
+	}
+
+	struct NoNamed
 	{
 		TypeInfo info;
-		VariableProperty property;
-		std::u32string name;
+		Property property;
 		std::vector<std::byte> value;
+	};
 
-		template<class Type>
-		static Variable MakeArray(std::u32string Name, Type const* P, VariableProperty pro = {})
-		{
-			using PureType = std::remove_cvref_t<Type>;
-			Variable var{
-				{std::u32string(TypeInfoPattern<PureType>{}()), alignof(PureType), sizeof(PureType) },
-				pro, Name, {}
-			};
-			size_t size = pro.CalculateSize(sizeof(PureType));
-			var.value.resize(size);
-			std::memcpy(var.value.data(), reinterpret_cast<std::byte const*>(P), size);
-			return std::move(var);
-		}
-
-		template<class Type>
-		static Variable Make(std::u32string Name, Type const& P, VariableProperty pro = {})
-		{
-			using PureType = std::remove_cvref_t<Type>;
-			Variable var{
-				{std::u32string(TypeInfoPattern<PureType>{}()), alignof(PureType), sizeof(PureType) },
-				pro, Name, {}
-			};
-			size_t size = pro.CalculateSize(sizeof(PureType));
-			var.value.resize(size);
-			std::memcpy(var.value.data(), reinterpret_cast<std::byte const*>(&P), size);
-			return std::move(var);
-		}
-
-		/*
-		template<class Type>
-		static Variable Make(std::u32string Name, Type const& P, VariableProperty pro = {}) { return Variable::Make(std::move(Name), &P, pro); }
-		*/
+	struct Named : NoNamed
+	{
+		Named& operator=(NoNamed const& ref) { static_cast<NoNamed&>(*this).operator=(ref); return *this; }
+		Named& operator=(NoNamed&& ref) { static_cast<NoNamed&>(*this).operator=(std::move(ref)); return *this; }
+		Named(NoNamed nonamed, std::u32string name) : NoNamed(std::move(nonamed)), name(std::move(name)) {}
+		Named(Named&&) = default;
+		Named(Named const&) = default;
+		std::u32string name;
 	};
 	
 	struct TypeInfoStorage
 	{
-		TypeInfo info;
+
 		struct Member
 		{
 			TypeInfo info;
 			std::u32string name;
-			VariableProperty property;
+			Property property;
 			size_t offset;
 		};
+
+		TypeInfo info;
 		std::vector<Member> members;
 		std::vector<std::byte> default_value;
-		Variable Construct(std::u32string Name, std::vector<std::byte> value = {}, VariableProperty pro = {}) const;
+		NoNamed Construct(std::vector<std::byte> datas = {}, Property pro = {}) const;
+		Named Construct(std::u32string name, std::vector<std::byte> datas = {}, Property pro = {}) const {
+			return Named{ Construct(std::move(datas), pro), std::move(name) };
+		}
+	};
+
+	template<typename StorageType>
+	struct Pattern
+	{
+		Pattern(std::u32string type_name, StorageType const& data) : 
+			info_storage({ TypeInfo{ std::move(type_name), alignof(StorageType), sizeof(StorageType) }, {}, ToData(data) }) {}
+		Pattern(std::u32string type_name) :
+			info_storage({ TypeInfo{ std::move(type_name), alignof(StorageType), sizeof(StorageType) }, {}, ToArrayData<StorageType>(nullptr, 0) }) {}
+
+		TypeInfo Info() const { return info_storage.info; }
+		NoNamed Construct(StorageType const& datas, Property pro = {}) const {
+			return info_storage.Construct(ToData(datas), pro);
+		}
+		NoNamed Construct(Property pro = {}) const {
+			return info_storage.Construct({}, pro);
+		}
+		Named Construct(std::u32string name, StorageType const& datas, Property pro = {}) const {
+			return info_storage.Construct(std::move(name), ToData(datas), pro);
+		}
+		Named Construct(std::u32string name, Property pro = {}) const {
+			return info_storage.Construct(std::move(name), {}, pro);
+		}
+	private:
+		TypeInfoStorage info_storage;
 	};
 
 	struct TypeInfoManager
@@ -143,8 +175,15 @@ namespace PineApple::VariableManager
 		size_t align_platform = sizeof(nullptr_t);
 		size_t adjest_member_order = false;
 		size_t refuse_same_name = true;
-		TypeInfoStorage Link(std::u32string_view type_name, Variable const* element, size_t size);
+		TypeInfoStorage Link(std::u32string_view type_name, Named const* element, size_t size);
 	};
 
-	
+	struct VariableManager
+	{
+		Named* Find(std::u32string_view Name);
+		bool Insert(Named var);
+	public:
+		std::map<std::u32string_view, Named> all_value;
+	};
+
 }

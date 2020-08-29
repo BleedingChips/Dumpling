@@ -1,16 +1,14 @@
 #include "../Interface/Variable.h"
 #include <set>
 
-namespace PineApple::VariableManager
+namespace PineApple::Variable
 {
 
-
-	Variable TypeInfoStorage::Construct(std::u32string Name, std::vector<std::byte> value, VariableProperty pro) const
+	NoNamed TypeInfoStorage::Construct(std::vector<std::byte> datas, Property pro) const
 	{
-		Variable Result{ info, pro, std::move(Name), {} };
-		if (value.size() != Result.info.size)
-			Result.value = default_value;
-		return Result;
+		if (datas.empty() || datas.size() != pro.CalculateSize(info.size))
+			datas = default_value;
+		return NoNamed{ info, pro, std::move(datas) };
 	}
 
 	bool TypeInfoManager::Insert(TypeInfoStorage input)
@@ -20,7 +18,6 @@ namespace PineApple::VariableManager
 		return Re.second;
 	}
 
-
 	TypeInfoStorage const* TypeInfoManager::Find(std::u32string_view Name) const
 	{
 		auto ite = all_types.find(Name);
@@ -29,7 +26,7 @@ namespace PineApple::VariableManager
 		return nullptr;
 	}
 
-	TypeInfoStorage TypeInfoStorageLinker::Link(std::u32string_view type_name, Variable const* element, size_t size)
+	TypeInfoStorage TypeInfoStorageLinker::Link(std::u32string_view type_name, Named const* element, size_t size)
 	{
 		TypeInfoStorage Result;
 		Result.info.type_name = type_name;
@@ -74,8 +71,23 @@ namespace PineApple::VariableManager
 		else {
 			throw 1;
 		}
-		
 
 		return Result;
 	}
+
+	Named* VariableManager::Find(std::u32string_view Name)
+	{
+		auto P = all_value.find(Name);
+		if (P != all_value.end())
+			return &(P->second);
+		return nullptr;
+	}
+
+	bool VariableManager::Insert(Named var)
+	{
+		std::u32string_view name = var.name;
+		auto re = all_value.insert({ name , std::move(var)});
+		return re.second;
+	}
+
 }
