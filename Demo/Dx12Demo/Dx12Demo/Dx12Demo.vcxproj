@@ -142,7 +142,7 @@
     <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Lr0.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Nfa.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\StrFormat.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Variable.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Implment\Symbol.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Potato\Implement\tool.cpp" />
     <ClCompile Include="demo.cpp" />
   </ItemGroup>
@@ -165,7 +165,7 @@
     <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Nfa.h" />
     <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Range.h" />
     <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\StrFormat.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Variable.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Interface\Symbol.h" />
     <ClInclude Include="..\..\..\Dumpling\Potato\Interface\auto_adapter.h" />
     <ClInclude Include="..\..\..\Dumpling\Potato\Interface\smart_pointer.h" />
     <ClInclude Include="..\..\..\Dumpling\Potato\Interface\tmp.h" />

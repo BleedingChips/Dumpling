@@ -2,7 +2,7 @@
 #include "../../../Dumpling/FrameWork/Interface/path_system.h"
 #include "../../../Dumpling/Msc/Interface/mscf.h"
 #include "../../../Dumpling/PineApple/Interface/CharEncode.h"
-#include "../../../Dumpling/PineApple/Interface/Variable.h"
+#include "../../../Dumpling/PineApple/Interface/Symbol.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
@@ -26,14 +26,14 @@ using namespace Dx12;
 namespace fs = std::filesystem;
 
 
-using namespace PineApple::Variable;
-
-
 int main()
 {
+	
+	Symbol::Table table({
+		Symbol::MakeInsideType(U"float", float(0.0f)),
+		Symbol::MakeInsideType(U"int", int32_t(0))
+	});
 
-	Pattern<float> patt(U"float");
-	auto P = patt.Construct(U"WTF");
 
 	return 0;
 
