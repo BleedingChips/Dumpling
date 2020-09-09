@@ -187,12 +187,14 @@ namespace PineApple::Ebnf
 						auto& Data = Datas[ite.shift.token_index];
 						step.capture = Data.march.capture;
 						step.loc = Data.location;
+						step.is_terminal = true;
 					}
 					else {
 						step.production_mask = ite.reduce.mask;
-						assert(ite.reduce.production_count >= TemporaryUsed);
+						//assert(TemporaryUsed < 0 || ite.reduce.production_count >= TemporaryUsed);
 						step.production_count = ite.reduce.production_count + TemporaryUsed;
 						TemporaryUsed = 0;
+						step.is_terminal = false;
 					}
 					re.push_back(step);
 				}
@@ -206,6 +208,7 @@ namespace PineApple::Ebnf
 				Nfa::Location loc = (Symbol.index > 0) ? Datas[Symbol.index - 1].location : Nfa::Location{};
 				throw Error::UnacceptableSyntax{ U"$_Eof", U"$_Eof", loc, std::move(re) };
 			}
+			auto loc = Datas[Symbol.symbol.Index()].location;
 			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.symbol.Index()].march.capture),Datas[Symbol.symbol.Index()].location, std::move(re) };
 		}
 	}

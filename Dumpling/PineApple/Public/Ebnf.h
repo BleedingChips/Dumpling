@@ -88,7 +88,7 @@ namespace PineApple::Ebnf
 		struct ExceptionStep
 		{
 			std::u32string Name;
-			bool IsTerminal = false;
+			bool is_terminal = false;
 			size_t production_mask = Lr0::ProductionInput::default_mask();
 			size_t production_count = 0;
 			std::u32string capture;

@@ -215,6 +215,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\Parser\Mscf.ebnf" />
+    <None Include="..\Content\Material\base.mscf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
