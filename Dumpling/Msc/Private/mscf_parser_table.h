@@ -1,7 +1,7 @@
 ﻿
-#include "../../FrameWork/Interface/path_system.h"
-#include "../../PineApple/Interface/Ebnf.h"
-#include "../../PineApple/Interface/CharEncode.h"
+#include "../../FrameWork/Public/path_system.h"
+#include "../../PineApple/Public/Ebnf.h"
+#include "../../PineApple/Public/CharEncode.h"
 using namespace PineApple;
 namespace Dumpling::Mscf
 {

@@ -1,7 +1,8 @@
-#include "../Interface/mscf.h"
+#include "../Public/mscf.h"
 #include "mscf_parser_table.h"
-#include "../../PineApple/Interface/CharEncode.h"
-#include "../../PineApple/Interface/Symbol.h"
+#include "../../PineApple/Public/CharEncode.h"
+#include "../../PineApple/Public/Symbol.h"
+#include "mscf_define.h"
 #include <array>
 
 float StringToFloat(std::u32string_view Input)
@@ -26,23 +27,18 @@ namespace Dumpling::Mscf
 
 	using namespace PineApple::Symbol;
 
-	/*
-	SymbolTable const& SymbolTableDefault() {
-		static SymbolTable tables = []()->SymbolTable{
-			SymbolTable tables;
-			tables.ValuePush();
-
-		}();
-		return tables;
-	}
-	*/
-
 	mscf translate(std::u32string const& code)
 	{
 		auto& Mref = MscfEbnfInstance();
 
 		auto History = Ebnf::Process(MscfEbnfInstance(), code);
 		std::map<std::u32string_view, VariableDesc> varables;
+
+		auto table = DefaultTable();
+		auto command = DefaultCommand(table);
+
+
+
 		Ebnf::Process(History, [&](Ebnf::Element& E) -> std::any {
 			if (E.IsTerminal())
 			{

@@ -1,4 +1,4 @@
-#include "../Interface/path_system.h"
+#include "../Public/path_system.h"
 #include <map>
 #include <fstream>
 #include <assert.h>

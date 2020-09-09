@@ -1,8 +1,8 @@
 #include "../../../Dumpling/Gui/Win32/dx12_form.h"
-#include "../../../Dumpling/FrameWork/Interface/path_system.h"
-#include "../../../Dumpling/Msc/Interface/mscf.h"
-#include "../../../Dumpling/PineApple/Interface/CharEncode.h"
-#include "../../../Dumpling/PineApple/Interface/Symbol.h"
+#include "../../../Dumpling/FrameWork/Public/path_system.h"
+#include "../../../Dumpling/Msc/Public/mscf.h"
+#include "../../../Dumpling/PineApple/Public/CharEncode.h"
+#include "../../../Dumpling/PineApple/Public/Symbol.h"
 #include <assert.h>
 #include <iostream>
 #include <chrono>
@@ -28,14 +28,6 @@ namespace fs = std::filesystem;
 
 int main()
 {
-	
-	Symbol::Table table({
-		Symbol::MakeInsideType(U"float", float(0.0f)),
-		Symbol::MakeInsideType(U"int", int32_t(0))
-	});
-
-
-	return 0;
 
 	
 

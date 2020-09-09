@@ -2,8 +2,8 @@
 #include <future>
 #include <string>
 #include <Windows.h>
-#include "../../Potato/Interface/smart_pointer.h"
-#include "../../Potato/Interface/tool.h"
+#include "../../Potato/Public/smart_pointer.h"
+#include "../../Potato/Public/tool.h"
 #include <functional>
 
 namespace Dumpling::Win32
