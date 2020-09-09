@@ -1,4 +1,4 @@
-#include "../Interface/Ebnf.h"
+#include "../Public/Ebnf.h"
 #include <assert.h>
 #include <vector>
 

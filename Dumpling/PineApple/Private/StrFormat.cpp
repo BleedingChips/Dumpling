@@ -1,6 +1,6 @@
-#include "../Interface/StrFormat.h"
-#include "../Interface/Nfa.h"
-#include "../Interface/CharEncode.h"
+#include "../Public/StrFormat.h"
+#include "../Public/Nfa.h"
+#include "../Public/CharEncode.h"
 namespace PineApple::StrFormat
 {
 

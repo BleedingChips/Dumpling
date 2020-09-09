@@ -76,7 +76,6 @@ namespace PineApple::Symbol
 		Mask InsertType(std::u32string_view type_name, std::vector<Value> member);
 		Mask FindType(std::u32string_view type_name) const;
 		Mask FindValue(std::u32string_view value_name) const;
-
 		void PopActionScope(Record record);
 
 		struct StorageMask

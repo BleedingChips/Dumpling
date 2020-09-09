@@ -1,4 +1,4 @@
-#include "../Interface/Lr0.h"
+#include "../Public/Lr0.h"
 #include <optional>
 namespace PineApple::Lr0
 {

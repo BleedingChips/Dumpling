@@ -1,5 +1,5 @@
-#include "../Interface/Lr0.h"
-#include "../Interface/Nfa.h"
+#include "../Public/Lr0.h"
+#include "../Public/Nfa.h"
 #include <optional>
 #include <variant>
 #include <string_view>

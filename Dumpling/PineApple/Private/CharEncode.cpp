@@ -1,4 +1,4 @@
-#include "../Interface/CharEncode.h"
+#include "../Public/CharEncode.h"
 #include <assert.h>
 
 #ifdef _WIN32
