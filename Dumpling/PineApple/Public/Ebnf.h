@@ -1,7 +1,7 @@
 #pragma once
 #include "Lr0.h"
 #include "Nfa.h"
-
+#include <assert.h>
 namespace PineApple::Ebnf
 {
 
@@ -23,33 +23,36 @@ namespace PineApple::Ebnf
 
 	struct Step
 	{
-		size_t state;
+		size_t state = 0;
 		std::u32string_view string;
-		bool is_terminal;
+		bool is_terminal = false;
 		Nfa::Location loc;
 		union {
 			struct {
-				size_t mask;
-				size_t production_count;
+				size_t mask = 0;
+				size_t production_count = 0;
 			}reduce;
 			struct {
-				std::u32string_view capture;
-				size_t mask;
+				std::u32string_view capture = 0;
+				size_t mask = 0;
 			}shift;
 		};
+		Step(){}
 		bool IsTerminal() const noexcept { return is_terminal; }
 		bool IsNoterminal() const noexcept { return !IsTerminal(); }
 	};
 
 	struct Element : Step
 	{
-		struct Property
+		struct Property : Step
 		{
-			size_t accept_index;
-			std::u32string_view capture;
+			Property() {}
+			Property(Step step, std::any datas) : Step(step), data(std::move(datas)){}
+			Property(Property const&) = default;
+			Property(Property&&) = default;
+			Property& operator=(Property&& p) = default;
+			Property& operator=(Property const& p) = default;
 			std::any data;
-			Nfa::Location location;
-
 			template<typename Type>
 			decltype(auto) GetData() { return std::any_cast<Type>(data); }
 			template<typename Type>
@@ -58,6 +61,8 @@ namespace PineApple::Ebnf
 		};
 		Property* datas = nullptr;
 		Property& operator[](size_t index) { return datas[index]; }
+		Property* begin() {assert(Step::IsNoterminal()); return datas;}
+		Property* end() {assert(Step::IsNoterminal()); return datas + reduce.production_count;}
 		Element(Step const& ref) : Step(ref) {}
 	};
 
@@ -72,6 +77,7 @@ namespace PineApple::Ebnf
 			};
 			return operator()(FunctionImp, static_cast<void*>(&Func));
 		}
+		std::vector<std::u32string> Expand() const;
 	};
 
 	History Process(Table const& Tab, std::u32string_view Code);
@@ -121,7 +127,7 @@ namespace PineApple::Ebnf
 			std::u32string type;
 			std::u32string data;
 			Nfa::Location loction;
-			std::vector<ExceptionStep> exception_step;
+			std::vector<std::u32string> exception_step;
 		};
 
 		struct UnacceptableRegex

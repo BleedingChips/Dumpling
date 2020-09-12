@@ -7,6 +7,7 @@
 #include <variant>
 #include <typeindex>
 #include <any>
+#include "Nfa.h"
 namespace PineApple::Symbol
 {
 	namespace Error
@@ -22,24 +23,7 @@ namespace PineApple::Symbol
 		};
 	}
 
-	struct Property
-	{
-		template<typename ProT>
-		Property(ProT prot) : pro(std::move(prot)){}
-		Property() = default;
-		Property(Property const&) = default;
-		Property(Property&&) = default;
-		Property& operator=(Property&&) = default;
-		Property& operator=(Property const&) = default;
-		operator bool() const noexcept{return pro.has_value();}
-		template<typename ProT>
-		ProT* TryCast(){ return std::any_cast<ProT>(&pro); }
-		template<typename ProT>
-		ProT& Cast() { return std::any_cast<ProT>(pro); }
-	private:
-		std::any pro;
-	};
-
+	/*
 	struct LRTable
 	{
 
@@ -94,4 +78,85 @@ namespace PineApple::Symbol
 		std::vector<std::tuple<Type, Mask>> type_stack;
 		std::vector<StorageMask> type_mapping;
 	};
+	*/
+
+	struct Value
+	{
+		std::u32string_view type_name;
+		std::u32string_view name;
+		std::any property;
+	};
+
+	
+
+	struct CommmandList
+	{
+		struct Element
+		{
+			std::any command;
+			Nfa::Location loc;
+		};
+
+		template<typename Type>
+		size_t Push(Type&& type, Nfa::Location loc)
+		{
+			size_t cur_index = commands.size();
+			commands.push_back({std::forward<Type>(type), loc});
+			return cur_index;
+		}
+	private:
+		std::vector<Element> commands;
+	};
+
+	namespace Command
+	{
+		struct Data
+		{
+			template<typename Type>
+			static Data Make(std::u32string_view name, Type&& type)
+			{
+				return Make(name, reinterpret_cast<std::byte const*>(&type), sizeof(type));
+			}
+			static Data Make(std::u32string_view name, std::byte const* datas, size_t length);
+			std::u32string_view type;
+			std::vector<std::byte> data;
+		};
+
+		struct DefaultValue
+		{
+			std::u32string_view type;
+		};
+
+		struct MakeNoNameValue
+		{
+			size_t count;
+		};
+
+		struct LinkNoNameValue
+		{
+			size_t count;
+		};
+
+		struct EqualValue
+		{
+			std::u32string_view type;
+			std::u32string_view name;
+			std::any property;
+			size_t data_used;
+		};
+
+		struct DefineType
+		{
+			std::u32string_view type;
+			size_t data_used;
+		};
+	}
+	
+
+	
+
+	
+
+	
+
 }

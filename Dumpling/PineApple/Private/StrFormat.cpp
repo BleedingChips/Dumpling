@@ -205,6 +205,7 @@ namespace PineApple::StrFormat
 
 	std::u32string Formatter<char32_t*>::operator()(std::u32string_view par, char32_t const* Input) { return std::u32string(Input); }
 	std::u32string Formatter<std::u32string>::operator()(std::u32string_view par, std::u32string Input) { return std::move(Input); }
+	std::u32string Formatter<std::u32string_view>::operator()(std::u32string_view par, std::u32string_view Input) { return std::u32string(Input); }
 	std::u32string Formatter<float>::operator()(std::u32string_view par, float input) { 
 		char Buffer[100];
 		size_t t = sprintf_s(Buffer, 100, "%f", input);

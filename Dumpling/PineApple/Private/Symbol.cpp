@@ -3,7 +3,13 @@
 
 namespace PineApple::Symbol
 {
-
+	Command::Data Command::Data::Make(std::u32string_view name, std::byte const* datas, size_t length)
+	{
+		std::vector<std::byte> data(length);
+		std::memcpy(data.data(), datas, length);
+		return Data{name, std::move(data)};
+	}
+	/*
 	template<typename Storage, typename StorageTuple, typename Mapping> 
 	LRTable::Mask InsertExe(Storage&& s, std::vector<StorageTuple>& stack, std::vector<Mapping>& mapping)
 	{
@@ -65,5 +71,5 @@ namespace PineApple::Symbol
 		PopActionScopeExe(record.value_count, value_stack, background_value_stack, value_mapping);
 		PopActionScopeExe(record.table_count, type_stack, background_type_stack, type_mapping);
 	}
-
+	*/
 }

@@ -200,7 +200,7 @@ namespace PineApple::Lr0
 		struct UnaccableSymbol {
 			size_t index;
 			Symbol symbol;
-			std::vector<Step> backup_step;
+			History backup_step;
 		};
 	}
 }

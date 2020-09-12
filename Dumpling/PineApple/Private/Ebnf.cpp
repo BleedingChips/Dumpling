@@ -1,4 +1,5 @@
 #include "../Public/Ebnf.h"
+#include "../Public/StrFormat.h"
 #include <assert.h>
 #include <vector>
 
@@ -107,109 +108,84 @@ namespace PineApple::Ebnf
 		return { std::move(R1), std::move(R2) };
 	}
 
+	History Translate(Table const& Tab, Lr0::History const& Steps, std::vector<Nfa::DocumenetMarchElement> const& Datas)
+	{
+		std::vector<Step> AllStep;
+		AllStep.reserve(Steps.steps.size());
+		Nfa::Location LastLocation;
+		size_t DataCount = 0;
+		std::vector<std::tuple<size_t, size_t>> TemporaryNoTerminal;
+		for (auto& Ite : Steps.steps)
+		{
+			Step Result{};
+			Result.state = Ite.value.Index();
+			Result.is_terminal = Ite.IsTerminal();
+			Result.string = Tab.FindSymbolString(Result.state, Result.is_terminal);
+			if (!Result.string.empty())
+			{
+				if (Result.is_terminal)
+				{
+					auto& DatasRef = Datas[Ite.shift.token_index];
+					Result.loc = DatasRef.location;
+					LastLocation = DatasRef.location;
+					Result.shift.capture = DatasRef.march.capture;
+					Result.shift.mask = DatasRef.march.mask;
+					DataCount += 1;
+				}
+				else {
+					Result.reduce.mask = Ite.reduce.mask;
+					size_t ProCount = Ite.reduce.production_count;
+					size_t Used = ProCount;
+					while (!TemporaryNoTerminal.empty())
+					{
+						auto [Index, Count] = *TemporaryNoTerminal.rbegin();
+						if (Index + ProCount >= DataCount)
+						{
+							TemporaryNoTerminal.pop_back();
+							Used += Count;
+							Used -= 1;
+						}
+						else
+							break;
+					}
+					assert(DataCount >= ProCount);
+					DataCount -= ProCount;
+					DataCount += 1;
+					Result.reduce.production_count = Used;
+					Result.loc = LastLocation;
+				}
+				AllStep.push_back(Result);
+			}
+			else {
+				assert(Result.IsNoterminal());
+				TemporaryNoTerminal.push_back({ DataCount, Ite.reduce.production_count });
+				assert(DataCount >= Ite.reduce.production_count);
+				DataCount -= Ite.reduce.production_count;
+				DataCount += 1;
+			}
+		}
+		return { std::move(AllStep) };
+	}
+
 	History Process(Table const& Tab, std::u32string_view Code)
 	{
 		auto [Symbols, Datas] = DefaultLexer(Tab.nfa_table, Code);
 
 		try{
 			auto Steps = Lr0::Process(Tab.lr0_table, Symbols.data(), Symbols.size());
-			std::vector<Step> AllStep;
-			AllStep.reserve(Steps.steps.size());
-			Nfa::Location LastLocation;
-			size_t DataCount = 0;
-			std::vector<std::tuple<size_t, size_t>> TemporaryNoTerminal;
-			for (auto& Ite : Steps.steps)
-			{
-				Step Result{};
-				Result.state = Ite.value.Index();
-				Result.is_terminal = Ite.IsTerminal();
-				Result.string = Tab.FindSymbolString(Result.state, Result.is_terminal);
-				if (!Result.string.empty())
-				{
-					if (Result.is_terminal)
-					{
-						auto& DatasRef = Datas[Ite.shift.token_index];
-						Result.loc = DatasRef.location;
-						LastLocation = DatasRef.location;
-						Result.shift.capture = DatasRef.march.capture;
-						Result.shift.mask = DatasRef.march.mask;
-						DataCount += 1;
-					}
-					else {
-						Result.reduce.mask = Ite.reduce.mask;
-						size_t ProCount = Ite.reduce.production_count;
-						size_t Used = ProCount;
-						while (!TemporaryNoTerminal.empty())
-						{
-							auto [Index, Count] = *TemporaryNoTerminal.rbegin();
-							if (Index + ProCount >= DataCount)
-							{
-								TemporaryNoTerminal.pop_back();
-								Used += Count;
-								Used -= 1;
-							}
-							else
-								break;
-						}
-						assert(DataCount >= ProCount);
-						DataCount -= ProCount;
-						DataCount += 1;
-						Result.reduce.production_count = Used;
-						Result.loc = LastLocation;
-					}
-					AllStep.push_back(Result);
-				}
-				else {
-					assert(Result.IsNoterminal());
-					TemporaryNoTerminal.push_back({ DataCount, Ite.reduce.production_count});
-					assert(DataCount >= Ite.reduce.production_count);
-					DataCount -= Ite.reduce.production_count;
-					DataCount += 1;
-				}
-			}
-			return { std::move(AllStep) };
+			return Translate(Tab, Steps, Datas);
 		}
 		catch (Lr0::Error::UnaccableSymbol const& Symbol)
 		{
+			auto his = Translate(Tab, Symbol.backup_step, Datas);
 			auto Str = Tab.FindSymbolString(Symbol.symbol.Index(), Symbol.symbol.IsTerminal());
-
-			std::vector<Error::ExceptionStep> re;
-			int TemporaryUsed = 0;
-			re.reserve(Symbol.backup_step.size());
-			for (auto& ite : Symbol.backup_step)
-			{
-				Error::ExceptionStep step;
-				step.Name = Tab.FindSymbolString(ite.value.Index(), ite.IsTerminal());
-				if (!step.Name.empty())
-				{
-					if (ite.IsTerminal())
-					{
-						auto& Data = Datas[ite.shift.token_index];
-						step.capture = Data.march.capture;
-						step.loc = Data.location;
-						step.is_terminal = true;
-					}
-					else {
-						step.production_mask = ite.reduce.mask;
-						//assert(TemporaryUsed < 0 || ite.reduce.production_count >= TemporaryUsed);
-						step.production_count = ite.reduce.production_count + TemporaryUsed;
-						TemporaryUsed = 0;
-						step.is_terminal = false;
-					}
-					re.push_back(step);
-				}
-				else {
-					assert(ite.IsNoTerminal());
-					TemporaryUsed += static_cast<int>(ite.reduce.production_count) - 1;
-				}
-			}
 			if (Str.empty())
 			{
 				Nfa::Location loc = (Symbol.index > 0) ? Datas[Symbol.index - 1].location : Nfa::Location{};
-				throw Error::UnacceptableSyntax{ U"$_Eof", U"$_Eof", loc, std::move(re) };
+				throw Error::UnacceptableSyntax{ U"$_Eof", U"$_Eof", loc, his.Expand() };
 			}
 			auto loc = Datas[Symbol.symbol.Index()].location;
-			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.symbol.Index()].march.capture),Datas[Symbol.symbol.Index()].location, std::move(re) };
+			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.index].march.capture),Datas[Symbol.index].location, his.Expand() };
 		}
 	}
 
@@ -224,7 +200,7 @@ namespace PineApple::Ebnf
 				Element Re(ite);
 				Re.datas = nullptr;
 				auto Result = (*Function)(FunctionBody, Re);
-				Storage.push_back({ ite.state, ite.string, std::move(Result), ite.loc });
+				Storage.push_back({ ite, std::move(Result) });
 			}
 			else {
 				Element Re(ite);
@@ -233,8 +209,8 @@ namespace PineApple::Ebnf
 				Re.datas = Storage.data() + CurrentAdress;
 				if (TotalUsed >= 1)
 				{
-					Re.loc = Re[0].location;
-					auto Tar = Re[TotalUsed - 1].location;
+					Re.loc = Re[0].loc;
+					auto Tar = Re[TotalUsed - 1].loc;
 					Re.loc.length = Tar.total_index - Re.loc.total_index + Tar.length;
 				}
 				else {
@@ -242,11 +218,53 @@ namespace PineApple::Ebnf
 				}
 				auto Result = (*Function)(FunctionBody, Re);
 				Storage.resize(CurrentAdress);
-				Storage.push_back({ Re.state, Re.string, std::move(Result), Re.loc });
+				Storage.push_back({ ite, std::move(Result) });
 			}
 		}
 		assert(Storage.size() == 1);
 		return std::move(Storage[0].data);
+	}
+
+	std::u32string ExpandExe(std::vector<std::u32string_view> ts)
+	{
+		std::u32string result;
+		static auto pattern = StrFormat::CreatePatternRef(U"{} ");
+		for (auto& ite : ts)
+		{
+			result += StrFormat::Process(pattern, ite);
+		}
+		return result;
+	}
+
+	std::vector<std::u32string> History::Expand() const
+	{
+		std::vector<std::u32string> result;
+		std::vector<std::u32string_view> all_token;
+		bool InputTerminal = false;
+		for (auto& ite : steps)
+		{
+			if (ite.IsTerminal())
+			{
+				all_token.push_back(ite.shift.capture);
+				InputTerminal = true;
+			}
+			else {
+				if (InputTerminal)
+				{
+					auto re = ExpandExe(all_token);
+					result.push_back(std::move(re));
+					InputTerminal = false;
+				}
+				assert(all_token.size() >= ite.reduce.production_count);
+				all_token.resize(all_token.size() - ite.reduce.production_count);
+				all_token.push_back(ite.string);
+				auto re = ExpandExe(all_token);
+				result.push_back(std::move(re));
+			}
+		}
+		if (!all_token.empty())
+			result.push_back(ExpandExe(all_token));
+		return result;
 	}
 
 	std::tuple<std::vector<Symbol>, std::vector<Nfa::DocumenetMarchElement>> EbnfLexer(Nfa::Table const& table, std::u32string_view& input, std::set<size_t> const& Remove, Nfa::Location& Loc)

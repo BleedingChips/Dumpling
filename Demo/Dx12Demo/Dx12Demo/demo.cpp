@@ -25,16 +25,14 @@ using namespace Dx12;
 
 namespace fs = std::filesystem;
 
-
 int main()
 {
 
-	
+	using SingleInterval = Range::SingleInterval<int>;
+	using Interval = Range::Interval<Range::SingleInterval<int>>;
 
-
-
-
-
+	Interval re({SingleInterval{1, 4}, {7,14}, {4, 7}, {}});
+	re = re - SingleInterval{8, 10};
 
 
 	using namespace Dumpling::Path;

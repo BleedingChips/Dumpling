@@ -112,6 +112,12 @@ namespace PineApple::StrFormat
 	};
 
 	template<>
+	struct Formatter<std::u32string_view>
+	{
+		std::u32string operator()(std::u32string_view par, std::u32string_view Input);
+	};
+
+	template<>
 	struct Formatter<float>
 	{
 		std::u32string operator()(std::u32string_view par, float Input);

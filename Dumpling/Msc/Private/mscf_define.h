@@ -5,8 +5,19 @@
 namespace Dumpling::Mscf
 {
 
-	using namespace::PineApple::Symbol;
+	struct ValueProperty
+	{
+		std::u32string read_format;
+		bool is_array = false;
+		size_t array_count;
+	};
 
+	struct ValueStorage
+	{
+
+	};
+
+	/*
 	LRTable DefaultTable();
 
 	
@@ -38,26 +49,42 @@ namespace Dumpling::Mscf
 		size_t parameter;
 	};
 
+	struct MakePushValueC
+	{
+		size_t parameter;
+	};
+
+	struct LinkPushValueC
+	{
+		size_t parameter;
+	};
+
 	struct ValueBuildCommand
 	{
 		void PushData(LRTable const& table, int32_t data);
 		void PushData(LRTable const& table, float data);
 		void PushData(LRTable const& table, std::u32string_view data);
+		void PushData(LRTable const& table, bool);
+		void PushData(LRTable const& table, uint32_t);
 		void PushDefaultValue(LRTable const& table, std::u32string_view type_name);
 		void MakeDefaultValue(LRTable const& table, std::u32string_view type_name, size_t count);
 		void EqualValue(LRTable const& table, std::u32string_view value_name, size_t count);
+		void MakePushValue(size_t count);
+		void LinkPushValue(size_t count);
 	private:
 		DataWrapper InsertData(std::vector<std::byte> const& data);
 		using Command = std::variant<
 			PushDataC,
 			PushDefaultValueC,
 			MakeDefaultValueC,
-			EqualValueC
+			EqualValueC,
+			MakePushValueC,
+			LinkPushValueC
 		>;
 		std::vector<Command> commands;
 		std::vector<std::byte> datas;
 	};
 
 	ValueBuildCommand DefaultCommand(LRTable const& Table);
-
+	*/
 }

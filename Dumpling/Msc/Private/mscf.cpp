@@ -30,133 +30,104 @@ namespace Dumpling::Mscf
 	mscf translate(std::u32string const& code)
 	{
 		auto& Mref = MscfEbnfInstance();
+		CommmandList commands;
+		try {
+			auto History = Ebnf::Process(MscfEbnfInstance(), code);
+			auto P = History.Expand();
 
-		auto History = Ebnf::Process(MscfEbnfInstance(), code);
-		std::map<std::u32string_view, VariableDesc> varables;
-
-		auto table = DefaultTable();
-		auto command = DefaultCommand(table);
-
-
-
-		Ebnf::Process(History, [&](Ebnf::Element& E) -> std::any {
-			if (E.IsTerminal())
-			{
-				switch (E.shift.mask)
+			Ebnf::Process(History, [&](Ebnf::Element& E) -> std::any {
+				if (E.IsTerminal())
 				{
-				case 0: { 
-					return StringToFloat(E.shift.capture);
+					switch (E.shift.mask)
+					{
+					case 0: {
+						return StringToFloat(E.shift.capture);
+					}
+					case 1: return StringToInt(E.shift.capture);
+					case 2: return E.shift.capture.substr(1, E.shift.capture.size() - 2);
+					case 3: return E.shift.capture.substr(2, E.shift.capture.size() - 4);
+					default: return E.shift.capture;
+					}
 				}
-				case 1: return StringToInt(E.shift.capture);
-				default: return E.shift.capture;
-				}
-			}
-			else if (E.IsNoterminal())
-			{
-				auto mask = E.reduce.mask;
-				auto count = E.reduce.production_count;
-				auto datas = E.datas;
-				switch (mask)
+				else if (E.IsNoterminal())
 				{
-				case 1: return E[0].MoveData();
-				case 2: return E[0].MoveData();
-				case 3: return {};
-				case 4: return E[0].MoveData();
-				case 5: return true;
-				case 6: return false;
-				case 7: return E[0].MoveData();
-				case 8: {
-					return {};
-				} break;
-				case 9: {
-					std::vector<std::any> AllData;
-					for (size_t i = 0; i < count; ++i)
+					auto mask = E.reduce.mask;
+					auto count = E.reduce.production_count;
+					auto datas = E.datas;
+					switch (mask)
 					{
-
-					}
-
-
-
-
-					//auto RequireType = E[0].GetData<std::u32string_view>();
-					//std::vector<std::any> AllData;
-					/*
-					for (size_t i = 0; i < count; ++i)
-					{
-						if(E.)
-					}
-					*/
-				}
-					/*
-				case 10: return E.GetRawData(0);
-					if (auto ptr = E.TryGetData<int>(0); ptr != nullptr)
-					{
-						ConstVariable re{ {VariableType::Base, StorageType::Int, 1, sizeof(int), alignof(int), 1, 0}};
-						*reinterpret_cast<int*>(re.datas.data()) = *ptr;
-						return re;
-					}
-					else if (auto ptr = E.TryGetData<float>(0); ptr != nullptr)
-					{
-						ConstVariable re{ {VariableType::Base, StorageType::Float, 1, sizeof(float), alignof(float), 1, 0} };
-						*reinterpret_cast<float*>(re.datas.data()) = *ptr;
-						return re;
-					}
-					else
-						assert(false);
-				} break;
-				case 5: { 
-					auto type = E.GetData<std::u32string_view>(0);
-					auto TarDesc = DefaultInsideType().find(type)->second;
-					assert(TarDesc.v_type == VariableType::Base);
-					ConstVariable Result{TarDesc};
-					switch (TarDesc.s_type)
-					{
-					case StorageType::Float: {
-						auto datas = reinterpret_cast<float*>(Result.datas.data());
-						size_t channel = 0;
-						for (size_t i = 1; i < E.reduce.production_count; ++i)
+					case 1: return E[0].MoveData();
+					case 2: return E[0].MoveData();
+					case 3: return {};
+					case 4: {
+						auto & ref = E[0];
+						if (auto p = ref.TryGetData<float>(); p != nullptr)
+							commands.Push(Command::Data::Make(U"float", *p), E.loc);
+						else if (auto p = ref.TryGetData<int32_t>(); p != nullptr)
+							commands.Push(Command::Data::Make(U"int", *p), E.loc);
+						else if (auto p = ref.TryGetData<uint32_t>(); p != nullptr)
+							commands.Push(Command::Data::Make(U"uint", *p), E.loc);
+						else if (auto p = ref.TryGetData<std::u32string_view>(); p != nullptr)
+							commands.Push(Command::Data::Make(U"string", *p), E.loc);
+						else
+							assert(false);
+						return {};
+					} break;
+					case 5:{
+						commands.Push(Command::Data::Make(U"bool", true), E.loc);
+						return {};
+					} break;
+					case 6: {
+						commands.Push(Command::Data::Make(U"bool", false), E.loc);
+						return {};
+					} break;
+					case 8 :{
+						auto id = E[0].GetData<std::u32string_view>();
+						size_t index = 0;
+						for(size_t i = 1; i < E.reduce.production_count; ++i)
+							if(E[i].IsNoterminal())
+								++index;
+						commands.Push(Command::MakeNoNameValue{index}, E.loc);
+						return {};
+					} break;
+					case 19:{
+						size_t index = 0;
+						for (size_t i = 0; i < E.reduce.production_count; ++i)
+							if (E[i].IsNoterminal())
+								++index;
+						commands.Push(Command::LinkNoNameValue{ index }, E.loc);
+					} break;
+					case 20:{ return ValueProperty{{}, true, 0}; } break;
+					case 21:{ return ValueProperty{{}, true, E[1].GetData<size_t>()}; } break;
+					case 22:{ return ValueProperty{{}, false}; }
+					case 9:{
+						std::array<std::u32string_view, 3> ids;
+						ValueProperty ap;
+						size_t index = 0;
+						for (auto& ite : E)
 						{
-							if (auto pt = E.TryGetData<ConstVariable>(i); pt != nullptr)
-							{
-								if (pt->desc.v_type != VariableType::Base)
-									assert(false);
-								if (pt->desc.channel + channel > Result.desc.channel)
-									assert(false);
-								auto re = ConstVariableToFloat(*pt);
-								for (size_t i = 0; i < pt->desc.channel; ++i)
-									datas[channel++] = re[i];
-							}
+							if(ite.string == U"Id")
+								ids[index++] = ite.shift.capture;
+							else if(ite.string == U"<ArrayProperty>")
+								ap = ite.GetData<ValueProperty>();
+						}
+						if (index == 2)
+						{
+							return std::tuple<std::u32string_view, std::u32string_view, ValueProperty>();
 						}
 					} break;
-					case StorageType::Int: {
-						auto datas = reinterpret_cast<int*>(TarDesc.channel);
-						size_t channel = 0;
-						for (size_t i = 1; i < E.reduce.production_count; ++i)
-						{
-							if (auto pt = E.TryGetData<ConstVariable>(i); pt != nullptr)
-							{
-								if (pt->desc.v_type != VariableType::Base)
-									assert(false);
-								if (pt->desc.channel + channel > Result.desc.channel)
-									assert(false);
-								auto re = ConstVariableToInt(*pt);
-								for (size_t i = 0; i < pt->desc.channel; ++i)
-									datas[channel++] = re[i];
-							}
-						}
-					} break;
-					default:
-						break;
-						
+					default: return {};
 					}
-					return Result;
-					
-				} break;
-				*/
 				}
-			}
+				return {};
+			});
 			return {};
-		});
+		}
+		catch (Ebnf::Error::UnacceptableSyntax& US)
+		{
+			volatile int i = 0;
+		}
+		
 		return {};
 	}
 

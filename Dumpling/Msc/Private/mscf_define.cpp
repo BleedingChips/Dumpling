@@ -2,7 +2,7 @@
 #include <array>
 namespace Dumpling::Mscf
 {
-
+	/*
 	void AddInsideType(LRTable& Table, std::u32string_view const* member_name, std::u32string_view const* name, size_t count)
 	{
 		auto mask = Table.InsertType(name[0], {});
@@ -29,6 +29,7 @@ namespace Dumpling::Mscf
 			AddInsideType(res, member_name.data(), uint_name.data(), 4);
 			auto i_mask = res.FindType(U"int");
 			auto str_mask = res.InsertType(U"str", {});
+			res.InsertType(U"bool", {});
 			res.InsertType(U"Sampler", { LRTable::MakeValue(str_mask, U"type"), LRTable::MakeValue(i_mask, U"lod_bisa") });
 			res.InsertType(U"StructureBuffer", {});
 			res.InsertType(U"RWStructureBuffer", {});
@@ -63,6 +64,14 @@ namespace Dumpling::Mscf
 		commands.push_back(PushDataC{ite, datas });
 	}
 
+	void ValueBuildCommand::PushData(LRTable const& table, uint32_t data)
+	{
+		auto datas = InsertData(ToData(data));
+		auto ite = table.FindType(U"uint");
+		assert(ite);
+		commands.push_back(PushDataC{ ite, datas });
+	}
+
 	void ValueBuildCommand::PushData(LRTable const& table, float data)
 	{
 		auto datas = InsertData(ToData(data));
@@ -75,6 +84,14 @@ namespace Dumpling::Mscf
 	{
 		auto datas = InsertData(ToData(data));
 		auto ite = table.FindType(U"str");
+		assert(ite);
+		commands.push_back(PushDataC{ ite, datas });
+	}
+
+	void ValueBuildCommand::PushData(LRTable const& table, bool data)
+	{
+		auto datas = InsertData(ToData(data));
+		auto ite = table.FindType(U"bool");
 		assert(ite);
 		commands.push_back(PushDataC{ ite, datas });
 	}
@@ -117,4 +134,14 @@ namespace Dumpling::Mscf
 		}
 		return result;
 	}
+
+	void ValueBuildCommand::MakePushValue(size_t count)
+	{
+		commands.push_back(MakePushValueC{count});
+	}
+	void ValueBuildCommand::LinkPushValue(size_t count)
+	{
+		commands.push_back(LinkPushValueC{ count });
+	}
+	*/
 }

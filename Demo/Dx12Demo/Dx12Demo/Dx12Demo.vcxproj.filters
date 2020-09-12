@@ -105,6 +105,9 @@
     <ClCompile Include="..\..\..\Dumpling\Msc\Private\mscf_define.cpp">
       <Filter>Msc\Private</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Range.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Testing.h">

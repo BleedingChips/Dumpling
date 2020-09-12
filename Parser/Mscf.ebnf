@@ -1,8 +1,8 @@
 _IGNORE := '\s+|/\*.*?\*/|//.*?\n'
-Code := '@\{[.\n]*?\}@'
+Code := '@\{[.\n]*?\}@' : [3]
 FloatNumber := '-?[0-9]+\.[0-9]+' : [0]
 IntNumber := '-?[1-9][0-9]*' : [1]
-String := '".*?[^\\]"|""'
+String := '".*?[^\\]"|""' : [2]
 Id := '[a-zA-Z_][a-zA-Z_0-9]*'
 
 %%%
@@ -13,32 +13,32 @@ $ := <Statement>
     := <Statement> ';' : [2]
     := : [3]
 
-<BaseConstValue> := IntNumber | FloatNumber : [4]
+<BaseConstValue> := IntNumber | FloatNumber | String : [4]
     := 'true' : [5]
-    := 'false': [6]
-    := String : [7]
+    := 'false' : [6]
+    := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [8]
+    := '{' [ <BaseConstValue> { ',' <BaseConstValue> } ] '}' : [19]
 
-<BaseValueNumber> := <BaseConstValue> : [8]
-    := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [9]
-    := String : [10]
+<ArrayProperty> := '[' ']' : [20]
+    := '[' IntNumber ']' : [21]
+    :=  : [22]
 
-<DefineVariable> := Id [ '<' Id '>' ] Id : [11]
-    := Id [ '<' Id '>' ] Id '[' IntNumber ']' : [12]
+<DefineVariable>  := Id [ '<' Id '>' ] Id <ArrayProperty> : [9]
 
-<DefineOrInitVariable> := <DefineVariable> [ '=' <BaseValueNumber> ] : [13]
+<DefineOrInitVariable> := <DefineVariable> [ '=' <BaseConstValue> ] : [10]
 
-<StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [14]
+<StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [11]
 
-<MateDateElement> := Id [ '=' <BaseValueNumber> ] : [15]
+<MateDateElement> := Id [ '=' <BaseConstValue> ] : [12]
 
-<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [16]
+<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [13]
 
-<PropertyDefine> := <PropertyDefine> <MateDate> '{' <PropertyDefine> '}' : [17]
-    := <PropertyDefine> <MateDate> <DefineOrInitVariable> ';' : [18]
-    := <PropertyDefine> ';' : [19]
-    := : [20]
+<PropertyDefine> := <PropertyDefine> <MateDate> '{' <PropertyDefine> '}' : [14]
+    := <PropertyDefine> <MateDate> <DefineOrInitVariable> ';' : [15]
+    := <PropertyDefine> ';' : [16]
+    := : [17]
 
-<PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [21]
+<PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [18]
 
 /*
 

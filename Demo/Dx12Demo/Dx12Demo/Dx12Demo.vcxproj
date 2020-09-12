@@ -142,6 +142,7 @@
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Ebnf.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Lr0.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Nfa.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Range.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\StrFormat.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Symbol.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Potato\Private\tool.cpp" />
