@@ -5,6 +5,10 @@
 #include <string_view>
 namespace PineApple::Nfa
 {
+
+	using Interval = Table::Interval;
+	using Segment = Table::Segment;
+
 	std::optional<MarchElement> Consume(Table const& Ref, std::u32string_view String)
 	{
 		std::vector<std::tuple<size_t, size_t, std::u32string_view>> search_stack;
@@ -30,7 +34,7 @@ namespace PineApple::Nfa
 					auto* edge_ref = Ref.ComsumeEdge.data() + i1;
 					for (size_t i = 0; i < i2; ++i)
 					{
-						if (Ref.ComsumeEdge[i + i1].inside(Input))
+						if (Ref.ComsumeEdge[i + i1].IsInclude(Input))
 						{
 							search_stack.push_back({ i3, 0, {code.data() + 1, code.size() - 1} });
 							ForceBreak = true;
@@ -183,71 +187,59 @@ namespace PineApple::Nfa
 		return rex_lr0;
 	}
 
-	std::tuple<T, Table::RangeSet> RexLexerTranslater(std::u32string_view::const_iterator& begin, std::u32string_view::const_iterator end)
+	std::tuple<T, Interval> RexLexerTranslater(std::u32string_view::const_iterator& begin, std::u32string_view::const_iterator end)
 	{
-		using RangeSet = Table::RangeSet;
 		assert(begin != end);
 		char32_t input = *(begin++);
 		switch (input)
 		{
-		case U'-':return { T::Min, RangeSet({input, input + 1}) };
-		case U'[': return { T::SquareBracketsLeft, RangeSet({input, input + 1}) };
-		case U']':return  {T::SquareBracketsRight, RangeSet({input, input + 1}) };
-		case U'(': return  {T::ParenthesesLeft , RangeSet({input, input + 1}) };
-		case U')':return {T::ParenthesesRight, RangeSet({input, input + 1}) };
-		case U'*': return {T::Mulity, RangeSet({input, input + 1}) };
-		case U'?':return {T::Question, RangeSet({input, input + 1}) };
-		case U'.': return { T::Char, RangeSet({1, std::numeric_limits<char32_t>::max()}) };
-		case U'|':return {T::Or, RangeSet({input, input + 1}) };
-		case U'+':return {T::Add, RangeSet({input, input + 1}) };
-		case U'^':return {T::Not, RangeSet({input, input + 1}) };
+		case U'-':return { T::Min, Interval({input, input + 1}) };
+		case U'[': return { T::SquareBracketsLeft, Interval({input, input + 1}) };
+		case U']':return  {T::SquareBracketsRight, Interval({input, input + 1}) };
+		case U'(': return  {T::ParenthesesLeft , Interval({input, input + 1}) };
+		case U')':return {T::ParenthesesRight, Interval({input, input + 1}) };
+		case U'*': return {T::Mulity, Interval({input, input + 1}) };
+		case U'?':return {T::Question, Interval({input, input + 1}) };
+		case U'.': return { T::Char, Interval({1, std::numeric_limits<char32_t>::max()}) };
+		case U'|':return {T::Or, Interval({input, input + 1}) };
+		case U'+':return {T::Add, Interval({input, input + 1}) };
+		case U'^':return {T::Not, Interval({input, input + 1}) };
 		case U'\\':
 		{
 			assert(begin != end);
 			input = *(begin++);
 			switch (input)
 			{
-			case U'd': return { T::Char, RangeSet({ U'0', U'9' + 1 }) };
+			case U'd': return { T::Char, Interval({ U'0', U'9' + 1 }) };
 			case U'D': {
-				RangeSet Tem({ U'0', U'9' + 1 });
-				RangeSet total({ 1, std::numeric_limits<char32_t>::max() });
-				Tem.intersection_cull(total);
-				return { T::Char, std::move(total) };
+				Interval Tem({ {1, U'0'}, {U'9' + 1, std::numeric_limits<char32_t>::max()} });
+				return { T::Char, std::move(Tem) };
 			};
-			case U'f': return { T::Char, RangeSet({ U'\f' }) };
-			case U'n': return { T::Char, RangeSet({ U'\n' }) };
-			case U'r': return { T::Char, RangeSet({ U'\r' }) };
-			case U't': return { T::Char, RangeSet({ U'\t' }) };
-			case U'v': return { T::Char, RangeSet({ U'\v' }) };
+			case U'f': return { T::Char, Interval({ U'\f', U'\f' + 1 }) };
+			case U'n': return { T::Char, Interval({ U'\n', U'\n' + 1 }) };
+			case U'r': return { T::Char, Interval({ U'\r', U'\r' + 1 }) };
+			case U't': return { T::Char, Interval({ U'\t', U'\t' + 1 }) };
+			case U'v': return { T::Char, Interval({ U'\v', U'\v' + 1 }) };
 			case U's':
 			{
-				RangeSet tem({ 1, 33 });
-				tem |= 127;
-				return { T::Char, tem };
+				Interval tem({{ 1, 33 }, {127, 128}});
+				return { T::Char, std::move(tem) };
 			}
 			case U'S':
 			{
-				RangeSet tem({ 1, 33 });
-				tem |= RangeSet::Range{ 127, 128 };
-				RangeSet total = RangeSet::Range{ 1, std::numeric_limits<char32_t>::max() };
-				auto re = tem.intersection_cull(total);
-				return { T::Char, total };
+				Interval tem({{33, 127}, {128, std::numeric_limits<char32_t>::max()}});
+				return { T::Char, std::move(tem) };
 			}
 			case U'w':
 			{
-				RangeSet tem({ U'a', U'z' + 1 });
-				tem |= RangeSet({ U'A', U'Z' + 1 });
-				tem |= RangeSet({ U'_', U'_' + 1 });
-				return { T::Char, tem };
+				Interval tem({{ U'a', U'z' + 1 }, { U'A', U'Z' + 1 }, { U'_', U'_' + 1}});
+				return { T::Char, std::move(tem) };
 			}
 			case U'W':
 			{
-				RangeSet tem({ U'a', U'z' + 1 });
-				tem |= RangeSet({ U'A', U'Z' + 1 });
-				tem |= RangeSet({ U'_', U'_' + 1 });
-				RangeSet total({ 1, std::numeric_limits<char32_t>::max() });
-				tem.intersection_cull(total);
-				return { T::Char, tem };
+				Interval tem({ { U'a', U'z' + 1 }, { U'A', U'Z' + 1 }, { U'_', U'_' + 1} });
+				Interval total({ 1, std::numeric_limits<char32_t>::max() });
+				return { T::Char, total - tem };
 			}
 			case U'u':
 			{
@@ -266,28 +258,27 @@ namespace PineApple::Nfa
 					else
 						assert(false);
 				}
-				return { T::Char, RangeSet({ static_cast<char32_t>(index), static_cast<char32_t>(index) + 1 }) };
+				return { T::Char, Interval({ static_cast<char32_t>(index), static_cast<char32_t>(index) + 1 }) };
 			}
 			default:
-				RangeSet tem({ input,input + 1 });
+				Interval tem({ input,input + 1 });
 				return { T::Char, tem };
 				break;
 			}
 			break;
 		}
-
 		default:
-			return { T::Char, RangeSet(input) };
+			return { T::Char, Interval({input, input + 1}) };
 			break;
 		}
 	}
 
-	std::tuple<std::vector<Lr0::Symbol>, std::vector<Table::RangeSet>> RexLexer(std::u32string_view Input)
+	std::tuple<std::vector<Lr0::Symbol>, std::vector<Interval>> RexLexer(std::u32string_view Input)
 	{
 		auto begin = Input.begin();
 		auto end = Input.end();
 		std::vector<Lr0::Symbol> Symbols;
-		std::vector<Table::RangeSet> RangeSets;
+		std::vector<Interval> RangeSets;
 		while (begin != end)
 		{
 			auto [Sym, Rs] = RexLexerTranslater(begin, end);
@@ -307,10 +298,9 @@ namespace PineApple::Nfa
 			unacceptable_rex_error(std::u32string rex, size_t acception_state, size_t index) : rex(rex), acception_state(acception_state), index(index) {}
 			char const* what() const noexcept override;
 		};
-		using range_set = Table::RangeSet;
 
 		struct epsilon { size_t state; };
-		struct comsume { size_t state; range_set require; };
+		struct comsume { size_t state; Interval require; };
 		struct acception { size_t state; size_t acception_state; size_t acception_mask; };
 
 		using edge_t = std::variant<epsilon, comsume, acception>;
@@ -355,7 +345,6 @@ namespace PineApple::Nfa
 		else
 			result.back_construction({});
 		bool NotAble = false;
-		using RangeSet = Table::RangeSet;
 		try {
 			auto [Symbols, Datas] = RexLexer(rex);
 			auto Hist = Lr0::Process(rex_lr0(), Symbols.data(), Symbols.size());
@@ -389,35 +378,28 @@ namespace PineApple::Nfa
 						return std::move(tra.GetRawData(1));
 					}
 					case 4: {
-						return RangeSet{};
+						return Interval{};
 					}
 					case 5: {
-						auto P1 = tra.GetData<RangeSet>(0);
-						auto P2 = tra.GetData<RangeSet>(1);
-						P1 |= P2;
-						return std::move(P1);
+						auto P1 = tra.GetData<Interval>(0);
+						auto P2 = tra.GetData<Interval>(1);
+						return P1 | P2;
 					}
 					case 6: {
-						auto P1 = tra.GetData<RangeSet>(0);
-						auto P2 = tra.GetData<RangeSet>(1);
-						auto P3 = tra.GetData<RangeSet>(3);
-
-						assert(!P2.empty() && !P3.empty());
-
-						auto min = P2[0].left;
-						auto big = P3[P3.size() - 1].right;
-						P1 |= RangeSet::Range{ min, big };
-						return std::move(P1);
+						auto P1 = tra.GetData<Interval>(0);
+						auto P2 = tra.GetData<Interval>(1);
+						auto P3 = tra.GetData<Interval>(3);
+						assert(P2 && P3);
+						return P1 | (P2.Maximum().Maximum(P3.Maximum()));
 					}
 					case 7 : {
-						auto P1 = tra.GetData<RangeSet>(0);
-						auto P2 = tra.GetData<RangeSet>(1);
-						P1 |= P2;
+						auto P1 = tra.GetData<Interval>(0);
+						auto P2 = tra.GetData<Interval>(1);
+						P1 = ( P1 | P2);
 						if (NotAble)
 						{
-							RangeSet total({ 1, std::numeric_limits<char32_t>::max() });
-							P1.intersection_cull(total);
-							P1 = std::move(total);
+							Interval total({ 1, std::numeric_limits<char32_t>::max() });
+							P1 = total - P1;
 						}
 						auto i1s = result.back_construction({});
 						auto i2s = result.back_construction({});
@@ -425,12 +407,11 @@ namespace PineApple::Nfa
 						return std::tuple<size_t, size_t>(i1s, i2s);
 					}
 					case 8: {
-						auto P1 = tra.GetData<RangeSet>(0);
+						auto P1 = tra.GetData<Interval>(0);
 						if (NotAble)
 						{
-							RangeSet total({ 1, std::numeric_limits<char32_t>::max() });
-							P1.intersection_cull(total);
-							P1 = std::move(total);
+							Interval total({ 1, std::numeric_limits<char32_t>::max() });
+							P1 = total - P1;
 						}
 						auto i1s = result.back_construction({});
 						auto i2s = result.back_construction({});
@@ -491,7 +472,7 @@ namespace PineApple::Nfa
 						return std::tuple<size_t, size_t>(s1, s2);
 					}
 					case 12: {
-						auto P1 = tra.GetData<RangeSet>(0);
+						auto P1 = tra.GetData<Interval>(0);
 						auto i1s = result.back_construction({});
 						auto i2s = result.back_construction({});
 						result[i1s].edge.push_back(comsume{ i2s, std::move(P1) });
@@ -528,7 +509,7 @@ namespace PineApple::Nfa
 		std::vector<nfa::edge_t> result;
 		std::vector<nfa::edge_t> o_result;
 		std::map<std::vector<size_t>, size_t> mapping;
-		nfa::range_set UsedRange;
+		Interval UsedRange;
 		for (auto ite = input.begin(); ite != input.end();)
 		{
 			if (std::holds_alternative<nfa::acception>(*ite))
@@ -550,30 +531,33 @@ namespace PineApple::Nfa
 					if (!std::holds_alternative<nfa::comsume>(*ite2))
 						break;
 				}
-				std::map<std::vector<size_t>, nfa::range_set> Mapping;
+				std::map<std::vector<size_t>, Interval> Mapping;
 				for (auto ite3 = ite; ite3 != ite2; ++ite3)
 				{
 					auto& ref = std::get<nfa::comsume>(*ite3);
 					auto cur_range = ref.require;
-					cur_range -= UsedRange;
+					cur_range = cur_range - UsedRange;
 					for (auto& ite4 : Mapping)
 					{
-						if (cur_range.empty())
+						if (!cur_range)
 							break;
-						auto re = cur_range.intersection_cull(ite4.second);
-						if (!re.empty())
+						auto re = (cur_range & ite4.second);
+						ite4.second = ite4.second - re;
+						cur_range = cur_range - re;
+						//auto re = cur_range.intersection_cull(ite4.second);
+						if (re)
 						{
 							std::vector<size_t> states = ite4.first;
 							states.push_back(ref.state);
 							Mapping.insert({ std::move(states), std::move(re) });
 						}
 					}
-					if (!cur_range.empty())
+					if (cur_range)
 						Mapping.insert({ {ref.state}, std::move(cur_range) });
 				}
 				for (auto& ite : Mapping)
 				{
-					if (!ite.second.empty())
+					if (ite.second)
 					{
 						auto find = mapping.insert({ ite.first, mapping.size() });
 						if (!MeetAcception)
@@ -604,7 +588,7 @@ namespace PineApple::Nfa
 			assert(input.size() > *ite);
 			search_stack.push_back({ *ite, 0 });
 		}
-		nfa::range_set comsumed_input;
+		Interval comsumed_input;
 		std::optional<size_t> MeetAcception;
 		while (!search_stack.empty())
 		{
@@ -799,12 +783,12 @@ namespace PineApple::StrFormat
 		}
 	};
 
-	template<> struct Formatter<Nfa::Table::RangeSet::Range>
+	template<> struct Formatter<Nfa::Table::Interval::Segment>
 	{
-		std::u32string operator()(std::u32string_view, Nfa::Table::RangeSet::Range RS)
+		std::u32string operator()(std::u32string_view, Nfa::Table::Interval::Segment RS)
 		{
 			static auto pat = CreatePatternRef(U"{{0x{-hex}, 0x{-hex}}}");
-			return Process(pat, static_cast<uint32_t>(RS.left), static_cast<uint32_t>(RS.right));
+			return Process(pat, static_cast<uint32_t>(RS.Start().Original()), static_cast<uint32_t>(RS.End().Original()));
 		}
 	};
 

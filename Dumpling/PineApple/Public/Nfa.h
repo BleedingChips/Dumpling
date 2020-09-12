@@ -1,5 +1,5 @@
 #pragma once
-#include "Range.h"
+#include "Interval.h"
 #include <string_view>
 #include <variant>
 #include <optional>
@@ -9,13 +9,16 @@ namespace PineApple::Nfa
 {
 	struct Table
 	{
-		using RangeSet = Range::Set<char32_t>;
+
+		using Interval = ::PineApple::Interval<char32_t>;
+		using Segment = typename Interval::Segment;
+
 		enum class EdgeType : size_t
 		{
 			Acception,
 			Comsume,
 		};
-		std::vector<RangeSet::Range> ComsumeEdge;
+		std::vector<Segment> ComsumeEdge;
 		std::vector<std::tuple<size_t, size_t, size_t, size_t>> Edges;
 		std::vector<std::tuple<size_t, size_t>> Nodes;
 	};
@@ -35,6 +38,8 @@ namespace PineApple::Nfa
 
 	std::optional<MarchElement> Consume(Table const& Ref, std::u32string_view String);
 	std::vector<MarchElement> Process(Table const& Ref, std::u32string_view String);
+
+
 
 	struct Location {
 		size_t start_index = 0;

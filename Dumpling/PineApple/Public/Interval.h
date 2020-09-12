@@ -2,12 +2,9 @@
 #include <vector>
 #include <assert.h>
 #include <optional>
-#include <limits>
 #include <tuple>
 #include <algorithm>
-#undef small
-#undef max
-namespace PineApple::Range
+namespace PineApple
 {
 
 	enum class RelationShip
@@ -29,15 +26,18 @@ namespace PineApple::Range
 	};
 
 	template<typename Storage, typename Less = std::less<Storage>>
-	struct Point : Storage
+	struct Point
 	{
-		using Storage::Storage;
+		Storage storage;
+		Point(Storage p) : storage(std::move(p)) {}
 		Point(Point&& p) = default;
 		Point(Point const&) = default;
 		Point& operator= (Point const&) = default;
 		Point& operator= (Point &&) = default;
-		bool operator< (Point const& o) const noexcept{return Less{}(*this, o);}
-		bool operator<= (Point const& o) const noexcept { return Less{}(*this, o) || *this == o; }
+		bool operator< (Point const& o) const noexcept{return Less{}(storage, o.storage);}
+		bool operator<= (Point const& o) const noexcept { return Less{}(storage, o.storage) || storage == o.storage; }
+		Storage& Original() {return storage;}
+		Storage const& Original() const { return storage; }
 	};
 
 	namespace Implement
@@ -62,26 +62,28 @@ namespace PineApple::Range
 		struct no_detection_t {};
 	}
 
-	template<typename PointT>
-	struct SingleInterval
+	template<typename PointT, typename Less = std::less<PointT>>
+	struct Segment
 	{
-		SingleInterval(PointT p1, PointT p2) : storage(std::tuple<PointT, PointT>{std::move(p1), std::move(p2)}){
+		using Point = Point<PointT, Less>;
+
+		Segment(Point p1, Point p2) : storage(std::tuple<Point, Point>{std::move(p1), std::move(p2)}){
 			auto& [p1c, p2c] = *storage;
 			if(!(p1c < p2c))
 				std::swap(p1c, p2c);
 		}
-		SingleInterval(PointT p1, PointT p2, Implement::no_detection_t) : storage(std::tuple<PointT, PointT>{ std::move(p1), std::move(p2) }) {}
-		SingleInterval() = default;
-		SingleInterval(SingleInterval const&) = default;
-		SingleInterval(SingleInterval &&) = default;
-		SingleInterval& operator=(SingleInterval const&) = default;
-		SingleInterval& operator=(SingleInterval &&) = default;
+		Segment(Point p1, Point p2, Implement::no_detection_t) : storage(std::tuple<Point, Point>{ std::move(p1), std::move(p2) }) {}
+		Segment() = default;
+		Segment(Segment const&) = default;
+		Segment(Segment &&) = default;
+		Segment& operator=(Segment const&) = default;
+		Segment& operator=(Segment &&) = default;
 
-		PointT const& Start() const { return std::get<0>(*storage); }
-		PointT const& End() const { return std::get<1>(*storage); }
+		Point const& Start() const { return std::get<0>(*storage); }
+		Point const& End() const { return std::get<1>(*storage); }
 
 		
-		RelationShip Relationship(SingleInterval const& p) const { 
+		RelationShip Relationship(Segment const& p) const { 
 			return Implement::Compress(
 				Implement::Compress(Start(), p.Start()), 
 				Implement::Compress(Start(), p.End()), 
@@ -89,12 +91,14 @@ namespace PineApple::Range
 				Implement::Compress(End(), p.End())
 				);
 		}
-		bool IsInclude(PointT const& si) const { Start() <= si && si < End(); }
+
+		bool IsInclude(Point const& si) const { return Start() <= si && si < End(); }
+
 		operator bool() const { return storage.has_value(); }
 
-		SingleInterval Maximum(SingleInterval const& si, Implement::no_detection_t) const;
+		Segment Maximum(Segment const& si, Implement::no_detection_t) const;
 
-		SingleInterval Maximum(SingleInterval const& si) const
+		Segment Maximum(Segment const& si) const
 		{
 			if (*this)
 			{
@@ -107,17 +111,17 @@ namespace PineApple::Range
 				return si;
 		}
 
-		SingleInterval Intersection(SingleInterval const& si, Implement::no_detection_t) const;
+		Segment Intersection(Segment const& si, Implement::no_detection_t) const;
 
-		SingleInterval Intersection(SingleInterval const& si) const {
+		Segment Intersection(Segment const& si) const {
 			if (*this && si)
 				return Intersection(si, Implement::no_detection_t{});
 			return {};
 		}
 
-		SingleInterval Union(SingleInterval const& si, Implement::no_detection_t) const;
+		Segment Union(Segment const& si, Implement::no_detection_t) const;
 
-		SingleInterval Union(SingleInterval const& si) const {
+		Segment Union(Segment const& si) const {
 			if (*this)
 			{
 				if (si)
@@ -129,78 +133,46 @@ namespace PineApple::Range
 				return si;
 		}
 
-		std::tuple<SingleInterval, SingleInterval> Cut(SingleInterval const& si, Implement::no_detection_t) const;
+		std::tuple<Segment, Segment> Cut(Segment const& si, Implement::no_detection_t) const;
 
-		std::tuple<SingleInterval, SingleInterval> Cut(SingleInterval const& si) const	{
+		std::tuple<Segment, Segment> Cut(Segment const& si) const	{
 			if (*this && si)
 				return Cut(si, Implement::no_detection_t{});
 			return {*this, {}};
 		}
 
-		SingleInterval operator&(SingleInterval const& si) const { return Intersection(si); }
+		Segment operator&(Segment const& si) const { return Intersection(si); }
 
-		SingleInterval operator|(SingleInterval const& si) const { return Union(si); }
-		std::tuple<SingleInterval, SingleInterval> operator-(SingleInterval const& si) const {return Cut(si);}
+		Segment operator|(Segment const& si) const { return Union(si); }
+		std::tuple<Segment, Segment> operator-(Segment const& si) const {return Cut(si);}
 
 	public:
-		std::optional<std::tuple<PointT, PointT>> storage;
+		std::optional<std::tuple<Point, Point>> storage;
 	};
 
-	template<typename SingleIntervalT, template<typename Type> class Allocator = std::allocator>
-	struct Interval;
-
-	template<typename PointT, template<typename Type> class Allocator>
-	struct Interval<SingleInterval<PointT>, Allocator>
-	{
-		using SingleInterval = SingleInterval<PointT>;
-
-		using StorageType = std::vector<SingleInterval, Allocator<SingleInterval>>;
-
-		Interval() = default;
-		Interval(Interval&&) = default;
-		Interval(Interval const&) = default;
-		Interval& operator=(Interval&&) = default;
-		Interval& operator=(Interval const&) = default;
-
-		Interval(SingleInterval const& si) : Interval(si ? Interval({si}, Implement::no_detection_t{}) : Interval()){}
-		Interval(StorageType st, Implement::no_detection_t) : single_intervals(std::move(st)){};
-		Interval(StorageType st);
-		Interval operator|(SingleInterval const& inter) const { return *this | Interval{ inter }; };
-		Interval operator|(Interval const& inter) const ;
-		Interval operator& (SingleInterval const& inter) const { return *this & Interval{ inter }; };
-		Interval operator& (Interval const& inter) const;
-		Interval operator- (SingleInterval const& inter) const { return *this - Interval{ inter }; };
-		Interval operator- (Interval const& inter) const;
-		bool CheckInclude(SingleInterval const&) const;
-		size_t size() const { return single_intervals.size();}
-	private:
-		StorageType single_intervals;
-	};
-
-
-	template<typename PointT>
-	auto SingleInterval<PointT>::Intersection(SingleInterval const& si, Implement::no_detection_t) const -> SingleInterval {
+	template<typename PointT, typename Less>
+	auto Segment<PointT, Less>::Intersection(Segment const& si, Implement::no_detection_t) const -> Segment {
 		assert(*this && si);
 		auto relation = Relationship(si);
 		switch (relation)
 		{
-		case PineApple::Range::RelationShip::Right:
-		case PineApple::Range::RelationShip::Left:
-		case PineApple::Range::RelationShip::RightEqual:
-		case PineApple::Range::RelationShip::LeftEqual:
+		case RelationShip::Right:
+		case RelationShip::Left:
+		case RelationShip::RightEqual:
+		case RelationShip::LeftEqual:
 			return {};
-		case PineApple::Range::RelationShip::LeftIntersect: 
+		case RelationShip::LeftIntersect: 
 			return { si.Start(), End(), Implement::no_detection_t{} };
-		case PineApple::Range::RelationShip::BeInclude:
-		case PineApple::Range::RelationShip::BeIncludeLeftEqual:
-		case PineApple::Range::RelationShip::BeIncludeRightEqual:
-		case PineApple::Range::RelationShip::Equal:
+		case RelationShip::BeInclude:
+		case RelationShip::BeIncludeLeftEqual:
+		case RelationShip::BeIncludeRightEqual:
+		case RelationShip::Equal:
 			return *this;
-		case PineApple::Range::RelationShip::Include:
-		case PineApple::Range::RelationShip::IncludeLeftEqual:
-		case PineApple::Range::RelationShip::IncludeRightEqual:
+		case RelationShip::Include:
+		case RelationShip::IncludeLeftEqual:
+		case RelationShip::IncludeRightEqual:
 			return si;
-		case PineApple::Range::RelationShip::RightIntersect:
+		case RelationShip::RightIntersect:
 			return { si.End(), Start(), Implement::no_detection_t{} };
 		default:
 			assert(false);
@@ -208,30 +180,59 @@ namespace PineApple::Range
 		}
 	}
 
-	template<typename PointT>
-	auto SingleInterval<PointT>::Union(SingleInterval const& si, Implement::no_detection_t) const -> SingleInterval {
+	template<typename PointT, typename Less>
+	auto Segment<PointT, Less>::Maximum(Segment const& si, Implement::no_detection_t) const -> Segment {
 		assert(*this && si);
 		auto relation = Relationship(si);
 		switch (relation)
 		{
-		case PineApple::Range::RelationShip::Left:
-		case PineApple::Range::RelationShip::Right:
-			return {};
-		case PineApple::Range::RelationShip::LeftIntersect:
-		case PineApple::Range::RelationShip::LeftEqual:
-			return { Start(), si.End(), Implement::no_detection_t{} };
-		case PineApple::Range::RelationShip::BeInclude:
-		case PineApple::Range::RelationShip::BeIncludeLeftEqual:
-		case PineApple::Range::RelationShip::BeIncludeRightEqual:
+		case RelationShip::Left:
+		case RelationShip::LeftEqual:
+		case RelationShip::LeftIntersect:
+			return {Start(), si.End(), Implement::no_detection_t{}};
+		case RelationShip::Right:
+		case RelationShip::RightEqual:
+		case RelationShip::RightIntersect:
+			return {si.Start(), End(), Implement::no_detection_t{}};
+		case RelationShip::BeInclude:
+		case RelationShip::BeIncludeLeftEqual:
+		case RelationShip::BeIncludeRightEqual:
+		case RelationShip::Equal:
+			return *this;
+		case RelationShip::Include:
+		case RelationShip::IncludeLeftEqual:
+		case RelationShip::IncludeRightEqual:
 			return si;
-		case PineApple::Range::RelationShip::Include:
-		case PineApple::Range::RelationShip::IncludeLeftEqual:
-		case PineApple::Range::RelationShip::IncludeRightEqual:
-		case PineApple::Range::RelationShip::Equal:
+		default:
+			assert(false);
+			return {};
+		}
+	}
+
+	template<typename PointT, typename Less>
+	auto Segment<PointT, Less>::Union(Segment const& si, Implement::no_detection_t) const -> Segment {
+		assert(*this && si);
+		auto relation = Relationship(si);
+		switch (relation)
+		{
+		case RelationShip::Left:
+		case RelationShip::Right:
+			return {};
+		case RelationShip::LeftIntersect:
+		case RelationShip::LeftEqual:
+			return { Start(), si.End(), Implement::no_detection_t{} };
+		case RelationShip::BeInclude:
+		case RelationShip::BeIncludeLeftEqual:
+		case RelationShip::BeIncludeRightEqual:
+			return si;
+		case RelationShip::Include:
+		case RelationShip::IncludeLeftEqual:
+		case RelationShip::IncludeRightEqual:
+		case RelationShip::Equal:
 			return *this;
 		
-		case PineApple::Range::RelationShip::RightIntersect:
-		case PineApple::Range::RelationShip::RightEqual:
+		case RelationShip::RightIntersect:
+		case RelationShip::RightEqual:
 			return { si.Start(), End(), Implement::no_detection_t{} };
 		default:
 			assert(false);
@@ -239,42 +240,84 @@ namespace PineApple::Range
 		}
 	}
 
-	template<typename PointT>
-	auto SingleInterval<PointT>::Cut(SingleInterval const& si, Implement::no_detection_t) const -> std::tuple<SingleInterval, SingleInterval> {
+	template<typename PointT, typename Less>
+	auto Segment<PointT, Less>::Cut(Segment const& si, Implement::no_detection_t) const -> std::tuple<Segment, Segment> {
 		assert(*this && si);
 		auto relation = Relationship(si);
 		switch (relation)
 		{
-		case PineApple::Range::RelationShip::Left:
-		case PineApple::Range::RelationShip::LeftEqual:
-		case PineApple::Range::RelationShip::RightEqual:
-		case PineApple::Range::RelationShip::Right:
+		case RelationShip::Left:
+		case RelationShip::LeftEqual:
+		case RelationShip::RightEqual:
+		case RelationShip::Right:
 			return { *this, {} };
-		case PineApple::Range::RelationShip::BeInclude:
-		case PineApple::Range::RelationShip::BeIncludeLeftEqual:
-		case PineApple::Range::RelationShip::BeIncludeRightEqual:
-		case PineApple::Range::RelationShip::Equal:
+		case RelationShip::BeInclude:
+		case RelationShip::BeIncludeLeftEqual:
+		case RelationShip::BeIncludeRightEqual:
+		case RelationShip::Equal:
 			return { {}, {} };
-		case PineApple::Range::RelationShip::Include:
+		case RelationShip::Include:
 			return { {Start(), si.Start(), Implement::no_detection_t{}}, {si.End(), End(), Implement::no_detection_t{}} };
-		case PineApple::Range::RelationShip::RightIntersect:
-		case PineApple::Range::RelationShip::IncludeLeftEqual:
+		case RelationShip::RightIntersect:
+		case RelationShip::IncludeLeftEqual:
 			return { {si.End(), End(), Implement::no_detection_t{}}, {} };
-		case PineApple::Range::RelationShip::LeftIntersect:
-		case PineApple::Range::RelationShip::IncludeRightEqual:
+		case RelationShip::LeftIntersect:
+		case RelationShip::IncludeRightEqual:
 			return { {Start(), si.Start(), Implement::no_detection_t{}}, {} };
-		case PineApple::Range::RelationShip::Unknow:
+		case RelationShip::Unknow:
 		default:
 			assert(false);
 			return { {}, {} };
 		}
 	}
 
-	template<typename PointT, template<typename Type> class Allocator>
-	Interval<SingleInterval<PointT>, Allocator>::Interval(StorageType st) : single_intervals(std::move(st))
+	template<typename PointT, typename Less = std::less<PointT>, template<typename Type> class Allocator = std::allocator>
+	struct Interval
 	{
-		single_intervals.erase(std::remove_if(single_intervals.begin(), single_intervals.end(), [](SingleInterval const& si) { return !si; }), single_intervals.end());
-		std::sort(single_intervals.begin(), single_intervals.end(), [](SingleInterval const& s1, SingleInterval const& s2) { return s1.Start() < s2.Start(); });
+		using Segment = Segment<PointT, Less>;
+		using Point = typename Segment::Point;
+
+		using StorageType = std::vector<Segment, Allocator<Segment>>;
+
+		Interval() = default;
+		Interval(Interval&&) = default;
+		Interval(Interval const&) = default;
+		Interval& operator=(Interval&&) = default;
+		Interval& operator=(Interval const&) = default;
+
+		Interval(Segment const& si) : Interval(si ? Interval({ si }, Implement::no_detection_t{}) : Interval()) {}
+		Interval(StorageType st, Implement::no_detection_t) : single_intervals(std::move(st)) {};
+		Interval(StorageType st);
+		Interval operator|(Segment const& inter) const { return *this | Interval{ inter }; };
+		Interval operator|(Interval const& inter) const;
+		Interval operator& (Segment const& inter) const { return *this & Interval{ inter }; };
+		Interval operator& (Interval const& inter) const;
+		Interval operator- (Segment const& inter) const { return *this - Interval{ inter }; };
+		Interval operator- (Interval const& inter) const;
+		bool IsInclude(Segment const&) const;
+		size_t size() const { return single_intervals.size(); }
+		operator bool() const { return !single_intervals.empty(); }
+		Segment Maximum() const {
+			switch (single_intervals.size())
+			{
+			case 0: return {};
+			case 1: return *single_intervals.begin();
+			default: return { single_intervals.begin()->Start(), single_intervals.rbegin()->End(), Implement::no_detection_t{} };
+			}
+		}
+		auto begin() {return single_intervals.begin();}
+		auto begin() const { return single_intervals.begin(); }
+		auto end() { return single_intervals.end(); }
+		auto end() const { return single_intervals.end(); }
+	private:
+		StorageType single_intervals;
+	};
+
+	template<typename PointT, typename Less, template<typename Type> class Allocator>
+	Interval<PointT, Less, Allocator>::Interval(StorageType st) : single_intervals(std::move(st))
+	{
+		single_intervals.erase(std::remove_if(single_intervals.begin(), single_intervals.end(), [](Segment const& si) { return !si; }), single_intervals.end());
+		std::sort(single_intervals.begin(), single_intervals.end(), [](Segment const& s1, Segment const& s2) { return s1.Start() < s2.Start(); });
 		if (single_intervals.size() >= 2)
 		{
 			auto ite = single_intervals.begin();
@@ -294,22 +337,22 @@ namespace PineApple::Range
 				}
 			}
 		}
-		single_intervals.erase(std::remove_if(single_intervals.begin(), single_intervals.end(), [](SingleInterval const& si) { return !si; }), single_intervals.end());
+		single_intervals.erase(std::remove_if(single_intervals.begin(), single_intervals.end(), [](Segment const& si) { return !si; }), single_intervals.end());
 	}
 
-	template<typename PointT, template<typename Type> class Allocator>
-	auto Interval<SingleInterval<PointT>, Allocator>::operator|(Interval const& inter) const ->Interval
+	template<typename PointT, typename Less, template<typename Type> class Allocator>
+	auto Interval<PointT, Less, Allocator>::operator|(Interval const& inter) const ->Interval
 	{
-		std::vector<SingleInterval, Allocator<SingleInterval>> result;
+		std::vector<Segment, Allocator<Segment>> result;
 		result.reserve(size() + inter.size());
 		result.insert(result.end(), single_intervals.begin(), single_intervals.end());
 		result.insert(result.end(), inter.single_intervals.begin(), inter.single_intervals.end());
-		std::sort(result.begin(), result.end(), [](SingleInterval const& s1, SingleInterval const& s2){ return s1.Start() < s2.Start(); });
+		std::sort(result.begin(), result.end(), [](Segment const& s1, Segment const& s2){ return s1.Start() < s2.Start(); });
 		return Interval(result);
 	}
 
-	template<typename PointT, template<typename Type> class Allocator>
-	auto Interval<SingleInterval<PointT>, Allocator>::operator&(Interval const& inter) const ->Interval
+	template<typename PointT, typename Less, template<typename Type> class Allocator>
+	auto Interval<PointT, Less, Allocator>::operator&(Interval const& inter) const ->Interval
 	{
 		auto i1 = single_intervals.begin();
 		auto i1e = single_intervals.end();
@@ -318,32 +361,32 @@ namespace PineApple::Range
 		StorageType result;
 		while (i1 != i1e && i2 != i2e)
 		{
-			auto relation = i1->Relationship(i2);
+			auto relation = i1->Relationship(*i2);
 			switch (relation)
 			{
-			case PineApple::Range::RelationShip::Left:
-			case PineApple::Range::RelationShip::LeftEqual:
+			case RelationShip::Left:
+			case RelationShip::LeftEqual:
 				++i1; break;
-			case PineApple::Range::RelationShip::RightEqual:
-			case PineApple::Range::RelationShip::Right:
+			case RelationShip::RightEqual:
+			case RelationShip::Right:
 				++i2; break;
-			case PineApple::Range::RelationShip::BeInclude:
-			case PineApple::Range::RelationShip::BeIncludeLeftEqual:
+			case RelationShip::BeInclude:
+			case RelationShip::BeIncludeLeftEqual:
 				result.push_back(*i1); ++i1; break;
-			case PineApple::Range::RelationShip::BeIncludeRightEqual:
-			case PineApple::Range::RelationShip::Equal:
+			case RelationShip::BeIncludeRightEqual:
+			case RelationShip::Equal:
 				result.push_back(*i1); ++i2; ++i1; break;
-			case PineApple::Range::RelationShip::Include:
+			case RelationShip::Include:
 				result.push_back(*i2); ++i2; break;
-			case PineApple::Range::RelationShip::RightIntersect:
+			case RelationShip::RightIntersect:
 				result.push_back({i1->Start(), i2->End(), Implement::no_detection_t{}}); ++i2; break;
-			case PineApple::Range::RelationShip::IncludeLeftEqual:
+			case RelationShip::IncludeLeftEqual:
 				result.push_back(*i2); ++i2; break;
-			case PineApple::Range::RelationShip::LeftIntersect:
+			case RelationShip::LeftIntersect:
 				result.push_back({i2->Start(), i1->End(), Implement::no_detection_t{}}); ++i1; break;
-			case PineApple::Range::RelationShip::IncludeRightEqual:
+			case RelationShip::IncludeRightEqual:
 				result.push_back(*i2); ++i2; ++i1; break;
-			case PineApple::Range::RelationShip::Unknow:
+			case RelationShip::Unknow:
 			default:
 				assert(false);
 				break;
@@ -352,8 +395,8 @@ namespace PineApple::Range
 		return Interval(result, Implement::no_detection_t{});
 	}
 
-	template<typename PointT, template<typename Type> class Allocator>
-	auto Interval<SingleInterval<PointT>, Allocator>::operator-(Interval const& inter) const ->Interval
+	template<typename PointT, typename Less, template<typename Type> class Allocator>
+	auto Interval<PointT, Less, Allocator>::operator-(Interval const& inter) const ->Interval
 	{
 		auto i1 = single_intervals.begin();
 		auto i1e = single_intervals.end();
@@ -361,7 +404,7 @@ namespace PineApple::Range
 		auto i2e = inter.single_intervals.end();
 
 		StorageType result;
-		std::optional<SingleInterval> Tar;
+		std::optional<Segment> Tar;
 		while (i1 != i1e && i2 != i2e)
 		{
 			if(!Tar)
@@ -384,6 +427,10 @@ namespace PineApple::Range
 					++i2;
 				}
 			}
+			else {
+				Tar = {};
+				++i2;
+			}
 		}
 		if(Tar)
 			result.push_back(std::move(*Tar));
@@ -391,6 +438,7 @@ namespace PineApple::Range
 		return Interval(result, Implement::no_detection_t{});
 	}
 
+	/*
 	template<typename Storage, typename Less = std::less<Storage>, template<typename Type> class Allocator = std::allocator>
 	struct Set
 	{
@@ -703,5 +751,6 @@ namespace PineApple::Range
 		input.m_set.insert(input.m_set.end(), i2, set2.end());
 		return std::move(result);
 	}
+	*/
 
 }

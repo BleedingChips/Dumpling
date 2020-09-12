@@ -105,7 +105,7 @@
     <ClCompile Include="..\..\..\Dumpling\Msc\Private\mscf_define.cpp">
       <Filter>Msc\Private</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Range.cpp">
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Interval.cpp">
       <Filter>PineApple\Private</Filter>
     </ClCompile>
   </ItemGroup>
@@ -182,9 +182,6 @@
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Nfa.h">
       <Filter>PineApple\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Range.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\StrFormat.h">
       <Filter>PineApple\Public</Filter>
     </ClInclude>
@@ -193,6 +190,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\Dumpling\Msc\Private\mscf_define.h">
       <Filter>Msc\Private</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Interval.h">
+      <Filter>PineApple\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

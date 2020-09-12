@@ -1,5 +1,5 @@
-#include "../Public/Range.h"
-namespace PineApple::Range
+#include "../Public/Interval.h"
+namespace PineApple
 {
 	namespace Implement
 	{

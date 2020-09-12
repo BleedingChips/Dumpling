@@ -142,7 +142,7 @@
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Ebnf.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Lr0.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Nfa.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Range.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Interval.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\StrFormat.cpp" />
     <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Symbol.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Potato\Private\tool.cpp" />
@@ -168,7 +168,7 @@
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Ebnf.h" />
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Lr0.h" />
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Nfa.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Range.h" />
+    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Interval.h" />
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\StrFormat.h" />
     <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Symbol.h" />
     <ClInclude Include="..\..\..\Dumpling\Potato\Public\auto_adapter.h" />
