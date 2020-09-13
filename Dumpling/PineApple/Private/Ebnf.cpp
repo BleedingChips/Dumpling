@@ -209,9 +209,7 @@ namespace PineApple::Ebnf
 				Re.datas = Storage.data() + CurrentAdress;
 				if (TotalUsed >= 1)
 				{
-					Re.loc = Re[0].loc;
-					auto Tar = Re[TotalUsed - 1].loc;
-					Re.loc.length = Tar.total_index - Re.loc.total_index + Tar.length;
+					Re.loc = {Re[0].loc.Start(), Re[TotalUsed - 1].loc.End()};
 				}
 				else {
 					Re.loc = ite.loc;

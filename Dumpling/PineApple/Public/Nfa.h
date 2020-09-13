@@ -39,14 +39,15 @@ namespace PineApple::Nfa
 	std::optional<MarchElement> Consume(Table const& Ref, std::u32string_view String);
 	std::vector<MarchElement> Process(Table const& Ref, std::u32string_view String);
 
-
-
-	struct Location {
-		size_t start_index = 0;
-		size_t line = 0;
-		size_t total_index = 0;
-		size_t length = 0;
+	struct LocatePoint
+	{
+		size_t total_index;
+		size_t line;
+		size_t line_index;
+		bool operator<(LocatePoint const& lp) const {return total_index < lp.total_index;}
 	};
+
+	using Location = ::PineApple::Segment<LocatePoint>;
 
 	struct DocumenetMarchElement
 	{

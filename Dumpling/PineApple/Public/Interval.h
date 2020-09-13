@@ -38,6 +38,8 @@ namespace PineApple
 		bool operator<= (Point const& o) const noexcept { return Less{}(storage, o.storage) || storage == o.storage; }
 		Storage& Original() {return storage;}
 		Storage const& Original() const { return storage; }
+		operator Storage const&() const {return storage;}
+		operator Storage& () { return storage; }
 	};
 
 	namespace Implement

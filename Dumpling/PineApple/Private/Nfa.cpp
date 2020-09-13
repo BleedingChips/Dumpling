@@ -59,18 +59,21 @@ namespace PineApple::Nfa
 
 	std::vector<MarchElement> Process(Table const& Ref, std::u32string_view String)
 	{
-		auto IteString = String;
+		size_t total_size = String.size();
 		std::vector<MarchElement> Result;
-		while (IteString.size() != 0)
+		while (String.size() != 0)
 		{
-			auto Re = Consume(Ref, IteString);
+			auto Re = Consume(Ref, String);
 			if (Re)
 			{
 				Result.push_back(*Re);
-				IteString = Re->last_string;
+				String = Re->last_string;
 			}
-			else
-				throw Error::UnaccaptableString{ std::u32string(String), {String.size() - IteString.size(), 0, String.size() - IteString.size()} };
+			else {
+				size_t ls = total_size - String.size();
+				throw Error::UnaccaptableString{ std::u32string(String), {{{ls, 0, ls}}, {{ls + String.size(), 0, ls + String.size()}}} };
+			}
+				
 		}
 		return std::move(Result);
 	}
@@ -80,18 +83,18 @@ namespace PineApple::Nfa
 		auto Re = Consume(Ref, String);
 		if (Re)
 		{
-			DocumenetMarchElement Result{ *Re, Loc };
+			LocatePoint NewLP = Loc.End();
 			for (auto& ite : Re->capture)
 			{
-				++Loc.total_index;
-				++Loc.start_index;
+				++(NewLP.total_index);
+				++(NewLP.line_index);
 				if (ite == U'\n')
 				{
-					Loc.start_index = 0;
-					++Loc.line;
+					NewLP.line_index = 0;
+					++NewLP.line;
 				}
-				Loc.length = Re->capture.size();
 			}
+			DocumenetMarchElement Result{ *Re, {Loc.End(), NewLP} };
 			return Result;
 		}
 		return std::nullopt;
