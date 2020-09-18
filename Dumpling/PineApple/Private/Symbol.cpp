@@ -3,15 +3,17 @@
 
 namespace PineApple::Symbol
 {
+	/*
 	Command::Data Command::Data::Make(std::u32string_view name, std::byte const* datas, size_t length)
 	{
 		std::vector<std::byte> data(length);
 		std::memcpy(data.data(), datas, length);
 		return Data{name, std::move(data)};
 	}
-	/*
+	*/
+	
 	template<typename Storage, typename StorageTuple, typename Mapping> 
-	LRTable::Mask InsertExe(Storage&& s, std::vector<StorageTuple>& stack, std::vector<Mapping>& mapping)
+	Mask InsertExe(Storage&& s, std::vector<StorageTuple>& stack, std::vector<Mapping>& mapping)
 	{
 		auto mask = mapping.size() + 1;
 		stack.push_back({ std::move(s), {mask} });
@@ -19,18 +21,18 @@ namespace PineApple::Symbol
 		return {mask};
 	}
 
-	auto LRTable::InsertValue(Mask type_mask, std::u32string_view value_name, Property pro) -> Mask 
+	auto Table::InsertValue(Value value) -> Mask
 	{
-		return InsertExe(Value{type_mask, value_name, std::move(pro)}, value_stack, value_mapping);
+		return InsertExe(std::move(value), value_stack, value_mapping);
 	}
 
-	auto LRTable::InsertType(std::u32string_view type_name, std::vector<Value> member) -> Mask
+	auto Table::InsertType(std::u32string type_name, std::vector<Value> member, std::any pro = {}) -> Mask
 	{
-		return InsertExe(Type{ type_name, std::move(member) }, type_stack, type_mapping);
+		return InsertExe(Type{ std::move(type_name), std::move(member), std::move(pro) }, type_stack, type_mapping);
 	}
 
 	template<typename StorageTuple>
-	LRTable::Mask FindExe(std::u32string_view name, std::vector<StorageTuple> const& stack)
+	Mask FindExe(std::u32string_view name, std::vector<StorageTuple> const& stack)
 	{
 		for (auto ite = stack.rbegin(); ite != stack.rend(); ++ite)
 		{
@@ -41,18 +43,18 @@ namespace PineApple::Symbol
 		return {0};
 	}
 
-	auto LRTable::FindType(std::u32string_view type_name) const -> Mask
+	auto Table::FindType(std::u32string const& type_name) const -> Mask
 	{
 		return FindExe(type_name, type_stack);
 	}
 
-	auto LRTable::FindValue(std::u32string_view value_name) const -> Mask
+	auto Table::FindValue(std::u32string const& value_name) const -> Mask
 	{
 		return FindExe(value_name, value_stack);
 	}
 
 	template<typename StorageTuple>
-	void PopActionScopeExe(size_t s, std::vector<StorageTuple>& stack, std::vector<StorageTuple>& backup_stack, std::vector<LRTable::StorageMask>& mapping)
+	void PopActionScopeExe(size_t s, std::vector<StorageTuple>& stack, std::vector<StorageTuple>& backup_stack, std::vector<Table::StorageMask>& mapping)
 	{
 		if (s != 0)
 		{
@@ -66,10 +68,9 @@ namespace PineApple::Symbol
 		}
 	}
 
-	void LRTable::PopActionScope(Record record)
+	void Table::PopActionScope(Record record)
 	{
 		PopActionScopeExe(record.value_count, value_stack, background_value_stack, value_mapping);
 		PopActionScopeExe(record.table_count, type_stack, background_type_stack, type_mapping);
 	}
-	*/
 }

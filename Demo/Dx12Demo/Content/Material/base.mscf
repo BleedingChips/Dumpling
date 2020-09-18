@@ -1,22 +1,28 @@
 property{
+
     [min = float2(1.0, 1.0)]
     {
         [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
         float2 Potato = float2(1.0, 1.0);
         []{
             float2 Potato2 = float2(2.0, 2.0);
-            float2<float2> Data[100][100] = {};
+            float2<float2> Data[100] = {};
         }
     };
 
-    [desc = "DefineWTF"]
+    [ PPC, desc = "DefineWTF"]
     {
         float2 Demo = float2(2.0, 1.0);
         float2 Cc;
     };
 
+    struct Wtf
+    {
+        float Data2;
+    };
+
     float Potato;
-    Texture2D<float4> T2;
+    Texture2D<float4> T2 = "GameplayContent";
     Texture2D<float4> T3;
 }
 

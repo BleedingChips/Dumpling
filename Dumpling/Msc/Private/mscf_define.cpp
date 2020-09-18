@@ -2,6 +2,62 @@
 #include <array>
 namespace Dumpling::Mscf
 {
+	using namespace PineApple::Symbol;
+
+	template<typename DataT> ValueMask ToData(PineApple::Symbol::ValueBuffer& buffer, DataT const& data)
+	{
+		return buffer.Insert(reinterpret_cast<std::byte const*>(&data), sizeof(DataT));
+	}
+
+	void AddInsideMemberType(ValueBuffer& buffer, Table& table, std::u32string type_name, std::u32string member_type)
+	{
+		auto mask = table.FindType(member_type);
+		assert(mask);
+		auto mask = Table.InsertType(name[0], {});
+		for (size_t i = 1; i < count; ++i)
+		{
+			std::vector<LRTable::Value> values;
+			for (size_t k = 0; k <= i; ++k)
+				values.push_back(LRTable::MakeValue(mask, member_name[k]));
+			Table.InsertType(name[i], std::move(values));
+		}
+	}
+
+	SymbolTable::SymbolTable()
+	{
+		table.InsertType(U"float", {}, TypeProperty{alignof(float), sizeof(float), ToData(buffer, float(0.0f))});
+		table.InsertType(U"uint", {}, TypeProperty{ alignof(uint32_t), sizeof(uint32_t), ToData(buffer, uint32_t(0))});
+		table.InsertType(U"int", {}, TypeProperty{ alignof(int32_t), sizeof(int32_t), ToData(buffer, int32_t(0))});
+		table.InsertType(U"bool", {}, TypeProperty{ alignof(bool), sizeof(bool), ToData(buffer, bool(0))});
+		table.InsertType(U"string", {}, TypeProperty{ alignof(std::u32string_view), sizeof(std::u32string_view), ToData(buffer, std::u32string_view())});
+		static std::array<std::u32string_view, 4> member_name = { U"x", U"y", U"z", U"w" };
+		for (size_t i = 1; i < 4; ++i)
+		{
+			std::vector<Value> values;
+			for (size_t k = 0; k <= i; ++k)
+				values.push_back(Value{U});
+			Table.InsertType(name[i], std::move(values));
+		}
+
+
+
+
+
+		InsertType(U"float2", {Value{     }})
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/*
 	void AddInsideType(LRTable& Table, std::u32string_view const* member_name, std::u32string_view const* name, size_t count)
 	{

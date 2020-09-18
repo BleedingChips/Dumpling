@@ -17,7 +17,6 @@ $ := <Statement>
     := 'true' : [5]
     := 'false' : [6]
     := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [8]
-    := '{' [ <BaseConstValue> { ',' <BaseConstValue> } ] '}' : [19]
 
 <ArrayProperty> := '[' ']' : [20]
     := '[' IntNumber ']' : [21]
@@ -33,10 +32,10 @@ $ := <Statement>
 
 <MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [13]
 
-<PropertyDefine> := <PropertyDefine> <MateDate> '{' <PropertyDefine> '}' : [14]
+<PropertyDefine> := <PropertyDefine> <MateDate> '{' { <MateDate> <DefineOrInitVariable> } '}' : [14]
     := <PropertyDefine> <MateDate> <DefineOrInitVariable> ';' : [15]
-    := <PropertyDefine> ';' : [16]
-    := : [17]
+    := <PropertyDefine> <StructDesc> : [17]
+    :=  : [16]
 
 <PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [18]
 

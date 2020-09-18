@@ -4,18 +4,44 @@
 #include "../../PineApple/Public/Symbol.h"
 namespace Dumpling::Mscf
 {
+	
+	using Mask = PineApple::Symbol::Mask;
+	using ValueMask = PineApple::Symbol::Mask;
 
 	struct ValueProperty
 	{
 		std::u32string read_format;
 		bool is_array = false;
 		size_t array_count;
+		std::map<std::u32string, ValueMask> mate_datas;
 	};
 
-	struct ValueStorage
+	struct MemberValueProperty
 	{
-
+		Mask type;
+		std::u32string name;
+		bool is_array = false;
+		size_t array_count;
+		size_t offset;
 	};
+
+	struct TypeProperty
+	{
+		size_t align;
+		size_t length;
+		ValueMask default_value;
+	};
+
+	struct SymbolTable
+	{
+		SymbolTable();
+		void InsertType(std::u32string name, std::vector<Value> const& all_value);
+	private:
+		PineApple::Symbol::ValueBuffer buffer;
+		PineApple::Symbol::Table table;
+	};
+
+
 
 	/*
 	LRTable DefaultTable();

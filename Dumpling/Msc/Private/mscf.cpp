@@ -113,8 +113,64 @@ namespace Dumpling::Mscf
 						}
 						if (index == 2)
 						{
-							return std::tuple<std::u32string_view, std::u32string_view, ValueProperty>();
+							size_t index = commands.Push(Command::DefineValue{ids[0], ids[1], ap}, E.loc);
+							return ids[1];
 						}
+						else {
+							assert(index == 3);
+							ap.read_format = ids[1];
+							commands.Push(Command::DefineValue{ ids[0], ids[2], ap }, E.loc);
+							return ids[2];
+						}
+					} break;
+					case 10:{
+						if (E.reduce.production_count == 3)
+						{
+							commands.Push(Command::EqualValue{E[0].GetData<std::u32string_view>(), 1}, E.loc);
+						}
+						else {
+							assert(E.reduce.production_count == 1);
+						}
+						return E[0].MoveData();
+					} break;
+					case 11:{
+						size_t index = 0;
+						for (auto& ite : E)
+						{
+							if(E.IsNoterminal())
+								index +=1;
+						}
+						commands.Push(Command::DefineType{E[0].GetData<std::u32string_view>()}, E.loc);
+						return {};
+					} break;
+					case 12:{
+						if (E.reduce.production_count == 3)
+						{
+							commands.Push(MakeMateValue{ E[0].GetData<std::u32string_view>(), 1 }, E.loc);
+						}
+						else {
+							commands.Push(MakeMateValue{ E[0].GetData<std::u32string_view>(), 0 }, E.loc);
+						}
+						return E[0].GetData<std::u32string_view>();
+					} break;
+					case 13:{
+						std::vector<std::u32string_view> all_mateData;
+						for (auto& ite : E)
+						{
+							if(ite.IsNoterminal())
+								all_mateData.push_back(ite.GetData<std::u32string_view>());
+						}
+						return std::move(all_mateData);
+					} break;
+					case 16:{
+						return std::vector<std::u32string_view>{};
+					} break;
+					case 15:{
+						auto EffectName = 
+					} break;
+					case 14:{
+						auto all_mate_data = E[0].GetData<std::vector<std::u32string_view>>();
+
 					} break;
 					default: return {};
 					}
