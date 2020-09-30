@@ -1,7 +1,6 @@
 #include "../Public/mscf.h"
 #include "mscf_parser_table.h"
 #include "../../PineApple/Public/CharEncode.h"
-#include "../../PineApple/Public/Symbol.h"
 #include "mscf_define.h"
 #include <array>
 
@@ -30,10 +29,12 @@ namespace Dumpling::Mscf
 	mscf translate(std::u32string const& code)
 	{
 		auto& Mref = MscfEbnfInstance();
-		CommmandList commands;
 		try {
 			auto History = Ebnf::Process(MscfEbnfInstance(), code);
 			auto P = History.Expand();
+
+			SymbolTable table;
+			DataStorage datas;
 
 			Ebnf::Process(History, [&](Ebnf::Element& E) -> std::any {
 				if (E.IsTerminal())

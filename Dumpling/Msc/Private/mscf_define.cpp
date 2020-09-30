@@ -4,6 +4,33 @@ namespace Dumpling::Mscf
 {
 	using namespace PineApple::Symbol;
 
+	std::tuple<std::byte const*, size_t> DataStorage::Read(DataMask mask) const
+	{
+		return {datas.data() + mask.offset, mask.length};
+	}
+
+	DataMask DataStorage::Push(std::byte const* data, size_t length)
+	{
+		size_t offset = datas.size();
+		datas.insert(datas.end(), data, data+length);
+		return { offset, length };
+	}
+
+	auto HlslStorageInfoLinker::Handle(StorageInfo cur, StorageInfo input) const ->HandleResult
+	{
+		auto old = cur;
+		static constexpr size_t AlignSize = sizeof(float) * 4;
+		cur.align = StorageInfoLinker::MaxAlign(cur, input);
+		size_t rever_size = cur.size % AlignSize;
+		if (input.size >= AlignSize || rever_size < input.size)
+			cur.size += rever_size;
+		cur.size += StorageInfoLinker::ReservedSize(cur, input);
+		return {cur.align, cur.size - old.size};
+	}
+
+
+	/*
+
 	template<typename DataT> ValueMask ToData(PineApple::Symbol::ValueBuffer& buffer, DataT const& data)
 	{
 		return buffer.Insert(reinterpret_cast<std::byte const*>(&data), sizeof(DataT));
@@ -45,6 +72,7 @@ namespace Dumpling::Mscf
 
 		InsertType(U"float2", {Value{     }})
 	}
+	*/
 
 
 

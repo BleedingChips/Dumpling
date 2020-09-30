@@ -10,7 +10,88 @@
 #include "Nfa.h"
 namespace PineApple::Symbol
 {
-	
+	struct Table
+	{
+		struct Mask
+		{
+			size_t index = 0;
+			operator bool () const noexcept{return index != 0;}
+		};
+
+		struct Storage
+		{
+			std::u32string_view name;
+			Mask index;
+			std::any property;
+		};
+		
+		Mask FindActiveLast(std::u32string_view name) const noexcept;
+		
+		Storage const& Find(Mask mask) const;
+
+		size_t PopElementAsUnactive(size_t count);
+
+		Mask Insert(std::u32string_view name, std::any property);
+
+		Table(Table&&) = default;
+		Table(Table const&) = default;
+
+	private:
+		
+		struct Mapping
+		{
+			bool is_active;
+			size_t index;
+		};
+		
+		std::vector<Storage> unactive_scope;
+		std::vector<Storage> active_scope;
+		std::vector<Mapping> mapping;
+	};
+
+	struct StorageInfo
+	{
+		size_t align = 0;
+		size_t size = 0;
+	};
+
+	struct StorageInfoLinker
+	{
+		
+		struct HandleResult
+		{
+			size_t align = 0;
+			size_t size_reserved = 0;
+		};
+
+		size_t operator()(StorageInfo const& info);
+		operator StorageInfo() const { return Finalize(info); }
+
+		StorageInfoLinker(StorageInfo info = {}) : info(std::move(info)) {}
+		StorageInfoLinker(StorageInfoLinker const&) = default;
+		StorageInfoLinker(StorageInfoLinker&&) = default;
+		StorageInfoLinker& operator=(StorageInfoLinker const&) = default;
+		StorageInfoLinker& operator=(StorageInfoLinker&&) = default;
+
+		static size_t MaxAlign(StorageInfo out, StorageInfo in) noexcept;
+		static size_t ReservedSize(StorageInfo out, StorageInfo in) noexcept;
+
+	private:
+		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const;
+		virtual StorageInfo Finalize(StorageInfo cur) const;
+		StorageInfo info;
+	};
+
+
+
+
+
+
+
+
+
+
+	/*
 	struct Mask
 	{
 		size_t index = 0;
@@ -33,6 +114,7 @@ namespace PineApple::Symbol
 	{
 		Mask type;
 	};
+	*/
 
 
 

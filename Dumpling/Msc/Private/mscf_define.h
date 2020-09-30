@@ -5,32 +5,67 @@
 namespace Dumpling::Mscf
 {
 	
-	using Mask = PineApple::Symbol::Mask;
-	using ValueMask = PineApple::Symbol::Mask;
+	using Mask = PineApple::Symbol::Table::Mask;
+
+	struct DataStorage
+	{
+		struct Mask{ size_t offset = 0; size_t length = 0; };
+		std::tuple<std::byte const*, size_t> Read(Mask mask) const;
+		Mask Push(std::byte const* data, size_t length);
+	private:
+		std::vector<std::byte> datas;
+	};
+
+	using DataMask = DataStorage::Mask;
 
 	struct ValueProperty
 	{
-		std::u32string read_format;
-		bool is_array = false;
-		size_t array_count;
-		std::map<std::u32string, ValueMask> mate_datas;
+		size_t read_wrapper;
+		bool is_array;
+		std::vector<size_t> array_count;
+		bool unmark_array;
 	};
 
-	struct MemberValueProperty
+	struct Value
 	{
 		Mask type;
-		std::u32string name;
-		bool is_array = false;
-		size_t array_count;
-		size_t offset;
+		std::u32string_view name;
+		ValueProperty property;
+		DataMask value;
+	};
+
+	struct Record
+	{
+		size_t element_count;
+	};
+
+	struct HlslStorageInfoLinker : PineApple::Symbol::StorageInfoLinker
+	{
+		using PineApple::Symbol::StorageInfoLinker::StorageInfoLinker;
+		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const override;
 	};
 
 	struct TypeProperty
 	{
-		size_t align;
-		size_t length;
-		ValueMask default_value;
+		struct Value {
+			Mask type;
+			std::u32string_view name;
+			size_t offset;
+		};
+		DataMask default_value;
+		PineApple::Symbol::StorageInfo info;
+		std::vector<TypeProperty> values;
 	};
+
+	struct SymbolTable
+	{
+		PineApple::Symbol::Table table;
+	};
+
+
+
+
+	/*
 
 	struct SymbolTable
 	{
@@ -40,6 +75,8 @@ namespace Dumpling::Mscf
 		PineApple::Symbol::ValueBuffer buffer;
 		PineApple::Symbol::Table table;
 	};
+
+	*/
 
 
 
