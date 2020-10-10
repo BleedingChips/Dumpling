@@ -28,6 +28,19 @@ namespace Dumpling::Mscf
 		return {cur.align, cur.size - old.size};
 	}
 
+	std::tuple<SymbolTable, DataStorage> CreateContent()
+	{
+		SymbolTable table;
+		DataStorage ds;
+		int32_t zero_i = 0;
+		auto zero_i_data = ds.Push(reinterpret_cast<std::byte const*>(&zero_i), sizeof(zero_i));
+		float zero_f = 0;
+		auto zero_f_data = ds.Push(reinterpret_cast<std::byte const*>(&zero_f), sizeof(zero_f));
+		{
+			Type index{ U"int", { {sizeof(zero_i), alignof(zero_i)}, {}}, zero_i_data };
+			table.InsertElement(std::move(index));
+		}
+	}
 
 	/*
 

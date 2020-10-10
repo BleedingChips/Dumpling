@@ -26,7 +26,7 @@ namespace Dumpling::Mscf
 		bool unmark_array;
 	};
 
-	struct Value
+	struct ValueInfo
 	{
 		Mask type;
 		std::u32string_view name;
@@ -52,17 +52,31 @@ namespace Dumpling::Mscf
 			std::u32string_view name;
 			size_t offset;
 		};
-		DataMask default_value;
 		PineApple::Symbol::StorageInfo info;
-		std::vector<TypeProperty> values;
+		std::vector<TypeProperty::Value> values;
+	};
+
+	struct TypeInfo
+	{
+		std::u32string_view name;
+		TypeProperty property;
+		DataMask default_value;
+	};
+
+	struct TextureInfo
+	{
+		std::u32string_view name;
+
 	};
 
 	struct SymbolTable
 	{
 		PineApple::Symbol::Table table;
+		Mask InsertElement(Type type) { return table.Insert(type.Name, std::move(type));}
+		Mask InsertElement(Value value) { table.Insert(value.name, std::move(type)); }
 	};
 
-
+	std::tuple<SymbolTable, DataStorage> CreateContent();
 
 
 	/*

@@ -3,8 +3,6 @@
 
 namespace PineApple::Symbol
 {
-	
-
 
 	auto Table::Insert(std::u32string_view name, std::any property) -> Table::Mask
 	{

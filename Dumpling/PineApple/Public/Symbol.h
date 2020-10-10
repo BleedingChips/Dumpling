@@ -27,6 +27,16 @@ namespace PineApple::Symbol
 		
 		Mask FindActiveLast(std::u32string_view name) const noexcept;
 		
+		template<typename Func> auto Find(Mask mask, Func&& func) const->std::optional<decltype(func(std::decay<Storage const&>{})) >
+		{
+			if (mask)
+			{
+				auto const& ref = FindImp(mask);
+				return std::forward<Func>(func)(ref);
+			}else
+				return std::nullopt;
+		}
+
 		Storage const& Find(Mask mask) const;
 
 		size_t PopElementAsUnactive(size_t count);
@@ -35,8 +45,11 @@ namespace PineApple::Symbol
 
 		Table(Table&&) = default;
 		Table(Table const&) = default;
+		Table() = default;
 
 	private:
+
+		Storage const& FindImp(Mask mask) const;
 		
 		struct Mapping
 		{
