@@ -9,12 +9,14 @@ namespace PineApple::Symbol
 		Mask mask{mapping.size() + 1};
 		active_scope.push_back({name, mask, std::move(property)});
 		mapping.push_back(Mapping{true, active_scope.size() - 1});
+		return mask;
 	}
 
-	auto Table::Find(Mask mask) const -> Storage const&
+	auto Table::FindImp(Mask mask) const -> Storage const&
 	{
 		assert(mask);
-		auto& mapp = mapping[mask.index - 1];
+		assert(*mask < mapping.size());
+		auto& mapp = mapping[*mask];
 		if (mapp.is_active)
 			return active_scope[mapp.index];
 		else

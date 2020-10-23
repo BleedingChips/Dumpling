@@ -8,14 +8,16 @@
 #include <typeindex>
 #include <any>
 #include "Nfa.h"
+#include <optional>
 namespace PineApple::Symbol
 {
 	struct Table
 	{
 		struct Mask
 		{
-			size_t index = 0;
-			operator bool () const noexcept{return index != 0;}
+			std::optional<size_t> index = std::nullopt;
+			operator bool () const noexcept{ return index.has_value(); }
+			size_t operator*() const {return *index;}
 		};
 
 		struct Storage
@@ -26,18 +28,16 @@ namespace PineApple::Symbol
 		};
 		
 		Mask FindActiveLast(std::u32string_view name) const noexcept;
-		
-		template<typename Func> auto Find(Mask mask, Func&& func) const->std::optional<decltype(func(std::decay<Storage const&>{})) >
-		{
-			if (mask)
-			{
-				auto const& ref = FindImp(mask);
-				return std::forward<Func>(func)(ref);
-			}else
-				return std::nullopt;
-		}
 
-		Storage const& Find(Mask mask) const;
+		template<typename FuncObj>
+		void Find(Mask mask, FuncObj&& FunObj)
+		{
+			if (mask && *mask < mapping.size())
+			{
+				auto& F = FindImp(mask);
+				std::forward<FuncObj>(FunObj)(F);
+			}
+		}
 
 		size_t PopElementAsUnactive(size_t count);
 

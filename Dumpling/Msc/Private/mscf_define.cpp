@@ -4,6 +4,94 @@ namespace Dumpling::Mscf
 {
 	using namespace PineApple::Symbol;
 
+	void CreateInsideType(Table& table, Commands& Comm,
+		std::u32string_view Name, Mask MemberType, std::u32string_view const* MemberName, size_t Count, Commands::DataType DefaultData
+	)
+	{
+		TypeProperty TP;
+		for (size_t i = 0; i < Count; ++i)
+		{
+			TP.values.push_back({ MemberName[i], {MemberType, false, {}, false} });
+			Comm.PushData(DefaultData);
+		}
+		Mask Result = table.Insert(Name, std::move(TP));
+		Comm.CoverToType(Result, Count);
+		Comm.EqualData(Result);
+	}
+
+
+	std::tuple<Table, Commands> CreateContent()
+	{
+		Table table;
+		Commands commands;
+
+		static std::u32string_view MemberName[] = {U"x", U"y", U"z", U"w"};
+
+		{
+			static std::u32string_view DefineTypeName[] = { U"float2", U"float3", U"float4" };
+			auto Base1 = table.Insert(U"float", TypeProperty{});
+			for(size_t i = 0; i < std::size(DefineTypeName); ++i)
+				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, float(0));
+		}
+
+		{
+			static std::u32string_view DefineTypeName[] = { U"int2", U"int3", U"int4" };
+			auto Base1 = table.Insert(U"int", TypeProperty{});
+			for (size_t i = 0; i < std::size(DefineTypeName); ++i)
+				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, int64_t(0));
+		}
+
+		{
+			static std::u32string_view DefineTypeName[] = { U"uint2", U"uint3", U"uint4" };
+			auto Base1 = table.Insert(U"uint", TypeProperty{});
+			for (size_t i = 0; i < std::size(DefineTypeName); ++i)
+				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, int64_t(0));
+		}
+
+		{
+			static std::tuple<TextureType, std::u32string_view> DefineType[] = {
+				{TextureType::Tex1, U"Texture1D"}, {TextureType::Tex2, U"Texture2D"}, {TextureType::Tex3, U"Texture3D"}
+			};
+			for (size_t i = 0; i < std::size(DefineType); ++i)
+			{
+				auto Mask = table.Insert(std::get<1>(DefineType[i]), TextureProperty{std::get<0>(DefineType[i])});
+				commands.PushData(U"float4");
+				commands.PushData(std::u32string_view{});
+				commands.CoverToType(Mask, 2);
+				commands.EqualData(Mask);
+			}
+		}
+
+		{
+			auto Mask = table.Insert(U"Sampler", SamplerProperty{});
+			commands.PushData(U"float4");
+			commands.PushData(std::u32string_view{});
+			commands.CoverToType(Mask, 2);
+			commands.EqualData(Mask);
+		}
+
+		return {std::move(table), std::move(commands)};
+	}
+
+	std::tuple<Table, Commands> CreateDefaultContent()
+	{
+		static std::tuple<Table, Commands> Content = CreateContent();
+		return Content;
+	}
+
+	auto HlslStorageInfoLinker::Handle(StorageInfo cur, StorageInfo input) const ->HandleResult
+	{
+		auto old = cur;
+		static constexpr size_t AlignSize = sizeof(float) * 4;
+		cur.align = StorageInfoLinker::MaxAlign(cur, input);
+		size_t rever_size = cur.size % AlignSize;
+		if (input.size >= AlignSize || rever_size < input.size)
+			cur.size += rever_size;
+		cur.size += StorageInfoLinker::ReservedSize(cur, input);
+		return { cur.align, cur.size - old.size };
+	}
+
+	/*
 	std::tuple<std::byte const*, size_t> DataStorage::Read(DataMask mask) const
 	{
 		return {datas.data() + mask.offset, mask.length};
@@ -27,7 +115,9 @@ namespace Dumpling::Mscf
 		cur.size += StorageInfoLinker::ReservedSize(cur, input);
 		return {cur.align, cur.size - old.size};
 	}
+	*/
 
+	/*
 	std::tuple<SymbolTable, DataStorage> CreateContent()
 	{
 		SymbolTable table;
@@ -41,6 +131,7 @@ namespace Dumpling::Mscf
 			table.InsertElement(std::move(index));
 		}
 	}
+	*/
 
 	/*
 

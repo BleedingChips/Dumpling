@@ -12,6 +12,8 @@ struct Data
 
 Texture2D<float4> GoGo;
 
+RWStructuredBuffer<float4> GO[][2];
+
 Data da;
 
 float4 main(

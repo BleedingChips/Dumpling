@@ -25,6 +25,7 @@ namespace Dumpling::Mscf
 {
 
 	using namespace PineApple::Symbol;
+	/*
 
 	mscf translate(std::u32string const& code)
 	{
@@ -187,6 +188,7 @@ namespace Dumpling::Mscf
 		
 		return {};
 	}
+	*/
 
 	void Translate(std::u32string_view InputCode)
 	{

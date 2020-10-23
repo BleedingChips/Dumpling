@@ -7,77 +7,62 @@ namespace Dumpling::Mscf
 	
 	using Mask = PineApple::Symbol::Table::Mask;
 
-	struct DataStorage
-	{
-		struct Mask{ size_t offset = 0; size_t length = 0; };
-		std::tuple<std::byte const*, size_t> Read(Mask mask) const;
-		Mask Push(std::byte const* data, size_t length);
-	private:
-		std::vector<std::byte> datas;
-	};
-
-	using DataMask = DataStorage::Mask;
-
 	struct ValueProperty
 	{
-		size_t read_wrapper;
-		bool is_array;
-		std::vector<size_t> array_count;
-		bool unmark_array;
-	};
-
-	struct ValueInfo
-	{
 		Mask type;
-		std::u32string_view name;
-		ValueProperty property;
-		DataMask value;
-	};
-
-	struct Record
-	{
-		size_t element_count;
-	};
-
-	struct HlslStorageInfoLinker : PineApple::Symbol::StorageInfoLinker
-	{
-		using PineApple::Symbol::StorageInfoLinker::StorageInfoLinker;
-		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const override;
+		std::vector<size_t> array_count;
 	};
 
 	struct TypeProperty
 	{
-		struct Value {
-			Mask type;
+		struct Member
+		{
 			std::u32string_view name;
-			size_t offset;
+			ValueProperty property;
 		};
-		PineApple::Symbol::StorageInfo info;
-		std::vector<TypeProperty::Value> values;
+		std::vector<Member> values;
 	};
 
-	struct TypeInfo
+	enum class TextureType
 	{
-		std::u32string_view name;
-		TypeProperty property;
-		DataMask default_value;
+		Tex1,
+		Tex2,
+		Tex3,
 	};
 
-	struct TextureInfo
+	struct TextureProperty
 	{
-		std::u32string_view name;
-
+		TextureType type;
 	};
 
-	struct SymbolTable
+	struct SamplerProperty {};
+
+	struct Commands
 	{
-		PineApple::Symbol::Table table;
-		Mask InsertElement(Type type) { return table.Insert(type.Name, std::move(type));}
-		Mask InsertElement(Value value) { table.Insert(value.name, std::move(type)); }
+		using DataType = std::variant<int64_t, double, std::u32string_view>;
+	private:
+		struct Data { DataType datas; };
+		struct CoverType { Mask type; size_t parameter; };
+		struct EqualToData { Mask value; };
+	public:
+		void PushData(DataType command){ AllCommands.push_back(Data{command}); }
+		void CoverToType(Mask type, size_t parameter){ AllCommands.push_back(CoverType{type, parameter}); }
+		void EqualData(Mask type) { AllCommands.push_back(EqualToData{ type }); }
+	private:
+		using CommandType = std::variant<Data, CoverType, EqualToData>;
+		std::vector<CommandType> AllCommands;
 	};
 
-	std::tuple<SymbolTable, DataStorage> CreateContent();
+	using Table = PineApple::Symbol::Table;
 
+	std::tuple<Table, Commands> CreateDefaultContent();
+
+	struct HlslStorageInfoLinker : PineApple::Symbol::StorageInfoLinker
+	{
+		using PineApple::Symbol::StorageInfoLinker::StorageInfoLinker;
+		using StorageInfo = PineApple::Symbol::StorageInfo;
+		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const override;
+	};
 
 	/*
 

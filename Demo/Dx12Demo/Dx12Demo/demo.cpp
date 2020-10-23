@@ -46,9 +46,14 @@ int main()
 	std::u32string AT = CharEncode::Wrapper(Data->data(), Data->size()).To<char32_t>();
 	auto E = Dumpling::Mscf::translate(AT);
 
+	auto P1234 = U"你好";
+
+	std::string Datacc = PineApple::CharEncode::Wrapper<char32_t>(P1234).To<char>();
+
 
 	//auto String = LoadEntireBinaryFile();
 
+	return 0;
 
 #ifdef _DEBUG
 	Dx12::InitDebugLayout();
