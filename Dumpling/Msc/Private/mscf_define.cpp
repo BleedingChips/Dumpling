@@ -63,10 +63,9 @@ namespace Dumpling::Mscf
 		}
 
 		{
-			auto Mask = table.Insert(U"Sampler", SamplerProperty{});
-			commands.PushData(U"float4");
+			auto Mask = table.Insert(U"SamplerState", SamplerProperty{});
 			commands.PushData(std::u32string_view{});
-			commands.CoverToType(Mask, 2);
+			commands.CoverToType(Mask, 1);
 			commands.EqualData(Mask);
 		}
 

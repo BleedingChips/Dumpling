@@ -33,6 +33,7 @@ namespace Dumpling::Mscf
 	struct TextureProperty
 	{
 		TextureType type;
+		Mask read_type;
 	};
 
 	struct SamplerProperty {};

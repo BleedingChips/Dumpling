@@ -16,28 +16,26 @@ $ := <Statement>
 <BaseConstValue> := IntNumber | FloatNumber | String : [4]
     := 'true' : [5]
     := 'false' : [6]
-    := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [8]
+    := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [7]
 
-<ArrayProperty> := '[' ']' : [20]
-    := '[' IntNumber ']' : [21]
-    :=  : [22]
+<ArrayProperty> := '[' ']' : [8]
+    := <ArrayProperty> '[' IntNumber ']' : [9]
+    :=  : [10]
 
-<DefineVariable>  := Id [ '<' Id '>' ] Id <ArrayProperty> : [9]
+<DefineVariable> := Id [ '<' Id '>' ] Id <ArrayProperty> [ '=' <BaseConstValue> ] : [11]
 
-<DefineOrInitVariable> := <DefineVariable> [ '=' <BaseConstValue> ] : [10]
+<StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [12]
 
-<StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [11]
+<MateDateElement> := Id [ '=' <BaseConstValue> ] : [13]
 
-<MateDateElement> := Id [ '=' <BaseConstValue> ] : [12]
+<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [14]
 
-<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [13]
-
-<PropertyDefine> := <PropertyDefine> <MateDate> '{' { <MateDate> <DefineOrInitVariable> } '}' : [14]
-    := <PropertyDefine> <MateDate> <DefineOrInitVariable> ';' : [15]
+<PropertyDefine> := <PropertyDefine> <MateDate> '{' { <MateDate>  <DefineVariable> } '}' : [15]
+    := <PropertyDefine> <MateDate> <DefineVariable> ';' : [16]
     := <PropertyDefine> <StructDesc> : [17]
-    :=  : [16]
+    :=  : [18]
 
-<PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [18]
+<PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [19]
 
 /*
 

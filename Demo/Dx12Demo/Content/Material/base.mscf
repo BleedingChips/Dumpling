@@ -24,6 +24,8 @@ property{
     float Potato;
     Texture2D<float4> T2 = "GameplayContent";
     Texture2D<float4> T3;
+    SamplerState WTF = "WTF";
+    SamplerCompState WTF2 = "WTF22";
 }
 
 /*
