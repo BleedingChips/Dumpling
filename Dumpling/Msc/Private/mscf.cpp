@@ -12,19 +12,21 @@ float StringToFloat(std::u32string_view Input)
 	return Result;
 }
 
-int32_t StringToInt(std::u32string_view Input)
+int64_t StringToInt(std::u32string_view Input)
 {
 	auto str = CharEncode::Wrapper(Input).To<char>();
-	int32_t Result;
-	sscanf_s(str.c_str(), "%i", &Result);
+	int64_t Result;
+	sscanf_s(str.c_str(), "%il", &Result);
 	return Result;
 }
+
 
 
 namespace Dumpling::Mscf
 {
 
 	using namespace PineApple::Symbol;
+
 	mscf translate(std::u32string const& code)
 	{
 		auto& Mref = MscfEbnfInstance();
@@ -50,128 +52,58 @@ namespace Dumpling::Mscf
 				}
 				else if (E.IsNoterminal())
 				{
-					auto mask = E.reduce.mask;
-					auto count = E.reduce.production_count;
-					auto datas = E.datas;
-					switch (mask)
+					switch (E.reduce.mask)
 					{
-					case 1: return E[0].MoveData();
-					case 2: return E[0].MoveData();
-					case 3: return {};
+					case 1: { return {}; } break;
+					case 2: { return {}; } break;
+					case 3: { return {}; } break;
 					case 4: {
-						auto& ref = E[0];
-						if (auto p = ref.TryGetData<float>(); p != nullptr)
-							commands.Push(Command::Data::Make(U"float", *p), E.loc);
-						else if (auto p = ref.TryGetData<int32_t>(); p != nullptr)
-							commands.Push(Command::Data::Make(U"int", *p), E.loc);
-						else if (auto p = ref.TryGetData<uint32_t>(); p != nullptr)
-							commands.Push(Command::Data::Make(U"uint", *p), E.loc);
-						else if (auto p = ref.TryGetData<std::u32string_view>(); p != nullptr)
-							commands.Push(Command::Data::Make(U"string", *p), E.loc);
+						auto& Data = E[0];
+						if (Data.TryGetData<int64_t>())
+							Command.PushData(*Data.TryGetData<int64_t>());
+						else if(Data.TryGetData<float>())
+							Command.PushData(*Data.TryGetData<float>());
+						else if(Data.TryGetData<std::u32string_view>())
+							Command.PushData(*Data.TryGetData<std::u32string_view>());
 						else
 							assert(false);
-						return {};
+						return {}; 
 					} break;
-					case 5: {
-						commands.Push(Command::Data::Make(U"bool", true), E.loc);
-						return {};
+					case 5:{
+						Command.PushData(true);
 					} break;
-					case 6: {
-						commands.Push(Command::Data::Make(U"bool", false), E.loc);
-						return {};
+					case 6:{
+						Command.PushData(false);
 					} break;
-					case 8: {
-						auto id = E[0].GetData<std::u32string_view>();
+					case 7:{
+						auto P  = E[0].GetData<std::u32string_view>();
+						auto TypeMask = Table.FindActiveLast(P);
+						if(!TypeMask)
+							throw Error::UndefineType{std::u32string(P), E[0].loc};
 						size_t index = 0;
-						for (size_t i = 1; i < E.reduce.production_count; ++i)
-							if (E[i].IsNoterminal())
+						for (auto& Ite : E)
+						{
+							if (Ite.IsNoterminal())
 								++index;
-						commands.Push(Command::MakeNoNameValue{ index }, E.loc);
-						return {};
+						}
+						Command.CoverToType(TypeMask, index);
 					} break;
-					case 19: {
-						size_t index = 0;
-						for (size_t i = 0; i < E.reduce.production_count; ++i)
-							if (E[i].IsNoterminal())
-								++index;
-						commands.Push(Command::LinkNoNameValue{ index }, E.loc);
+					case 8:{
+						return ValueProperty{Mask{}, {0}};
 					} break;
-					case 20: { return ValueProperty{ {}, true, 0 }; } break;
-					case 21: { return ValueProperty{ {}, true, E[1].GetData<size_t>() }; } break;
-					case 22: { return ValueProperty{ {}, false }; }
-					case 9: {
-						std::array<std::u32string_view, 3> ids;
-						ValueProperty ap;
-						size_t index = 0;
-						for (auto& ite : E)
-						{
-							if (ite.string == U"Id")
-								ids[index++] = ite.shift.capture;
-							else if (ite.string == U"<ArrayProperty>")
-								ap = ite.GetData<ValueProperty>();
-						}
-						if (index == 2)
-						{
-							size_t index = commands.Push(Command::DefineValue{ ids[0], ids[1], ap }, E.loc);
-							return ids[1];
-						}
-						else {
-							assert(index == 3);
-							ap.read_format = ids[1];
-							commands.Push(Command::DefineValue{ ids[0], ids[2], ap }, E.loc);
-							return ids[2];
-						}
+					case 9:{
+						ValueProperty Last = E[0].GetData<ValueProperty>();
+						Last.array_count.push_back(E[2].GetData<int64_t>());
+						return std::move(Last);
 					} break;
-					case 10: {
-						if (E.reduce.production_count == 3)
-						{
-							commands.Push(Command::EqualValue{ E[0].GetData<std::u32string_view>(), 1 }, E.loc);
-						}
-						else {
-							assert(E.reduce.production_count == 1);
-						}
-						return E[0].MoveData();
+					case 10:{
+						return ValueProperty{};
 					} break;
 					case 11: {
-						size_t index = 0;
-						for (auto& ite : E)
-						{
-							if (E.IsNoterminal())
-								index += 1;
-						}
-						commands.Push(Command::DefineType{ E[0].GetData<std::u32string_view>() }, E.loc);
-						return {};
-					} break;
-					case 12: {
-						if (E.reduce.production_count == 3)
-						{
-							commands.Push(MakeMateValue{ E[0].GetData<std::u32string_view>(), 1 }, E.loc);
-						}
-						else {
-							commands.Push(MakeMateValue{ E[0].GetData<std::u32string_view>(), 0 }, E.loc);
-						}
-						return E[0].GetData<std::u32string_view>();
-					} break;
-					case 13: {
-						std::vector<std::u32string_view> all_mateData;
-						for (auto& ite : E)
-						{
-							if (ite.IsNoterminal())
-								all_mateData.push_back(ite.GetData<std::u32string_view>());
-						}
-						return std::move(all_mateData);
-					} break;
-					case 16: {
-						return std::vector<std::u32string_view>{};
-					} break;
-					case 15: {
-						auto EffectName =
-					} break;
-					case 14: {
-						auto all_mate_data = E[0].GetData<std::vector<std::u32string_view>>();
-
-					} break;
-					default: return {};
+						
+					}break;
+					default:
+						break;
 					}
 				}
 				return {};

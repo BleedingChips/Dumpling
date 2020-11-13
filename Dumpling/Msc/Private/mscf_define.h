@@ -10,7 +10,7 @@ namespace Dumpling::Mscf
 	struct ValueProperty
 	{
 		Mask type;
-		std::vector<size_t> array_count;
+		std::vector<int64_t> array_count;
 	};
 
 	struct TypeProperty
@@ -40,7 +40,7 @@ namespace Dumpling::Mscf
 
 	struct Commands
 	{
-		using DataType = std::variant<int64_t, double, std::u32string_view>;
+		using DataType = std::variant<int64_t, float, std::u32string_view, bool>;
 	private:
 		struct Data { DataType datas; };
 		struct CoverType { Mask type; size_t parameter; };

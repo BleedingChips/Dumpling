@@ -53,6 +53,15 @@ namespace Dumpling::Mscf
 
 	};
 
+	namespace Error
+	{
+		struct UndefineType
+		{
+			std::u32string TypeName;
+			PineApple::Nfa::Location LocationPoint;
+		};
+	}
+
 	mscf translate(std::u32string const& code);
 
 }

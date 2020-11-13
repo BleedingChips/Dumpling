@@ -453,4 +453,24 @@ namespace Potato::Tool
 		size_t count;
 	};
 
+	/*
+	template<typename CallType, typename MemberType, typename ReturnType, typename ...Parameter> struct member_function_wrapper
+	{
+		template<typename FunctionType>
+		struct Storage
+		{
+			FunctionType fun_ptr;
+		};
+
+
+
+		template<typename FunctionType>
+		member_function_wrapper(FunctionType fun_ptr)
+			: 
+	private:
+		std::array<std::byte, sizeof(nullptr) * 4> member_function_pointer_storage;
+		ReturnType (*wrapper_function)(Parameter ...par) = nullptr;
+	};
+	*/
+
 }
