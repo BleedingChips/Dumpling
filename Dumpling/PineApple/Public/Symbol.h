@@ -30,13 +30,27 @@ namespace PineApple::Symbol
 		Mask FindActiveLast(std::u32string_view name) const noexcept;
 
 		template<typename FuncObj>
-		void Find(Mask mask, FuncObj&& FunObj)
+		bool Find(Mask mask, FuncObj&& FunObj)
 		{
 			if (mask && *mask < mapping.size())
 			{
 				auto& F = FindImp(mask);
 				std::forward<FuncObj>(FunObj)(F);
+				return true;
 			}
+			return false;
+		}
+
+		template<typename FuncObj>
+		bool Find(Mask mask, FuncObj&& FunObj) const
+		{
+			if (mask && *mask < mapping.size())
+			{
+				auto& F = FindImp(mask);
+				std::forward<FuncObj>(FunObj)(F);
+				return true;
+			}
+			return false;
 		}
 
 		size_t PopElementAsUnactive(size_t count);
@@ -50,6 +64,7 @@ namespace PineApple::Symbol
 	private:
 
 		Storage const& FindImp(Mask mask) const;
+		Storage& FindImp(Mask mask){ return const_cast<Storage&>( static_cast<Table const*>(this)->FindImp(mask)); }
 		
 		struct Mapping
 		{

@@ -43,7 +43,7 @@ namespace PineApple::Symbol
 			std::move_iterator(offset_ite),
 			std::move_iterator(active_scope.end())
 		);
-		unactive_scope.erase(offset_ite, unactive_scope.end());
+		active_scope.erase(offset_ite, active_scope.end());
 		for (size_t i = 0; i < count; ++i)
 		{
 			auto& mapp = *(mapping.rbegin() + i);

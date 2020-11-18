@@ -41,9 +41,9 @@ namespace PineApple::Nfa
 
 	struct LocatePoint
 	{
-		size_t total_index;
-		size_t line;
-		size_t line_index;
+		size_t total_index = 0;
+		size_t line = 0;
+		size_t line_index = 0;
 		bool operator<(LocatePoint const& lp) const {return total_index < lp.total_index;}
 	};
 

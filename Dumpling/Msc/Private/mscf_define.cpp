@@ -11,14 +11,16 @@ namespace Dumpling::Mscf
 		TypeProperty TP;
 		for (size_t i = 0; i < Count; ++i)
 		{
-			TP.values.push_back({ MemberName[i], {MemberType, false, {}, false} });
-			Comm.PushData(DefaultData);
+			ValueProperty Vp{MemberType, {}, {}, {}, {}};
+			auto V1 = table.Insert(MemberName[i], std::move(Vp));
+			TP.values.push_back(V1);
+			Comm.PushData(DefaultData, {});
 		}
+		table.PopElementAsUnactive(Count);
 		Mask Result = table.Insert(Name, std::move(TP));
-		Comm.CoverToType(Result, Count);
-		Comm.EqualData(Result);
+		Comm.CoverToType(Result, Count, {});
+		Comm.EqualData(Result, {});
 	}
-
 
 	std::tuple<Table, Commands> CreateContent()
 	{
@@ -55,18 +57,22 @@ namespace Dumpling::Mscf
 			for (size_t i = 0; i < std::size(DefineType); ++i)
 			{
 				auto Mask = table.Insert(std::get<1>(DefineType[i]), TextureProperty{std::get<0>(DefineType[i])});
-				commands.PushData(U"float4");
-				commands.PushData(std::u32string_view{});
-				commands.CoverToType(Mask, 2);
-				commands.EqualData(Mask);
+				commands.PushData(std::u32string_view{}, {});
+				commands.CoverToType(Mask, 1, {});
+				commands.EqualData(Mask, {});
 			}
 		}
 
 		{
 			auto Mask = table.Insert(U"SamplerState", SamplerProperty{});
-			commands.PushData(std::u32string_view{});
-			commands.CoverToType(Mask, 1);
-			commands.EqualData(Mask);
+			commands.PushData(std::u32string_view{}, {});
+			commands.CoverToType(Mask, 1, {});
+			commands.EqualData(Mask, {});
+		}
+
+		{
+			table.Insert(U"__MateData", MateDataProperty{});
+			table.Insert(U"__UntypedList", UnTypedListProperty{});
 		}
 
 		return {std::move(table), std::move(commands)};

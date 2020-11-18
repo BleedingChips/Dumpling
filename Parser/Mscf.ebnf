@@ -18,11 +18,15 @@ $ := <Statement>
     := 'false' : [6]
     := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [7]
 
+<BaseConstValueList> := '{'[ <BaseConstValue> {',' <BaseConstValue> } ] '}' : [22]
+
 <ArrayProperty> := '[' ']' : [8]
     := <ArrayProperty> '[' IntNumber ']' : [9]
     :=  : [10]
 
-<DefineVariable> := Id [ '<' Id '>' ] Id <ArrayProperty> [ '=' <BaseConstValue> ] : [11]
+<TypeRequire> := Id [ '<' Id '>' ] : [20]
+
+<DefineVariable> := <TypeRequire> Id <ArrayProperty> [ '=' ( <BaseConstValue> | <BaseConstValueList> ) ] : [11]
 
 <StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [12]
 
@@ -30,12 +34,14 @@ $ := <Statement>
 
 <MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [14]
 
-<PropertyDefine> := <PropertyDefine> <MateDate> '{' { <MateDate>  <DefineVariable> } '}' : [15]
-    := <PropertyDefine> <MateDate> <DefineVariable> ';' : [16]
-    := <PropertyDefine> <StructDesc> : [17]
-    :=  : [18]
+<PropertyDefine> := <MateDate> '{' { <PropertyDefine> } '}' : [15]
+    := <MateDate> <DefineVariable> ';' : [16]
 
-<PropertyStatement> := 'property' '{' <PropertyDefine> '}' : [19]
+<PropertyDefineList> := : [17]
+    := <PropertyDefineList> <PropertyDefine> : [18]
+    := <PropertyDefineList> <StructDesc> : [19]
+
+<PropertyStatement> := 'property' '{' <PropertyDefineList> '}' : [21]
 
 /*
 

@@ -94,7 +94,9 @@ namespace PineApple::Nfa
 					++NewLP.line;
 				}
 			}
-			DocumenetMarchElement Result{ *Re, {Loc.End(), NewLP} };
+			Loc = { Loc.End(), NewLP };
+			
+			DocumenetMarchElement Result{ *Re, Loc };
 			return Result;
 		}
 		return std::nullopt;
@@ -359,7 +361,7 @@ namespace PineApple::Nfa
 				else {
 					switch (tra.reduce.mask)
 					{
-					case 0: return std::move(tra.GetRawData(0));
+					case 0: return tra.MoveRawData(0);
 					case 1: {
 						auto [N1s, N1e] = tra.GetData<std::tuple<size_t, size_t>>(0);
 						auto [N2s, N2e] = tra.GetData<std::tuple<size_t, size_t>>(1);
@@ -378,7 +380,7 @@ namespace PineApple::Nfa
 						return std::tuple<size_t, size_t>{i1s, i2s};
 					}
 					case 3: {
-						return std::move(tra.GetRawData(1));
+						return tra.MoveRawData(1);
 					}
 					case 4: {
 						return Interval{};

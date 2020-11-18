@@ -107,8 +107,11 @@ namespace PineApple::Lr0
 		std::tuple<Symbol, std::any>& operator[](size_t index) { return datas[index]; }
 		Symbol& GetSymbol(size_t index) { return std::get<0>((*this)[index]); }
 		template<typename Type>
-		decltype(auto) GetData(size_t index) { return std::any_cast<Type>(std::get<1>((*this)[index])); }
-		decltype(auto) GetRawData(size_t index) { return std::get<1>((*this)[index]); }
+		Type GetData(size_t index) { return std::any_cast<Type>(std::get<1>((*this)[index])); }
+		template<typename Type>
+		std::remove_reference_t<Type> MoveData(size_t index) {return std::move(std::any_cast<std::add_lvalue_reference_t<Type>>(std::get<1>((*this)[index])));}
+		std::any MoveRawData(size_t index) { return std::move(std::get<1>((*this)[index])); }
+		std::any& GetRawData(size_t index) { return std::get<1>((*this)[index]); }
 		Element& operator=(Step const& ref) { Step::operator=(ref); return *this; }
 		Element(Step const& ref) : Step(ref) {}
 	};

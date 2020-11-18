@@ -6,6 +6,9 @@
 #include <map>
 #include <set>
 #include <array>
+
+#include "../../PineApple/Public/Nfa.h"
+
 namespace Dumpling::Mscf
 {
 	enum class VariableType
@@ -56,6 +59,12 @@ namespace Dumpling::Mscf
 	namespace Error
 	{
 		struct UndefineType
+		{
+			std::u32string TypeName;
+			PineApple::Nfa::Location LocationPoint;
+		};
+		
+		struct RequireTypeDonotSupportSample
 		{
 			std::u32string TypeName;
 			PineApple::Nfa::Location LocationPoint;

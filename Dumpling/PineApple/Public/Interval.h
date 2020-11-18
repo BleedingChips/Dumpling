@@ -32,6 +32,7 @@ namespace PineApple
 		Point(Storage p) : storage(std::move(p)) {}
 		Point(Point&& p) = default;
 		Point(Point const&) = default;
+		Point() = default;
 		Point& operator= (Point const&) = default;
 		Point& operator= (Point &&) = default;
 		bool operator< (Point const& o) const noexcept{return Less{}(storage, o.storage);}
@@ -70,7 +71,7 @@ namespace PineApple
 		using Point = Point<PointT, Less>;
 
 		Segment(Point p1, Point p2) : storage(std::tuple<Point, Point>{std::move(p1), std::move(p2)}){
-			auto& [p1c, p2c] = *storage;
+			auto& [p1c, p2c] = storage;
 			if(!(p1c < p2c))
 				std::swap(p1c, p2c);
 		}
@@ -81,8 +82,8 @@ namespace PineApple
 		Segment& operator=(Segment const&) = default;
 		Segment& operator=(Segment &&) = default;
 
-		Point const& Start() const { return std::get<0>(*storage); }
-		Point const& End() const { return std::get<1>(*storage); }
+		Point const& Start() const { return std::get<0>(storage); }
+		Point const& End() const { return std::get<1>(storage); }
 
 		
 		RelationShip Relationship(Segment const& p) const { 
@@ -96,7 +97,7 @@ namespace PineApple
 
 		bool IsInclude(Point const& si) const { return Start() <= si && si < End(); }
 
-		operator bool() const { return storage.has_value(); }
+		operator bool() const { return Start() != End(); }
 
 		Segment Maximum(Segment const& si, Implement::no_detection_t) const;
 
@@ -149,7 +150,7 @@ namespace PineApple
 		std::tuple<Segment, Segment> operator-(Segment const& si) const {return Cut(si);}
 
 	public:
-		std::optional<std::tuple<Point, Point>> storage;
+		std::tuple<Point, Point> storage;
 	};
 
 	template<typename PointT, typename Less>

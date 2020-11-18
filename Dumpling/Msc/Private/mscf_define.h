@@ -6,21 +6,21 @@ namespace Dumpling::Mscf
 {
 	
 	using Mask = PineApple::Symbol::Table::Mask;
+	using Location = PineApple::Nfa::Location;
 
 	struct ValueProperty
 	{
 		Mask type;
+		Mask sampler;
 		std::vector<int64_t> array_count;
+		std::vector<Mask> mate_data;
+		Location location;
 	};
 
 	struct TypeProperty
 	{
-		struct Member
-		{
-			std::u32string_view name;
-			ValueProperty property;
-		};
-		std::vector<Member> values;
+		std::vector<Mask> values;
+		Location location;
 	};
 
 	enum class TextureType
@@ -33,10 +33,13 @@ namespace Dumpling::Mscf
 	struct TextureProperty
 	{
 		TextureType type;
-		Mask read_type;
 	};
 
 	struct SamplerProperty {};
+
+	struct MateDataProperty {};
+
+	struct UnTypedListProperty {};
 
 	struct Commands
 	{
@@ -46,12 +49,12 @@ namespace Dumpling::Mscf
 		struct CoverType { Mask type; size_t parameter; };
 		struct EqualToData { Mask value; };
 	public:
-		void PushData(DataType command){ AllCommands.push_back(Data{command}); }
-		void CoverToType(Mask type, size_t parameter){ AllCommands.push_back(CoverType{type, parameter}); }
-		void EqualData(Mask type) { AllCommands.push_back(EqualToData{ type }); }
+		void PushData(DataType command, PineApple::Nfa::Location Loc){ AllCommands.push_back({Data{command}, Loc}); }
+		void CoverToType(Mask type, size_t parameter, PineApple::Nfa::Location Loc){ AllCommands.push_back({CoverType{type, parameter}, Loc}); }
+		void EqualData(Mask type, PineApple::Nfa::Location Loc) { AllCommands.push_back({EqualToData{ type }, Loc}); }
 	private:
 		using CommandType = std::variant<Data, CoverType, EqualToData>;
-		std::vector<CommandType> AllCommands;
+		std::vector<std::tuple<CommandType, PineApple::Nfa::Location>> AllCommands;
 	};
 
 	using Table = PineApple::Symbol::Table;

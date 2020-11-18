@@ -54,10 +54,12 @@ namespace PineApple::Ebnf
 			Property& operator=(Property const& p) = default;
 			std::any data;
 			template<typename Type>
-			decltype(auto) GetData() { return std::any_cast<Type>(data); }
+			Type GetData() { return std::any_cast<Type>(data); }
 			template<typename Type>
 			Type* TryGetData() { return std::any_cast<Type>(&data); }
-			std::any MoveData() { return std::move(data); }
+			template<typename Type>
+			std::remove_reference_t<Type> MoveData() { return std::move(std::any_cast<std::add_lvalue_reference_t<Type>>(data)); }
+			std::any MoveRawData() { return std::move(data); }
 		};
 		Property* datas = nullptr;
 		Property& operator[](size_t index) { return datas[index]; }

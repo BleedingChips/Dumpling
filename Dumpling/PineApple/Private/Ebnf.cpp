@@ -93,7 +93,7 @@ namespace PineApple::Ebnf
 	{
 		std::vector<Symbol> R1;
 		std::vector<Nfa::DocumenetMarchElement> R2;
-		Nfa::Location Loc;
+		Nfa::Location Loc = {Nfa::LocatePoint{}, Nfa::LocatePoint{}};
 		while (!input.empty())
 		{
 			auto Re = Nfa::DecumentComsume(table, input, Loc);
@@ -113,56 +113,87 @@ namespace PineApple::Ebnf
 		std::vector<Step> AllStep;
 		AllStep.reserve(Steps.steps.size());
 		Nfa::Location LastLocation;
-		size_t DataCount = 0;
-		std::vector<std::tuple<size_t, size_t>> TemporaryNoTerminal;
+		std::vector<size_t> TemporaryNoTerminalList;
+		std::vector<std::optional<size_t>> SimulateProduction;
 		for (auto& Ite : Steps.steps)
 		{
 			Step Result{};
 			Result.state = Ite.value.Index();
 			Result.is_terminal = Ite.IsTerminal();
 			Result.string = Tab.FindSymbolString(Result.state, Result.is_terminal);
+			if(!Result.string.empty() && Result.is_terminal)
+			{
+				auto& DatasRef = Datas[Ite.shift.token_index];
+				Result.loc = DatasRef.location;
+				LastLocation = DatasRef.location;
+				Result.shift.capture = DatasRef.march.capture;
+				Result.shift.mask = DatasRef.march.mask;
+				AllStep.push_back(Result);
+				SimulateProduction.push_back(std::nullopt);
+			}else
+			{
+				assert(Result.IsNoterminal());
+				size_t ProCount = Ite.reduce.production_count;
+				size_t Used = 0;
+				size_t UsedSimulateCount = 0;
+				size_t StartPosition = SimulateProduction.size() - ProCount;
+				for (size_t i = SimulateProduction.size(); i > StartPosition; --i)
+				{
+					if (!SimulateProduction[i - 1].has_value())
+					{
+						++Used;
+					}
+					else
+					{
+						assert(!TemporaryNoTerminalList.empty());
+						Used += *TemporaryNoTerminalList.rbegin();
+						TemporaryNoTerminalList.pop_back();
+					}
+					++UsedSimulateCount;
+				}
+				SimulateProduction.resize(SimulateProduction.size() - UsedSimulateCount);
+				if(Result.string.empty())
+				{
+					TemporaryNoTerminalList.push_back(Used);
+					SimulateProduction.push_back(TemporaryNoTerminalList.size());
+				}else
+				{
+					Result.reduce.mask = Ite.reduce.mask;
+					Result.reduce.production_count = Used;
+					Result.loc = LastLocation;
+					SimulateProduction.push_back(std::nullopt);
+					AllStep.push_back(Result);
+				}
+			}
+			/*
 			if (!Result.string.empty())
 			{
 				if (Result.is_terminal)
 				{
-					auto& DatasRef = Datas[Ite.shift.token_index];
-					Result.loc = DatasRef.location;
-					LastLocation = DatasRef.location;
-					Result.shift.capture = DatasRef.march.capture;
-					Result.shift.mask = DatasRef.march.mask;
-					DataCount += 1;
+					
 				}
 				else {
-					Result.reduce.mask = Ite.reduce.mask;
-					size_t ProCount = Ite.reduce.production_count;
-					size_t Used = ProCount;
-					while (!TemporaryNoTerminal.empty())
-					{
-						auto [Index, Count] = *TemporaryNoTerminal.rbegin();
-						if (Index + ProCount >= DataCount)
-						{
-							TemporaryNoTerminal.pop_back();
-							Used += Count;
-							Used -= 1;
-						}
-						else
-							break;
-					}
-					assert(DataCount >= ProCount);
-					DataCount -= ProCount;
-					DataCount += 1;
-					Result.reduce.production_count = Used;
-					Result.loc = LastLocation;
+					
 				}
-				AllStep.push_back(Result);
+				
 			}
 			else {
 				assert(Result.IsNoterminal());
-				TemporaryNoTerminal.push_back({ DataCount, Ite.reduce.production_count });
-				assert(DataCount >= Ite.reduce.production_count);
-				DataCount -= Ite.reduce.production_count;
-				DataCount += 1;
+				size_t Used = 0;
+				for(size_t i = Ite.reduce.production_count; i > 0; --i)
+				{
+					if(!SimulateProduction[i-1].has_value())
+						++Used;
+					else
+					{
+						assert(!TemporaryNoTerminalList.empty());
+						Used += *TemporaryNoTerminalList.rbegin();
+						TemporaryNoTerminalList.pop_back();
+					}
+				}
+				
 			}
+			*/
 		}
 		return { std::move(AllStep) };
 	}
@@ -192,7 +223,6 @@ namespace PineApple::Ebnf
 	std::any History::operator()(std::any(*Function)(void*, Element&), void* FunctionBody) const
 	{
 		std::vector<Element::Property> Storage;
-		int append = 0;
 		for (auto& ite : steps)
 		{
 			if (ite.IsTerminal())
@@ -204,7 +234,7 @@ namespace PineApple::Ebnf
 			}
 			else {
 				Element Re(ite);
-				size_t TotalUsed = ite.reduce.production_count + append;
+				size_t TotalUsed = ite.reduce.production_count;
 				size_t CurrentAdress = Storage.size() - TotalUsed;
 				Re.datas = Storage.data() + CurrentAdress;
 				if (TotalUsed >= 1)
@@ -548,7 +578,7 @@ namespace PineApple::Ebnf
 						} break;
 						case 1: {
 							LastHead = std::nullopt;
-							auto P1 = std::move(tra.GetData<Token>(3));
+							auto P1 = tra.MoveData<Token>(3);
 							if (!start_symbol)
 								start_symbol = P1.sym;
 							else
@@ -556,18 +586,18 @@ namespace PineApple::Ebnf
 							return std::vector<Lr0::ProductionInput>{};
 						}break;
 						case 2: {
-							return std::move(tra.GetRawData(0));
+							return tra.MoveRawData(0);
 						} break;
 						case 3: {
-							auto P1 = std::move(tra.GetData<SymbolList>(0));
-							auto P2 = std::move(tra.GetData<SymbolList>(1));
+							auto P1 = tra.MoveData<SymbolList>(0);
+							auto P2 = tra.MoveData<SymbolList>(1);
 							P1.insert(P1.end(), P2.begin(), P2.end());
 							return std::move(P1);
 						}break;
 						case 5: {
 							auto TemSym = Symbol(noterminal_temporary--, Lr0::NoTerminalT{});
-							auto P1 = std::move(tra.GetData<SymbolList>(0));
-							auto P2 = std::move(tra.GetData<SymbolList>(2));
+							auto P1 = tra.MoveData<SymbolList>(0);
+							auto P2 = tra.MoveData<SymbolList>(2);
 							P1.insert(P1.begin(), TemSym);
 							P2.insert(P2.begin(), TemSym);
 							productions.push_back({ std::move(P1) });
@@ -602,11 +632,11 @@ namespace PineApple::Ebnf
 							return {};
 						}break;
 						case 9: {
-							return std::move(tra.GetRawData(1));
+							return tra.MoveRawData(1);
 						}break;
 						case 10: {
 							auto TemSym = Symbol(noterminal_temporary--, Lr0::NoTerminalT{});
-							auto P = std::move(tra.GetData<SymbolList>(1));
+							auto P = tra.MoveData<SymbolList>(1);
 							P.insert(P.begin(), TemSym);
 							productions.push_back(std::move(P));
 							productions.push_back(Lr0::ProductionInput({ TemSym }));
@@ -614,7 +644,7 @@ namespace PineApple::Ebnf
 						}break;
 						case 11: {
 							auto TemSym = Symbol(noterminal_temporary--, Lr0::NoTerminalT{});
-							auto P = std::move(tra.GetData<SymbolList>(1));
+							auto P = tra.MoveData<SymbolList>(1);
 							auto List = { TemSym, TemSym };
 							P.insert(P.begin(), List.begin(), List.end());
 							productions.push_back(std::move(P));
@@ -627,7 +657,7 @@ namespace PineApple::Ebnf
 							return std::move(SL);
 						} break;
 						case 13: {
-							return std::move(tra.GetRawData(1));
+							return tra.MoveRawData(1);
 						} break;
 						case 14: {
 							return size_t(Lr0::ProductionInput::default_mask());
@@ -714,8 +744,8 @@ namespace PineApple::Ebnf
 							return std::move(List);
 						}break;
 						case 2: {
-							auto P1 = std::move(step.GetData<std::vector<Symbol>>(0));
-							auto P2 = std::move(step.GetData<std::vector<Symbol>>(1));
+							auto P1 = step.MoveData<std::vector<Symbol>>(0);
+							auto P2 = step.MoveData<std::vector<Symbol>>(1);
 							P1.insert(P1.end(), P2.begin(), P2.end());
 							return std::move(P1);
 						} break;
@@ -725,12 +755,12 @@ namespace PineApple::Ebnf
 							return {};
 						} break;
 						case 4: {
-							auto P = step.GetData<std::vector<Symbol>>(2);
+							auto P = step.MoveData<std::vector<Symbol>>(2);
 							operator_priority.push_back({ std::move(P), Lr0::Associativity::Left });
 							return {};
 						} break;
 						case 5: {
-							auto P = step.GetData<std::vector<Symbol>>(2);
+							auto P = step.MoveData<std::vector<Symbol>>(2);
 							operator_priority.push_back({ std::move(P), Lr0::Associativity::Right });
 							return {};
 						} break;

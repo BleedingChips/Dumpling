@@ -1,5 +1,12 @@
 property{
 
+    [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
+        float2 Potato = float2(1.0, 1.0);
+      []{
+            float2 Potato2 = float2(2.0, 2.0);
+            float2<float2> Data[100] = {};
+        }
+
     [min = float2(1.0, 1.0)]
     {
         [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
@@ -8,13 +15,13 @@ property{
             float2 Potato2 = float2(2.0, 2.0);
             float2<float2> Data[100] = {};
         }
-    };
+    }
 
     [ PPC, desc = "DefineWTF"]
     {
         float2 Demo = float2(2.0, 1.0);
         float2 Cc;
-    };
+    }
 
     struct Wtf
     {
@@ -25,7 +32,7 @@ property{
     Texture2D<float4> T2 = "GameplayContent";
     Texture2D<float4> T3;
     SamplerState WTF = "WTF";
-    SamplerCompState WTF2 = "WTF22";
+    SamplerState WTF2 = "WTF22";
 }
 
 /*
