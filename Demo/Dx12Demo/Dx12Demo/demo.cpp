@@ -25,9 +25,34 @@ using namespace Dx12;
 
 namespace fs = std::filesystem;
 
+
+template<typename FuncObj, typename = std::enable_if_t<!std::is_same_v<decltype(std::declval<FuncObj&&>()()), void>>>
+auto FUNC(bool t1, FuncObj&& OJ) -> std::optional<decltype(OJ())>
+{
+	if(t1)
+		return OJ();
+	else
+		return std::nullopt;
+}
+
+template<typename FuncObj, typename = std::enable_if_t<std::is_same_v<decltype(std::declval<FuncObj&&>()()), void>>>
+bool FUNC(bool t1, FuncObj&& OJ)
+{
+  if (t1)
+    return true;
+  else
+    return false;
+}
+
 int main()
 {
 
+	auto P = FUNC(true, [](){});
+	
+
+
+
+	
 	using Interval = Interval<int>;
 
 	Interval re({{1, 4}, {7,14}, {4, 7}, {}});

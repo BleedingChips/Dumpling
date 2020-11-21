@@ -11,49 +11,66 @@
 #include <optional>
 namespace PineApple::Symbol
 {
+	
 	struct Table
 	{
 		struct Mask
 		{
-			std::optional<size_t> index = std::nullopt;
-			operator bool () const noexcept{ return index.has_value(); }
-			size_t operator*() const {return *index;}
-		};
-
-		struct Storage
-		{
-			std::u32string_view name;
-			Mask index;
-			std::any property;
+			Mask(const Mask&) = default;
+			Mask(size_t inputindex) : index(inputindex){}
+			Mask() =default;
+			Mask& operator=(Mask const&) = default;
+			operator bool() const noexcept { return index != 0; }
+		private:
+			friend class Table;
+			size_t index = 0;
 		};
 		
 		Mask FindActiveLast(std::u32string_view name) const noexcept;
+		std::vector<Mask> FindActiveAll(std::u32string_view name) const;
 
-		template<typename FuncObj>
-		bool Find(Mask mask, FuncObj&& FunObj)
+		enum class ResultType
 		{
-			if (mask && *mask < mapping.size())
-			{
-				auto& F = FindImp(mask);
-				std::forward<FuncObj>(FunObj)(F);
-				return true;
-			}
-			return false;
+			Inavailable,
+			ExistButNotRequireType,
+			Available
+		};
+		
+		template<typename RequireType>
+		struct Result
+		{
+			ResultType type = ResultType::Inavailable;
+			std::u32string_view name;
+			RequireType* require_data = nullptr;
+			operator bool () const noexcept{return type == ResultType::Available;}
+			RequireType* operator->(){return require_data;}
+			bool Exist() const noexcept{return type != ResultType::Inavailable;}
+		};
+
+		template<typename RequireType>
+		auto Find(Mask mask) ->Result<std::remove_reference_t<RequireType>>
+		{
+			auto result = static_cast<Table const*>(this)->Table::Find<std::add_const_t<RequireType>>(mask);
+			return { result.type, result.name, const_cast<std::remove_reference_t<RequireType>*>(result.require_data) };
 		}
 
-		template<typename FuncObj>
-		bool Find(Mask mask, FuncObj&& FunObj) const
+		template<typename RequireType>
+		auto Find(Mask mask) const ->Result<std::add_const_t<std::remove_reference_t<RequireType>>>
 		{
-			if (mask && *mask < mapping.size())
+			auto storage = FindImp(mask);
+			if (storage != nullptr)
 			{
-				auto& F = FindImp(mask);
-				std::forward<FuncObj>(FunObj)(F);
-				return true;
+				RequireType* require = std::any_cast<RequireType>(&storage->property);
+				if (require != nullptr)
+					return { ResultType::Available, storage->name, require };
+				return { ResultType::ExistButNotRequireType, storage->name, nullptr };
 			}
-			return false;
+			return { ResultType::Inavailable, storage->name, nullptr };
 		}
 
 		size_t PopElementAsUnactive(size_t count);
+
+		std::vector<Mask> PopAndReturnElementAsUnactive(size_t count);
 
 		Mask Insert(std::u32string_view name, std::any property);
 
@@ -63,8 +80,15 @@ namespace PineApple::Symbol
 
 	private:
 
-		Storage const& FindImp(Mask mask) const;
-		Storage& FindImp(Mask mask){ return const_cast<Storage&>( static_cast<Table const*>(this)->FindImp(mask)); }
+		struct Storage
+		{
+			std::u32string_view name;
+			Mask index;
+			std::any property;
+		};
+
+		Storage* FindImp(Mask mask){ return const_cast<Storage*>( static_cast<Table const*>(this)->FindImp(mask));  }
+		Storage const* FindImp(Mask mask) const;
 		
 		struct Mapping
 		{

@@ -134,17 +134,16 @@ namespace Dumpling::Mscf
 						auto ArrayCount = E[2].MoveData<std::vector<int64_t>>();
 						if(ReaderMask)
 						{
-							Table.Find(TypeMask, [&](Table::Storage const& Storage)
-							{
-								if (std::any_cast<TextureProperty>(&Storage.property) == nullptr)
-									throw Error::RequireTypeDonotSupportSample{ String(Storage.name), E[0].loc};
-							});
+							auto Find = Table.Find<TextureProperty>(TypeMask);
+							assert(Find.Exist());
+							if(!Find)
+								throw Error::RequireTypeDonotSupportSample{ String(Find.name), E[0].loc };
 						}
 						ValueProperty Pro{ TypeMask,ReaderMask, std::move(ArrayCount), {}, E.loc };
 						auto ValueMask = Table.Insert(ValName, std::move(Pro));
 						if(E.reduce.production_count == 5)
 							Command.EqualData(ValueMask, E.loc);
-						return ValueMask;
+						return std::tuple<Mask, Location>{ValueMask, E.loc};
 					}break;
 					case 12:{
 							auto TypeName = E[1].GetData<StringView>();
@@ -152,11 +151,15 @@ namespace Dumpling::Mscf
 							for(size_t i = 3; i < E.reduce.production_count; ++i)
 							{
 								if(E[i].IsNoterminal())
+								{
+									// todo list
+									auto [ValueMask, Loc] = E[i].GetData<std::tuple<Mask, Location>>();
+								}
 									AllProperty.push_back(E[i].GetData<Mask>());
 							}
 							Table.PopElementAsUnactive(AllProperty.size());
 							auto TypeMask = Table.Insert(TypeName, {std::move(AllProperty)});
-							return TypeMask;
+							return std::tuple<Mask, Location>{TypeMask, E.loc};
 					} break;
 					case 13:
 						{
@@ -190,10 +193,10 @@ namespace Dumpling::Mscf
 									std::vector<Mask> Value = E[i].MoveData<std::vector<Mask>>();
 									for(auto Item : Value)
 									{
-										bool Find = Table.Find(Item, [&](Symbol::Table::Storage& Str){
-											auto& Ref = std::any_cast<ValueProperty&>(Str.property);
-											Ref.mate_data.insert(Ref.mate_data.end(), AppendMate.rbegin(), AppendMate.rend());
-										});
+										auto Fined = Table.Find<ValueProperty>(Item);
+										assert(Fined);
+										auto& ref = Fined->mate_data;
+										ref.insert(ref.begin(), AppendMate.rbegin(), AppendMate.rend());
 									}
 									DefinedValue.insert(DefinedValue.end(), Value.begin(), Value.end());
 								}
@@ -204,11 +207,10 @@ namespace Dumpling::Mscf
 						{
 							std::vector<Mask> SelfMateData = E[0].MoveData<std::vector<Mask>>();
 							Mask ValueMask = E[1].MoveData<Mask>();
-							bool Find = Table.Find(ValueMask, [&](Symbol::Table::Storage& Str)
-							{
-								auto& Ref = std::any_cast<ValueProperty&>(Str.property);
-								Ref.mate_data.insert(Ref.mate_data.end(), SelfMateData.rbegin(), SelfMateData.rend());
-							});
+							auto Result = Table.Find<ValueProperty>(ValueMask);
+							assert(Result);
+							auto& ref = Result->mate_data;
+							ref.insert(ref.end(), SelfMateData.rbegin(), SelfMateData.rend());
 							Table.PopElementAsUnactive(1);
 							return std::vector<Mask>({ValueMask});
 						}break;
@@ -230,7 +232,20 @@ namespace Dumpling::Mscf
 					case 21:
 						{
 							auto L1 = E[2].MoveData<std::vector<Mask>>();
-							volatile int i =0;
+							for(auto Ite : L1)
+							{
+								auto Result = Table.Find<ValueProperty>(Ite);
+								assert(Result);
+								std::set<StringView> MateDataNameSet;
+								auto& ref = Result->mate_data;
+								ref.erase(std::remove_if(ref.begin(), ref.end(), [&](Mask mask) -> bool
+								{
+									auto MateData = Table.Find<ValueProperty>(mask);
+									assert(MateData);
+									auto Result = MateDataNameSet.insert(MateData.name);
+									return !Result.second;
+								}), ref.end());
+							}
 						} break;
 					}
 				}

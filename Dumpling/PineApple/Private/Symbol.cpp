@@ -12,15 +12,17 @@ namespace PineApple::Symbol
 		return mask;
 	}
 
-	auto Table::FindImp(Mask mask) const -> Storage const&
+	auto Table::FindImp(Mask mask) const -> Storage const*
 	{
-		assert(mask);
-		assert(*mask < mapping.size());
-		auto& mapp = mapping[*mask];
-		if (mapp.is_active)
-			return active_scope[mapp.index];
-		else
-			return unactive_scope[mapp.index];
+		if(mask && (mask.index <= mapping.size()))
+		{
+			auto& mapp = mapping[mask.index - 1];
+			if (mapp.is_active)
+				return &active_scope[mapp.index];
+			else
+				return &unactive_scope[mapp.index];
+		}
+		return nullptr;
 	}
 
 	auto Table::FindActiveLast(std::u32string_view name) const noexcept -> Table::Mask
@@ -31,6 +33,17 @@ namespace PineApple::Symbol
 				return ite->index;
 		}
 		return {};
+	}
+
+	auto Table::FindActiveAll(std::u32string_view name) const -> std::vector<Table::Mask>
+	{
+		std::vector<Mask> result;
+		for (auto ite = active_scope.rbegin(); ite != active_scope.rend(); ++ite)
+		{
+			if (ite->name == name)
+				result.push_back(ite->index);
+		}
+		return std::move(result);
 	}
 	
 	size_t Table::PopElementAsUnactive(size_t count)
@@ -51,6 +64,28 @@ namespace PineApple::Symbol
 			mapp.index = unactive_scope_size + count - i - 1;
 		}
 		return active_scope.size();
+	}
+
+	auto Table::PopAndReturnElementAsUnactive(size_t count) -> std::vector<Mask>
+	{
+		assert(active_scope.size() >= count);
+		auto unactive_scope_size = unactive_scope.size();
+		auto offset = active_scope.size() - count;
+		auto offset_ite = active_scope.begin() + offset;
+		unactive_scope.insert(unactive_scope.end(),
+			std::move_iterator(offset_ite),
+			std::move_iterator(active_scope.end())
+		);
+		active_scope.erase(offset_ite, active_scope.end());
+		std::vector<Mask> result;
+		for (size_t i = 0; i < count; ++i)
+		{
+			auto& mapp = *(mapping.rbegin() + i);
+			mapp.is_active = false;
+			mapp.index = unactive_scope_size + count - i - 1;
+			result.push_back(mapping.size() - (1 + i));
+		}
+		return std::move(result);
 	}
 
 	size_t StorageInfoLinker::operator()(StorageInfo const& info_i)
