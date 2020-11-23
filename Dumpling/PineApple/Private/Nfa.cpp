@@ -22,19 +22,19 @@ namespace PineApple::Nfa
 				Input = 0;
 			else
 				Input = *code.begin();
-			auto [s, c] = Ref.Nodes[state];
+			auto [s, c] = Ref.nodes[state];
 			bool ForceBreak = false;
 			while (!ForceBreak && index < c)
 			{
 				auto cur_index = index++;
-				auto [Type, i1, i2, i3] = Ref.Edges[s + cur_index];
+				auto [Type, i1, i2, i3] = Ref.edges[s + cur_index];
 				switch (Type)
 				{
 				case static_cast<size_t>(Table::EdgeType::Comsume): {
-					auto* edge_ref = Ref.ComsumeEdge.data() + i1;
+					auto* edge_ref = Ref.comsume_edge.data() + i1;
 					for (size_t i = 0; i < i2; ++i)
 					{
-						if (Ref.ComsumeEdge[i + i1].IsInclude(Input))
+						if (Ref.comsume_edge[i + i1].IsInclude(Input))
 						{
 							search_stack.push_back({ i3, 0, {code.data() + 1, code.size() - 1} });
 							ForceBreak = true;
@@ -78,12 +78,12 @@ namespace PineApple::Nfa
 		return std::move(Result);
 	}
 
-	std::optional<DocumenetMarchElement> DecumentComsume(Table const& Ref, std::u32string_view String, Location& Loc)
+	std::optional<DocumenetMarchElement> DecumentComsume(Table const& Ref, std::u32string_view String, Section& Loc)
 	{
 		auto Re = Consume(Ref, String);
 		if (Re)
 		{
-			LocatePoint NewLP = Loc.End();
+			SectionPoint NewLP = Loc.End();
 			for (auto& ite : Re->capture)
 			{
 				++(NewLP.total_index);
@@ -104,7 +104,7 @@ namespace PineApple::Nfa
 
 	std::vector<DocumenetMarchElement> DecumentProcess(Table const& Ref, std::u32string_view String)
 	{
-		Location Loc;
+		Section Loc;
 		std::vector<DocumenetMarchElement> Result;
 		auto IteString = String;
 		while (IteString.size() != 0)
@@ -712,27 +712,27 @@ namespace PineApple::Nfa
 			}
 			for (auto& ite : result.nodes)
 			{
-				size_t start = re.Edges.size();
+				size_t start = re.edges.size();
 				size_t count = 0;
 				for (auto& ite2 : ite.edge)
 				{
 					if (std::holds_alternative<comsume>(ite2))
 					{
 						auto& ref = std::get<comsume>(ite2);
-						size_t comsume_index = re.ComsumeEdge.size();
-						re.ComsumeEdge.insert(re.ComsumeEdge.end(), ref.require.begin(), ref.require.end());
-						re.Edges.push_back({ static_cast<size_t>(Table::EdgeType::Comsume), comsume_index, ref.require.size(), ref.state});
+						size_t comsume_index = re.comsume_edge.size();
+						re.comsume_edge.insert(re.comsume_edge.end(), ref.require.begin(), ref.require.end());
+						re.edges.push_back({ static_cast<size_t>(Table::EdgeType::Comsume), comsume_index, ref.require.size(), ref.state});
 					}
 					else if (std::holds_alternative<acception>(ite2))
 					{
 						auto& ref = std::get<acception>(ite2);
-						re.Edges.push_back({ static_cast<size_t>(Table::EdgeType::Acception), ref.acception_state, ref.acception_mask, ref.state });
+						re.edges.push_back({ static_cast<size_t>(Table::EdgeType::Acception), ref.acception_state, ref.acception_mask, ref.state });
 					}
 					else
 						assert(false);
 					++count;
 				}
-				re.Nodes.push_back({start, count});
+				re.nodes.push_back({start, count});
 			}
 		}
 		return re;
@@ -820,6 +820,6 @@ namespace PineApple::StrFormat
 	std::u32string Formatter<Nfa::Table>::operator()(std::u32string_view, Nfa::Table const& input)
 	{
 		static auto pat = CreatePatternRef(U"{{{}, {}, {}}}");
-		return Process(pat, input.ComsumeEdge, input.Edges, input.Nodes);
+		return Process(pat, input.comsume_edge, input.edges, input.nodes);
 	}
 }

@@ -4,10 +4,10 @@
 namespace PineApple::Symbol
 {
 
-	auto Table::Insert(std::u32string_view name, std::any property) -> Table::Mask
+	auto Table::Insert(std::u32string_view name,  std::any property, Section section) -> Table::Mask
 	{
 		Mask mask{mapping.size() + 1};
-		active_scope.push_back({name, mask, std::move(property)});
+		active_scope.push_back({name, mask, section, std::move(property)});
 		mapping.push_back(Mapping{true, active_scope.size() - 1});
 		return mask;
 	}

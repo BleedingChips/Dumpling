@@ -6,6 +6,7 @@ namespace PineApple::Ebnf
 {
 
 	using Symbol = Lr0::Symbol;
+	using Section = Nfa::Section;
 
 	struct Table
 	{
@@ -26,7 +27,7 @@ namespace PineApple::Ebnf
 		size_t state = 0;
 		std::u32string_view string;
 		bool is_terminal = false;
-		Nfa::Location loc;
+		Section section;
 		union {
 			struct {
 				size_t mask = 0;
@@ -95,19 +96,19 @@ namespace PineApple::Ebnf
 
 		struct ExceptionStep
 		{
-			std::u32string Name;
+			std::u32string name;
 			bool is_terminal = false;
 			size_t production_mask = Lr0::ProductionInput::default_mask();
 			size_t production_count = 0;
 			std::u32string capture;
-			Nfa::Location loc;
+			Section section;
 		};
 
 		struct MissingStartSymbol {};
 
 		struct UndefinedTerminal {
 			std::u32string token;
-			Nfa::Location loc;
+			Section section;
 		};
 
 		struct UndefinedNoterminal {
@@ -117,18 +118,18 @@ namespace PineApple::Ebnf
 		struct UnsetDefaultProductionHead {};
 
 		struct RedefinedStartSymbol {
-			Nfa::Location loc;
+			Section section;
 		};
 
 		struct UnacceptableToken {
 			std::u32string token;
-			Nfa::Location loc;
+			Section section;
 		};
 
 		struct UnacceptableSyntax {
 			std::u32string type;
 			std::u32string data;
-			Nfa::Location loction;
+			Section section;
 			std::vector<std::u32string> exception_step;
 		};
 

@@ -93,7 +93,7 @@ namespace PineApple::Ebnf
 	{
 		std::vector<Symbol> R1;
 		std::vector<Nfa::DocumenetMarchElement> R2;
-		Nfa::Location Loc = {Nfa::LocatePoint{}, Nfa::LocatePoint{}};
+		Section Loc = { Nfa::SectionPoint{}, Nfa::SectionPoint{}};
 		while (!input.empty())
 		{
 			auto Re = Nfa::DecumentComsume(table, input, Loc);
@@ -112,7 +112,7 @@ namespace PineApple::Ebnf
 	{
 		std::vector<Step> AllStep;
 		AllStep.reserve(Steps.steps.size());
-		Nfa::Location LastLocation;
+		Section LastSection;
 		std::vector<size_t> TemporaryNoTerminalList;
 		std::vector<std::optional<size_t>> SimulateProduction;
 		for (auto& Ite : Steps.steps)
@@ -124,8 +124,8 @@ namespace PineApple::Ebnf
 			if(!Result.string.empty() && Result.is_terminal)
 			{
 				auto& DatasRef = Datas[Ite.shift.token_index];
-				Result.loc = DatasRef.location;
-				LastLocation = DatasRef.location;
+				Result.section = DatasRef.section;
+				LastSection = DatasRef.section;
 				Result.shift.capture = DatasRef.march.capture;
 				Result.shift.mask = DatasRef.march.mask;
 				AllStep.push_back(Result);
@@ -160,40 +160,11 @@ namespace PineApple::Ebnf
 				{
 					Result.reduce.mask = Ite.reduce.mask;
 					Result.reduce.production_count = Used;
-					Result.loc = LastLocation;
+					Result.section = LastSection;
 					SimulateProduction.push_back(std::nullopt);
 					AllStep.push_back(Result);
 				}
 			}
-			/*
-			if (!Result.string.empty())
-			{
-				if (Result.is_terminal)
-				{
-					
-				}
-				else {
-					
-				}
-				
-			}
-			else {
-				assert(Result.IsNoterminal());
-				size_t Used = 0;
-				for(size_t i = Ite.reduce.production_count; i > 0; --i)
-				{
-					if(!SimulateProduction[i-1].has_value())
-						++Used;
-					else
-					{
-						assert(!TemporaryNoTerminalList.empty());
-						Used += *TemporaryNoTerminalList.rbegin();
-						TemporaryNoTerminalList.pop_back();
-					}
-				}
-				
-			}
-			*/
 		}
 		return { std::move(AllStep) };
 	}
@@ -212,11 +183,11 @@ namespace PineApple::Ebnf
 			auto Str = Tab.FindSymbolString(Symbol.symbol.Index(), Symbol.symbol.IsTerminal());
 			if (Str.empty())
 			{
-				Nfa::Location loc = (Symbol.index > 0) ? Datas[Symbol.index - 1].location : Nfa::Location{};
+				Section loc = (Symbol.index > 0) ? Datas[Symbol.index - 1].section : Section{};
 				throw Error::UnacceptableSyntax{ U"$_Eof", U"$_Eof", loc, his.Expand() };
 			}
-			auto loc = Datas[Symbol.symbol.Index()].location;
-			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.index].march.capture),Datas[Symbol.index].location, his.Expand() };
+			auto loc = Datas[Symbol.symbol.Index()].section;
+			throw Error::UnacceptableSyntax{ std::u32string(Str), std::u32string(Datas[Symbol.index].march.capture),Datas[Symbol.index].section, his.Expand() };
 		}
 	}
 
@@ -239,10 +210,10 @@ namespace PineApple::Ebnf
 				Re.datas = Storage.data() + CurrentAdress;
 				if (TotalUsed >= 1)
 				{
-					Re.loc = {Re[0].loc.Start(), Re[TotalUsed - 1].loc.End()};
+					Re.section = {Re[0].section.Start(), Re[TotalUsed - 1].section.End()};
 				}
 				else {
-					Re.loc = ite.loc;
+					Re.section = ite.section;
 				}
 				auto Result = (*Function)(FunctionBody, Re);
 				Storage.resize(CurrentAdress);
@@ -295,7 +266,7 @@ namespace PineApple::Ebnf
 		return result;
 	}
 
-	std::tuple<std::vector<Symbol>, std::vector<Nfa::DocumenetMarchElement>> EbnfLexer(Nfa::Table const& table, std::u32string_view& input, std::set<size_t> const& Remove, Nfa::Location& Loc)
+	std::tuple<std::vector<Symbol>, std::vector<Nfa::DocumenetMarchElement>> EbnfLexer(Nfa::Table const& table, std::u32string_view& input, std::set<size_t> const& Remove, Section& Loc)
 	{
 		std::vector<Symbol> R1;
 		std::vector<Nfa::DocumenetMarchElement> R2;
@@ -348,7 +319,7 @@ namespace PineApple::Ebnf
 
 		symbol_to_index.insert({ U"_IGNORE", 0 });
 
-		Nfa::Location Loc;
+		Section Loc;
 
 		// step1
 		{
@@ -428,7 +399,7 @@ namespace PineApple::Ebnf
 			{
 				assert(Elements.size() > US.index);
 				auto P = Elements[US.index];
-				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location};
+				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.section};
 			}
 			
 		}
@@ -533,7 +504,7 @@ namespace PineApple::Ebnf
 							if (Find != symbol_to_index.end())
 								return Token{ Symbol(Find->second, Lr0::TerminalT{}), element };
 							else
-								throw Error::UndefinedTerminal{ string, element.location };
+								throw Error::UndefinedTerminal{ string, element.section };
 						}break;
 						case* T::NoTerminal: {
 							auto Find = noterminal_symbol_to_index.insert({ string, noterminal_symbol_to_index.size() });
@@ -582,7 +553,7 @@ namespace PineApple::Ebnf
 							if (!start_symbol)
 								start_symbol = P1.sym;
 							else
-								throw Error::RedefinedStartSymbol{ P1.march.location };
+								throw Error::RedefinedStartSymbol{ P1.march.section };
 							return std::vector<Lr0::ProductionInput>{};
 						}break;
 						case 2: {
@@ -685,7 +656,7 @@ namespace PineApple::Ebnf
 			catch (Lr0::Error::UnaccableSymbol const& US)
 			{
 				auto P = Elements[US.index];
-				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location };
+				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.section };
 			}
 
 		}
@@ -732,7 +703,7 @@ namespace PineApple::Ebnf
 							if (Find != symbol_to_index.end())
 								return Token{ Symbol(Find->second, Lr0::TerminalT{}) };
 							else
-								throw Error::UndefinedTerminal{std::u32string(element.march.capture), element.location };
+								throw Error::UndefinedTerminal{std::u32string(element.march.capture), element.section };
 						}
 					}
 					else {
@@ -772,7 +743,7 @@ namespace PineApple::Ebnf
 			catch (Lr0::Error::UnaccableSymbol const& US)
 			{
 				auto P = Elements[US.index];
-				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.location };
+				throw Error::UnacceptableToken{ std::u32string(P.march.capture), P.section };
 			}
 		}
 
@@ -817,7 +788,7 @@ namespace PineApple::Ebnf
 		}
 		catch (Nfa::Error::UnaccaptableRexgex const& ref)
 		{
-			throw Error::UnacceptableRegex{ref.Regex, ref.AccepetableMask};
+			throw Error::UnacceptableRegex{ref.regex, ref.accepetable_mask};
 		}
 		catch (Lr0::Error::NoterminalUndefined const NU)
 		{

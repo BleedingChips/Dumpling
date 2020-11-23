@@ -7,10 +7,12 @@
 #include <set>
 #include <array>
 
-#include "../../PineApple/Public/Nfa.h"
+#include "../../PineApple/Public/Ebnf.h"
 
 namespace Dumpling::Mscf
 {
+	using Section = PineApple::Ebnf::Section;
+	
 	enum class VariableType
 	{
 		Base,
@@ -60,14 +62,21 @@ namespace Dumpling::Mscf
 	{
 		struct UndefineType
 		{
-			std::u32string TypeName;
-			PineApple::Nfa::Location LocationPoint;
+			std::u32string type_name;
+			Section section;
 		};
 		
 		struct RequireTypeDonotSupportSample
 		{
-			std::u32string TypeName;
-			PineApple::Nfa::Location LocationPoint;
+			std::u32string type_name;
+			Section section;
+		};
+
+		struct RedefineProperty
+		{
+			std::u32string redefine_name;
+			Section redefine_section;
+			Section predefine_section;
 		};
 	}
 

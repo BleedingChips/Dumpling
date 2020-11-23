@@ -11,6 +11,8 @@
 #include <optional>
 namespace PineApple::Symbol
 {
+
+	using Section = Nfa::Section;
 	
 	struct Table
 	{
@@ -22,7 +24,7 @@ namespace PineApple::Symbol
 			Mask& operator=(Mask const&) = default;
 			operator bool() const noexcept { return index != 0; }
 		private:
-			friend class Table;
+			friend struct Table;
 			size_t index = 0;
 		};
 		
@@ -41,6 +43,7 @@ namespace PineApple::Symbol
 		{
 			ResultType type = ResultType::Inavailable;
 			std::u32string_view name;
+			Section section;
 			RequireType* require_data = nullptr;
 			operator bool () const noexcept{return type == ResultType::Available;}
 			RequireType* operator->(){return require_data;}
@@ -51,7 +54,7 @@ namespace PineApple::Symbol
 		auto Find(Mask mask) ->Result<std::remove_reference_t<RequireType>>
 		{
 			auto result = static_cast<Table const*>(this)->Table::Find<std::add_const_t<RequireType>>(mask);
-			return { result.type, result.name, const_cast<std::remove_reference_t<RequireType>*>(result.require_data) };
+			return { result.type, result.name, result.section, const_cast<std::remove_reference_t<RequireType>*>(result.require_data) };
 		}
 
 		template<typename RequireType>
@@ -60,19 +63,19 @@ namespace PineApple::Symbol
 			auto storage = FindImp(mask);
 			if (storage != nullptr)
 			{
-				RequireType* require = std::any_cast<RequireType>(&storage->property);
+				std::add_const_t<std::remove_reference_t<RequireType>>* require = std::any_cast<std::add_const_t<std::remove_reference_t<RequireType>>>(&storage->property);
 				if (require != nullptr)
-					return { ResultType::Available, storage->name, require };
-				return { ResultType::ExistButNotRequireType, storage->name, nullptr };
+					return { ResultType::Available, storage->name, storage->section,  require };
+				return { ResultType::ExistButNotRequireType, storage->name, storage->section, nullptr };
 			}
-			return { ResultType::Inavailable, storage->name, nullptr };
+			return { ResultType::Inavailable, {}, {}, nullptr };
 		}
 
 		size_t PopElementAsUnactive(size_t count);
 
 		std::vector<Mask> PopAndReturnElementAsUnactive(size_t count);
 
-		Mask Insert(std::u32string_view name, std::any property);
+		Mask Insert(std::u32string_view name, std::any property, Section section = {});
 
 		Table(Table&&) = default;
 		Table(Table const&) = default;
@@ -84,6 +87,7 @@ namespace PineApple::Symbol
 		{
 			std::u32string_view name;
 			Mask index;
+			Section section;
 			std::any property;
 		};
 

@@ -20,14 +20,26 @@ int64_t StringToInt(std::u32string_view Input)
 	return Result;
 }
 
-
-
 namespace Dumpling::Mscf
 {
-
+	
 	using namespace PineApple::Symbol;
 	using String = std::u32string;
 	using StringView = std::u32string_view;
+
+	void CheckRedefine(Table const& table, std::vector<Mask> const& masks)
+	{
+		std::map<StringView, Section> NameSet;
+		for(auto ite : masks)
+		{
+			assert(ite);
+			auto result = table.Find<ValueProperty>(ite);
+			assert(result.Exist());
+			auto re = NameSet.insert({result.name, result.section});
+			if(!re.second)
+				throw Error::RedefineProperty{String(re.first->first), result.section , re.first->second };
+		}
+	}
 
 	mscf translate(String const& code)
 	{
@@ -62,33 +74,33 @@ namespace Dumpling::Mscf
 					case 4: {
 						auto& Data = E[0];
 						if (Data.TryGetData<int64_t>())
-							Command.PushData(*Data.TryGetData<int64_t>(), Data.loc);
+							Command.PushData(*Data.TryGetData<int64_t>(), Data.section);
 						else if(Data.TryGetData<float>())
-							Command.PushData(*Data.TryGetData<float>(), Data.loc);
+							Command.PushData(*Data.TryGetData<float>(), Data.section);
 						else if(Data.TryGetData<StringView>())
-							Command.PushData(*Data.TryGetData<StringView>(), Data.loc);
+							Command.PushData(*Data.TryGetData<StringView>(), Data.section);
 						else
 							assert(false);
 						return {}; 
 					} break;
 					case 5:{
-						Command.PushData(true, E.loc);
+						Command.PushData(true, E.section);
 					} break;
 					case 6:{
-						Command.PushData(false, E.loc);
+						Command.PushData(false, E.section);
 					} break;
 					case 7:{
 						auto P = E[0].GetData<StringView>();
 						auto TypeMask = Table.FindActiveLast(P);
 						if(!TypeMask)
-							throw Error::UndefineType{String(P), E[0].loc};
+							throw Error::UndefineType{String(P), E[0].section };
 						size_t index = 0;
 						for (auto& Ite : E)
 						{
 							if (Ite.IsNoterminal())
 								++index;
 						}
-						Command.CoverToType(TypeMask, index, E.loc);
+						Command.CoverToType(TypeMask, index, E.section);
 					} break;
 					case 22:{
 						auto P = Table.FindActiveLast(U"__MateData");
@@ -99,10 +111,12 @@ namespace Dumpling::Mscf
 							if(Ite.IsNoterminal())
 								++used;
 						}
-						Command.CoverToType(P, used, E.loc);
+						Command.CoverToType(P, used, E.section);
 					} break;
 					case 8:{
-						return std::vector<int64_t>{0};
+						std::vector<int64_t> Result;
+						Result.push_back(0);
+						return std::move(Result);
 					} break;
 					case 9:{
 						std::vector<int64_t> Last = E[0].MoveData<std::vector<int64_t>>();
@@ -117,14 +131,14 @@ namespace Dumpling::Mscf
 							auto TypeName = E[0].GetData<StringView>();
 							auto TypeMask = Table.FindActiveLast(TypeName);
 							if (!TypeMask)
-								throw Error::UndefineType{ String(TypeName), E[0].loc };
+								throw Error::UndefineType{ String(TypeName), E[0].section };
 							Mask SampleMask;
 							if (E.reduce.production_count == 3)
 							{
 								auto ReaderName = E[2].GetData<StringView>();
 								SampleMask = Table.FindActiveLast(ReaderName);
 								if (!SampleMask)
-									throw Error::UndefineType{ String(ReaderName), E[2].loc };
+									throw Error::UndefineType{ String(ReaderName), E[2].section };
 							}
 							return std::tuple<Mask, Mask>{TypeMask, SampleMask};
 						} break;
@@ -137,13 +151,13 @@ namespace Dumpling::Mscf
 							auto Find = Table.Find<TextureProperty>(TypeMask);
 							assert(Find.Exist());
 							if(!Find)
-								throw Error::RequireTypeDonotSupportSample{ String(Find.name), E[0].loc };
+								throw Error::RequireTypeDonotSupportSample{ String(Find.name), E[0].section };
 						}
-						ValueProperty Pro{ TypeMask,ReaderMask, std::move(ArrayCount), {}, E.loc };
-						auto ValueMask = Table.Insert(ValName, std::move(Pro));
+						ValueProperty Pro{ TypeMask,ReaderMask, std::move(ArrayCount), {} };
+						auto ValueMask = Table.Insert(ValName, std::move(Pro), E.section);
 						if(E.reduce.production_count == 5)
-							Command.EqualData(ValueMask, E.loc);
-						return std::tuple<Mask, Location>{ValueMask, E.loc};
+							Command.EqualData(ValueMask, E.section);
+						return ValueMask;
 					}break;
 					case 12:{
 							auto TypeName = E[1].GetData<StringView>();
@@ -151,24 +165,21 @@ namespace Dumpling::Mscf
 							for(size_t i = 3; i < E.reduce.production_count; ++i)
 							{
 								if(E[i].IsNoterminal())
-								{
-									// todo list
-									auto [ValueMask, Loc] = E[i].GetData<std::tuple<Mask, Location>>();
-								}
 									AllProperty.push_back(E[i].GetData<Mask>());
 							}
+							CheckRedefine(Table, AllProperty);
 							Table.PopElementAsUnactive(AllProperty.size());
-							auto TypeMask = Table.Insert(TypeName, {std::move(AllProperty)});
-							return std::tuple<Mask, Location>{TypeMask, E.loc};
+							auto TypeMask = Table.Insert(TypeName, {std::move(AllProperty)}, E.section);
+							return TypeMask;
 					} break;
 					case 13:
 						{
 							auto MateType = Table.FindActiveLast(U"__MateData");
 							assert(MateType);
 							auto Name = E[0].GetData<StringView>();
-							auto MateMask = Table.Insert(Name, ValueProperty{MateType, {}, {}, {}, E.loc});
+							auto MateMask = Table.Insert(Name, ValueProperty{MateType, {}, {}, {}}, E.section);
 							if(E.reduce.production_count == 3)
-								Command.EqualData(MateMask, E.loc);
+								Command.EqualData(MateMask, E.section);
 							return MateMask;
 						}break;
 					case 14:
@@ -211,27 +222,29 @@ namespace Dumpling::Mscf
 							assert(Result);
 							auto& ref = Result->mate_data;
 							ref.insert(ref.end(), SelfMateData.rbegin(), SelfMateData.rend());
-							Table.PopElementAsUnactive(1);
 							return std::vector<Mask>({ValueMask});
 						}break;
 					case 17:
 						{
-							return std::vector<Mask>();
+							return std::tuple<std::vector<Mask>, size_t>({}, 0);
 						} break;
 					case 18:
 						{
-							auto L1 = E[0].MoveData<std::vector<Mask>>();
+							auto [L1, count] = E[0].MoveData<std::tuple<std::vector<Mask>, size_t>>();
 							auto L2 = E[1].MoveData<std::vector<Mask>>();
+							count += L2.size();
 							L1.insert(L1.end(), L2.begin(), L2.end());
-							return std::move(L1);
+							return std::tuple<std::vector<Mask>, size_t>{std::move(L1), count};
 						}break;
 					case 19:
 						{
-							return E[0].MoveRawData();
+							auto [L1, count] = E[0].MoveData<std::tuple<std::vector<Mask>, size_t>>();
+							++count;
+							return std::tuple<std::vector<Mask>, size_t>{std::move(L1), count};
 						} break;
 					case 21:
 						{
-							auto L1 = E[2].MoveData<std::vector<Mask>>();
+							auto [L1, count] = E[2].MoveData<std::tuple<std::vector<Mask>, size_t>>();
 							for(auto Ite : L1)
 							{
 								auto Result = Table.Find<ValueProperty>(Ite);
@@ -246,6 +259,9 @@ namespace Dumpling::Mscf
 									return !Result.second;
 								}), ref.end());
 							}
+							auto pop_map = Table.PopAndReturnElementAsUnactive(count);
+							CheckRedefine(Table, pop_map);
+							volatile int i =0;
 						} break;
 					}
 				}

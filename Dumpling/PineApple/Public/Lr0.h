@@ -5,7 +5,9 @@
 #include <set>
 #include <any>
 #include <functional>
+#include <limits>
 #include "StrFormat.h"
+#undef max
 namespace PineApple::Lr0
 {
 	using SymbolStorageT = int32_t;
@@ -56,13 +58,13 @@ namespace PineApple::Lr0
 
 		struct Reduce
 		{
-			size_t ProductionIndex;
+			size_t production_index;
 		};
 
 		struct Shift
 		{
-			SymbolStorageT RequireSymbol;
-			size_t ShiftState;
+			SymbolStorageT require_symbol;
+			size_t shift_state;
 		};
 
 		struct Node
@@ -74,8 +76,8 @@ namespace PineApple::Lr0
 		};
 
 		std::vector<Production> productions;
-		std::vector<Reduce> Reduces;
-		std::vector<Shift> Shifts;
+		std::vector<Reduce> reduces;
+		std::vector<Shift> shifts;
 		std::vector<Node> nodes;
 		std::map<SymbolStorageT, std::set<size_t>> force_reduce;
 	};

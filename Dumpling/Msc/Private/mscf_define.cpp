@@ -11,7 +11,7 @@ namespace Dumpling::Mscf
 		TypeProperty TP;
 		for (size_t i = 0; i < Count; ++i)
 		{
-			ValueProperty Vp{MemberType, {}, {}, {}, {}};
+			ValueProperty Vp{MemberType, {}, {}, {}};
 			auto V1 = table.Insert(MemberName[i], std::move(Vp));
 			TP.values.push_back(V1);
 			Comm.PushData(DefaultData, {});

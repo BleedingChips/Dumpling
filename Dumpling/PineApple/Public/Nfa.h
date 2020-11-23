@@ -18,9 +18,9 @@ namespace PineApple::Nfa
 			Acception,
 			Comsume,
 		};
-		std::vector<Segment> ComsumeEdge;
-		std::vector<std::tuple<size_t, size_t, size_t, size_t>> Edges;
-		std::vector<std::tuple<size_t, size_t>> Nodes;
+		std::vector<Segment> comsume_edge;
+		std::vector<std::tuple<size_t, size_t, size_t, size_t>> edges;
+		std::vector<std::tuple<size_t, size_t>> nodes;
 	};
 
 	Table CreateTableFromRex(std::u32string_view const* input, size_t const* state, size_t const* mask, size_t input_length);
@@ -39,37 +39,37 @@ namespace PineApple::Nfa
 	std::optional<MarchElement> Consume(Table const& Ref, std::u32string_view String);
 	std::vector<MarchElement> Process(Table const& Ref, std::u32string_view String);
 
-	struct LocatePoint
+	struct SectionPoint
 	{
 		size_t total_index = 0;
 		size_t line = 0;
 		size_t line_index = 0;
-		bool operator<(LocatePoint const& lp) const {return total_index < lp.total_index;}
+		bool operator<(SectionPoint const& lp) const {return total_index < lp.total_index;}
 	};
 
-	using Location = ::PineApple::Segment<LocatePoint>;
+	using Section = ::PineApple::Segment<SectionPoint>;
 
 	struct DocumenetMarchElement
 	{
 		MarchElement march;
-		Location location;
+		Section section;
 	};
 
-	std::optional<DocumenetMarchElement> DecumentComsume(Table const& Ref, std::u32string_view String, Location& Loc);
+	std::optional<DocumenetMarchElement> DecumentComsume(Table const& Ref, std::u32string_view String, Section& Loc);
 	std::vector<DocumenetMarchElement> DecumentProcess(Table const& Ref, std::u32string_view String);
 
 	namespace Error
 	{
 		struct UnaccaptableRexgex {
-			std::u32string Regex;
-			size_t AccepetableState;
-			size_t AccepetableMask;
+			std::u32string regex;
+			size_t accepetable_state;
+			size_t accepetable_mask;
 			size_t Index;
 		};
 
 		struct UnaccaptableString {
-			std::u32string TotalString;
-			Location Loc;
+			std::u32string total_string;
+			Section section;
 		};
 	}
 }

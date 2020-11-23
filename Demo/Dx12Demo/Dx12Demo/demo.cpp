@@ -48,9 +48,6 @@ int main()
 {
 
 	auto P = FUNC(true, [](){});
-	
-
-
 
 	
 	using Interval = Interval<int>;

@@ -40,10 +40,10 @@ namespace PineApple::Lr0
 		auto Nodes = Table.nodes[CurState];
 		for (size_t i = 0; i < Nodes.shift_count; ++i)
 		{
-			auto TarShift = Table.Shifts[i + Nodes.shift_adress];
-			if (TarShift.RequireSymbol == Sym)
+			auto TarShift = Table.shifts[i + Nodes.shift_adress];
+			if (TarShift.require_symbol == Sym)
 			{
-				SE.State.push_back(TarShift.ShiftState);
+				SE.State.push_back(TarShift.shift_state);
 				if (Sym.IsTerminal() && !Sym.IsEndOfFile())
 				{
 					Step ShiftStep;
@@ -76,9 +76,9 @@ namespace PineApple::Lr0
 		for (size_t i = 0; i < CurNode.reduce_count; ++i)
 		{
 			size_t reduce_index = CurNode.reduce_count - 1 - i;
-			auto Reduce = Table.Reduces[CurNode.reduce_adress + reduce_index];
-			auto Production = Table.productions[Reduce.ProductionIndex];
-			if (Find == force_reduce.end() || Find->second.find(Reduce.ProductionIndex) == Find->second.end())
+			auto Reduce = Table.reduces[CurNode.reduce_adress + reduce_index];
+			auto Production = Table.productions[Reduce.production_index];
+			if (Find == force_reduce.end() || Find->second.find(Reduce.production_index) == Find->second.end())
 				SearchStack.push_back({ Pros, true, CurNode.reduce_count - 1 - i, Production.production_count, Production.mask, Production.value });
 			else
 				ForceReduceList.push_back({ Pros, true, CurNode.reduce_count - 1 - i, Production.production_count, Production.mask, Production.value });
@@ -377,9 +377,9 @@ namespace PineApple::Lr0
 			std::vector<Table::Reduce> Reduceing;
 			for (auto& ite : ReduceState)
 				Reduceing.push_back(Table::Reduce{ ite });
-			result.nodes.push_back({result.Reduces.size(), Reduceing.size(), result.Shifts.size(),  Shiftting.size()});
-			result.Reduces.insert(result.Reduces.end(), Reduceing.begin(), Reduceing.end());
-			result.Shifts.insert(result.Shifts.end(), Shiftting.begin(), Shiftting.end());
+			result.nodes.push_back({result.reduces.size(), Reduceing.size(), result.shifts.size(),  Shiftting.size()});
+			result.reduces.insert(result.reduces.end(), Reduceing.begin(), Reduceing.end());
+			result.shifts.insert(result.shifts.end(), Shiftting.begin(), Shiftting.end());
 		}
 		return result;
 	}
@@ -462,7 +462,7 @@ namespace PineApple::StrFormat
 		std::u32string operator()(std::u32string_view, Lr0::Table::Reduce const& RS)
 		{
 			static auto pat = CreatePatternRef(U"{{{}}}");
-			return Process(pat, RS.ProductionIndex);
+			return Process(pat, RS.production_index);
 		}
 	};
 
@@ -471,7 +471,7 @@ namespace PineApple::StrFormat
 		std::u32string operator()(std::u32string_view, Lr0::Table::Shift const& RS)
 		{
 			static auto pat = CreatePatternRef(U"{{{}, {} }}");
-			return Process(pat, RS.RequireSymbol, RS.ShiftState);
+			return Process(pat, RS.require_symbol, RS.shift_state);
 		}
 	};
 
@@ -487,6 +487,6 @@ namespace PineApple::StrFormat
 	std::u32string Formatter<Lr0::Table>::operator()(std::u32string_view, Lr0::Table const& tab)
 	{
 		static auto pat = CreatePatternRef(U"{{{}, {}, {}, {}, {}}}");
-		return Process(pat, tab.productions, tab.Reduces, tab.Shifts, tab.nodes, tab.force_reduce);
+		return Process(pat, tab.productions, tab.reduces, tab.shifts, tab.nodes, tab.force_reduce);
 	}
 }
