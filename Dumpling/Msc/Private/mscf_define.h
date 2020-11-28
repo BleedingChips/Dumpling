@@ -38,6 +38,51 @@ namespace Dumpling::Mscf
 	struct MateDataProperty {};
 
 	struct UnTypedListProperty {};
+	
+	struct ImportProperty
+	{
+		std::u32string_view path;
+	};
+
+	struct ReferencesPath
+	{
+		Mask property_reference;
+		std::vector<std::u32string_view> references;
+	};
+
+	struct CodeProperty
+	{
+		std::vector<ReferencesPath> reference;
+		std::u32string_view code;
+	};
+
+	struct InoutParameter
+	{
+		bool is_input;
+		Mask type;
+		std::u32string_view name;
+		Section section;
+	};
+	
+	struct SnippetProperty
+	{
+		std::vector<ReferencesPath> references;
+		std::u32string_view code;
+		std::vector<InoutParameter> parameters;
+	};
+
+	struct MaterialProperty
+	{
+		std::variant<std::u32string_view, ReferencesPath> complie_type;
+		std::vector<Mask> property;
+		std::vector<Mask> snippets;
+	};
+
+	struct Content
+	{
+		std::vector<Mask> propertys;
+		std::vector<Mask> statement;
+	};
 
 	struct Commands
 	{
@@ -65,6 +110,8 @@ namespace Dumpling::Mscf
 		using StorageInfo = PineApple::Symbol::StorageInfo;
 		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const override;
 	};
+
+	Content Parser(std::u32string_view code, Table& table, Commands& commands);
 
 	/*
 

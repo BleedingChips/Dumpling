@@ -1,11 +1,31 @@
 #include "mscf_define.h"
+#include "../Public/mscf.h"
 #include <array>
+
+#include "mscf_parser_table.h"
+
+float StringToFloat(std::u32string_view Input)
+{
+	auto str = CharEncode::Wrapper(Input).To<char>();
+	float Result;
+	sscanf_s(str.c_str(), "%f", &Result);
+	return Result;
+}
+
+int64_t StringToInt(std::u32string_view Input)
+{
+	auto str = CharEncode::Wrapper(Input).To<char>();
+	int64_t Result;
+	sscanf_s(str.c_str(), "%I64i", &Result);
+	return Result;
+}
+
 namespace Dumpling::Mscf
 {
 	using namespace PineApple::Symbol;
 
 	void CreateInsideType(Table& table, Commands& Comm,
-		std::u32string_view Name, Mask MemberType, std::u32string_view const* MemberName, size_t Count, Commands::DataType DefaultData
+		std::u32string_view Name, Mask MemberType, std::u32string_view const* MemberName, size_t Count, std::optional<Commands::DataType> DefaultData
 	)
 	{
 		TypeProperty TP;
@@ -14,12 +34,16 @@ namespace Dumpling::Mscf
 			ValueProperty Vp{MemberType, {}, {}, {}};
 			auto V1 = table.Insert(MemberName[i], std::move(Vp));
 			TP.values.push_back(V1);
-			Comm.PushData(DefaultData, {});
+			if(DefaultData.has_value())
+				Comm.PushData(*DefaultData, {});
 		}
 		table.PopElementAsUnactive(Count);
 		Mask Result = table.Insert(Name, std::move(TP));
-		Comm.CoverToType(Result, Count, {});
-		Comm.EqualData(Result, {});
+		if(DefaultData.has_value())
+		{
+			Comm.CoverToType(Result, Count, {});
+			Comm.EqualData(Result, {});
+		}
 	}
 
 	std::tuple<Table, Commands> CreateContent()
@@ -43,11 +67,20 @@ namespace Dumpling::Mscf
 				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, int64_t(0));
 		}
 
+		/*
 		{
 			static std::u32string_view DefineTypeName[] = { U"uint2", U"uint3", U"uint4" };
 			auto Base1 = table.Insert(U"uint", TypeProperty{});
 			for (size_t i = 0; i < std::size(DefineTypeName); ++i)
 				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, int64_t(0));
+		}
+		*/
+
+		{
+			static std::u32string_view MaterialMemberName[] = { U"v1", U"v2", U"v3", U"v4" };
+			auto F3Type = table.FindActiveLast(U"float4");
+			assert(F3Type);
+			CreateInsideType(table, commands, U"matrix", F3Type, MaterialMemberName, 4, std::nullopt);
 		}
 
 		{
@@ -94,6 +127,377 @@ namespace Dumpling::Mscf
 			cur.size += rever_size;
 		cur.size += StorageInfoLinker::ReservedSize(cur, input);
 		return { cur.align, cur.size - old.size };
+	}
+
+	Content Parser(std::u32string_view code, Table& table, Commands& commands)
+	{
+		auto& Mref = MscfEbnfInstance();
+		auto History = Ebnf::Process(MscfEbnfInstance(), code);
+		auto P = History.Expand();
+
+		using String = std::u32string;
+		using StringView = std::u32string_view;
+
+		auto Result = Ebnf::Process(History, [&](Ebnf::Element& E) -> std::any {
+			if (E.IsTerminal())
+			{
+				switch (E.shift.mask)
+				{
+				case 0: {
+					return StringToFloat(E.shift.capture);
+				}
+				case 1: return StringToInt(E.shift.capture);
+				case 2: return E.shift.capture.substr(1, E.shift.capture.size() - 2);
+				case 3: return E.shift.capture.substr(2, E.shift.capture.size() - 4);
+				default: return E.shift.capture;
+				}
+			}
+			else if (E.IsNoterminal())
+			{
+				switch (E.reduce.mask)
+				{
+				case 4: {
+					auto& Data = E[0];
+					if (Data.TryGetData<int64_t>())
+						commands.PushData(*Data.TryGetData<int64_t>(), Data.section);
+					else if (Data.TryGetData<float>())
+						commands.PushData(*Data.TryGetData<float>(), Data.section);
+					else if (Data.TryGetData<StringView>())
+						commands.PushData(*Data.TryGetData<StringView>(), Data.section);
+					else
+						assert(false);
+					return {};
+				} break;
+				case 5: {
+					commands.PushData(true, E.section);
+				} break;
+				case 6: {
+					commands.PushData(false, E.section);
+				} break;
+				case 7: {
+					auto P = E[0].GetData<StringView>();
+					auto TypeMask = table.FindActiveLast(P);
+					if (!TypeMask)
+						throw Error::UndefineType{ String(P), E[0].section };
+					size_t index = 0;
+					for (auto& Ite : E)
+					{
+						if (Ite.IsNoterminal())
+							++index;
+					}
+					commands.CoverToType(TypeMask, index, E.section);
+				} break;
+				case 22: {
+					auto P = table.FindActiveLast(U"__MateData");
+					assert(P);
+					size_t used = 0;
+					for (auto& Ite : E)
+					{
+						if (Ite.IsNoterminal())
+							++used;
+					}
+					commands.CoverToType(P, used, E.section);
+				} break;
+				case 8: {
+					std::vector<int64_t> Result;
+					Result.push_back(0);
+					return std::move(Result);
+				} break;
+				case 9: {
+					std::vector<int64_t> Last = E[0].MoveData<std::vector<int64_t>>();
+					Last.push_back(E[2].GetData<int64_t>());
+					return std::move(Last);
+				} break;
+				case 10: {
+					return std::vector<int64_t>{};
+				} break;
+				case 20:
+				{
+					auto TypeName = E[0].GetData<StringView>();
+					auto TypeMask = table.FindActiveLast(TypeName);
+					if (!TypeMask)
+						throw Error::UndefineType{ String(TypeName), E[0].section };
+					Mask SampleMask;
+					if (E.reduce.production_count == 3)
+					{
+						auto ReaderName = E[2].GetData<StringView>();
+						SampleMask = table.FindActiveLast(ReaderName);
+						if (!SampleMask)
+							throw Error::UndefineType{ String(ReaderName), E[2].section };
+					}
+					return std::tuple<Mask, Mask>{TypeMask, SampleMask};
+				} break;
+				case 11: {
+					auto [TypeMask, ReaderMask] = E[0].GetData<std::tuple<Mask, Mask>>();
+					auto ValName = E[1].GetData<StringView>();
+					auto ArrayCount = E[2].MoveData<std::vector<int64_t>>();
+					if (ReaderMask)
+					{
+						auto Find = table.Find<TextureProperty>(TypeMask);
+						assert(Find.Exist());
+						if (!Find)
+							throw Error::RequireTypeDonotSupportSample{ String(Find.name), E[0].section };
+					}
+					ValueProperty Pro{ TypeMask,ReaderMask, std::move(ArrayCount), {} };
+					auto ValueMask = table.Insert(ValName, std::move(Pro), E.section);
+					if (E.reduce.production_count == 5)
+						commands.EqualData(ValueMask, E.section);
+					return ValueMask;
+				}break;
+				case 12: {
+					auto TypeName = E[1].GetData<StringView>();
+					std::vector<Mask> AllProperty;
+					for (size_t i = 3; i < E.reduce.production_count; ++i)
+					{
+						if (E[i].IsNoterminal())
+							AllProperty.push_back(E[i].GetData<Mask>());
+					}
+					table.PopElementAsUnactive(AllProperty.size());
+					auto TypeMask = table.Insert(TypeName, { std::move(AllProperty) }, E.section);
+					return TypeMask;
+				} break;
+				case 13:
+				{
+					auto MateType = table.FindActiveLast(U"__MateData");
+					assert(MateType);
+					auto Name = E[0].GetData<StringView>();
+					auto MateMask = table.Insert(Name, ValueProperty{ MateType, {}, {}, {} }, E.section);
+					if (E.reduce.production_count == 3)
+						commands.EqualData(MateMask, E.section);
+					return MateMask;
+				}break;
+				case 14:
+				{
+					std::vector<Mask> AllMateData;
+					for (size_t i = 0; i < E.reduce.production_count; ++i)
+					{
+						if (!E[i].IsTerminal())
+							AllMateData.push_back(E[i].GetData<Mask>());
+					}
+					table.PopElementAsUnactive(AllMateData.size());
+					return std::move(AllMateData);
+				}break;
+				case 15:
+				{
+					std::vector<Mask> DefinedValue;
+					std::vector<Mask> AppendMate = E[0].MoveData<std::vector<Mask>>();
+					for (size_t i = 1; i < E.reduce.production_count; i += 1)
+					{
+						if (E[i].IsNoterminal())
+						{
+							std::vector<Mask> Value = E[i].MoveData<std::vector<Mask>>();
+							for (auto Item : Value)
+							{
+								auto Fined = table.Find<ValueProperty>(Item);
+								assert(Fined);
+								auto& ref = Fined->mate_data;
+								ref.insert(ref.begin(), AppendMate.rbegin(), AppendMate.rend());
+							}
+							DefinedValue.insert(DefinedValue.end(), Value.begin(), Value.end());
+						}
+					}
+					return std::move(DefinedValue);
+				} break;
+				case 16:
+				{
+					std::vector<Mask> SelfMateData = E[0].MoveData<std::vector<Mask>>();
+					Mask ValueMask = E[1].MoveData<Mask>();
+					auto Result = table.Find<ValueProperty>(ValueMask);
+					assert(Result);
+					auto& ref = Result->mate_data;
+					ref.insert(ref.end(), SelfMateData.rbegin(), SelfMateData.rend());
+					return std::vector<Mask>({ ValueMask });
+				}break;
+				case 17:
+				{
+					return std::vector<Mask>();
+				} break;
+				case 18:
+				{
+					auto L1 = E[0].MoveData<std::vector<Mask>>();
+					auto& Ref = E[1];
+					auto L2 = E[1].MoveData<std::vector<Mask>>();
+					L1.insert(L1.end(), L2.begin(), L2.end());
+					return std::move(L1);
+				}break;
+				case 19:
+				{
+					auto& ref = E[0].GetData<std::vector<Mask>&>();
+					auto type_define_mask = E[1].GetData<Mask>();
+					ref.push_back(type_define_mask);
+					return E[0].MoveRawData();
+				} break;
+				case 21:
+				{
+					auto L1 = E[2].MoveData<std::vector<Mask>>();
+					for (auto Ite : L1)
+					{
+						auto Result = table.Find<ValueProperty>(Ite);
+						if (Result)
+						{
+							std::set<StringView> MateDataNameSet;
+							auto& ref = Result->mate_data;
+							ref.erase(std::remove_if(ref.begin(), ref.end(), [&](Mask mask) -> bool
+							{
+								auto MateData = table.Find<ValueProperty>(mask);
+								assert(MateData);
+								auto Result = MateDataNameSet.insert(MateData.name);
+								return !Result.second;
+							}), ref.end());
+						}
+					}
+					table.PopElementAsUnactive(L1.size());
+					return std::move(L1);
+				} break;
+				case 30:
+				{
+					auto ImportID = E[3].MoveData<StringView>();
+					auto ImportMask = table.FindActiveLast(ImportID);
+					if (ImportMask)
+					{
+						auto redefine = table.FindRaw(ImportMask);
+						assert(redefine);
+						throw Error::RedefineProperty{ String(ImportID), E.section, redefine.section };
+					}
+					ImportMask = table.Insert(ImportID, ImportProperty{ E[1].MoveData<StringView>() }, E.section);
+					return ImportMask;
+				} break;
+				case 31:
+				{
+
+					StringView RefName = E[0].GetData<StringView>();
+					auto RefMask = table.FindActiveLast(RefName);
+					if (!RefMask)
+						throw Error::UndefineImport{ String(RefName), E.section };
+					return ReferencesPath{ RefMask, {} };
+				}break;
+				case 32:
+				{
+					auto& P = E[0].GetData<ReferencesPath&>();
+					auto IdName = E[1].GetData<StringView>();
+					P.references.push_back(IdName);
+					return E[0].MoveRawData();
+					break;
+				}
+				case 33:
+				{
+					std::vector<ReferencesPath> all_paths;
+					for (size_t i = 0; i < E.reduce.production_count; ++i)
+					{
+						if (E[i].IsNoterminal())
+							all_paths.push_back(E[i].MoveData<ReferencesPath>());
+					}
+					return std::move(all_paths);
+					break;
+				}
+				case 34:
+				{
+					auto code_name = E[1].GetData<StringView>();
+					CodeProperty cp{ E[2].MoveData<std::vector<ReferencesPath>>(), E[3].GetData<StringView>() };
+					auto code_mask = table.Insert(code_name, std::move(cp), E.section);
+					return code_mask;
+					break;
+				}
+				case 36:
+				{
+					StringView Typename;
+					StringView IdName;
+					bool InputOrOutput = true;
+					if (E.reduce.production_count == 3)
+					{
+						Typename = E[1].GetData<StringView>();
+						IdName = E[2].GetData<StringView>();
+						InputOrOutput = E[0].GetData<StringView>() != U"in";
+					}
+					else if (E.reduce.production_count == 2)
+					{
+						Typename = E[0].GetData<StringView>();
+						IdName = E[1].GetData<StringView>();
+					}
+					auto TypeMask = table.FindActiveLast(Typename);
+					if (!TypeMask)
+						throw Error::UndefineType{ String(Typename), E.section };
+					return InoutParameter{ InputOrOutput, TypeMask, IdName, E.section };
+					break;
+				}
+				case 37:
+				{
+					std::vector<InoutParameter> all_parameters;
+					std::map<StringView, Section> parameter_name;
+					for (size_t i = 0; i < E.reduce.production_count; ++i)
+					{
+						if (E[i].IsNoterminal())
+						{
+							auto par = E[i].MoveData<InoutParameter>();
+							auto re = parameter_name.insert({ par.name, par.section });
+							if (!re.second)
+								throw Error::RedefineProperty{ String(par.name), par.section, re.first->second };
+							all_parameters.push_back(par);
+						}
+					}
+					return std::move(all_parameters);
+					break;
+				}
+				case 38:
+				{
+					auto Name = E[1].GetData<StringView>();
+					SnippetProperty Sp{ E[2].MoveData<std::vector<ReferencesPath>>(), E[4].GetData<StringView>(),
+						E[3].MoveData<std::vector<InoutParameter>>() };
+					auto snippet = table.Insert(Name, std::move(Sp), E.section);
+					std::vector<Mask> Result;
+					Result.push_back(snippet);
+					return std::move(Result);
+					break;
+				}
+				case 42:
+				{
+					auto Name = E[3].MoveData<StringView>();
+					MaterialProperty pro{ E[1].GetData<StringView>(), E[4].MoveData<std::vector<Mask>>(), E[6].MoveData<std::vector<Mask>>() };
+					table.PopElementAsUnactive(pro.snippets.size());
+					table.PopElementAsUnactive(pro.property.size());
+					return table.Insert(Name, std::move(pro), E.section);
+					break;
+				}
+				case 46:
+				{
+					auto Name = E[4].MoveData<StringView>();
+					MaterialProperty pro{ E[2].GetData<ReferencesPath>(), E[5].MoveData<std::vector<Mask>>(), E[7].MoveData<std::vector<Mask>>() };
+					table.PopElementAsUnactive(pro.snippets.size());
+					table.PopElementAsUnactive(pro.property.size());
+					return table.Insert(Name, std::move(pro), E.section);
+					break;
+				}
+				case 1:
+				{
+					Content content{ E[0].MoveData<std::vector<Mask>>(), {} };
+					return std::move(content);
+					break;
+				}
+				case 3:
+				{
+					return Content{};
+					break;
+				}
+				case 43:
+				{
+					E[0].GetData<Content&>().statement.push_back(E[1].GetData<Mask>());
+					return E[0].MoveRawData();
+					break;
+				}
+				case 44:
+				{
+					table.PopElementAsUnactive(E[0].GetData<Content&>().statement.size());
+					return E[0].MoveRawData();
+				}
+				default:
+					assert(false);
+					return {};
+				}
+				return {};
+			}
+			return {};
+		});
+		return std::move(std::any_cast<Content&>(Result));
 	}
 
 	/*

@@ -12,46 +12,8 @@
 namespace Dumpling::Mscf
 {
 	using Section = PineApple::Ebnf::Section;
+
 	
-	enum class VariableType
-	{
-		Base,
-		Texture,
-		RWTexture,
-		Struct,
-		RWStruct,
-	};
-
-	enum class StorageType
-	{
-		Unorm,
-		UUnorm,
-		UInt,
-		Int,
-		Float,
-		Custom,
-	};
-
-	struct VariableDesc
-	{
-		VariableType v_type;
-		StorageType s_type;
-		size_t channel;
-		size_t size;
-		size_t align;
-		size_t array_size;
-		size_t default_value_index;
-	};
-
-	struct ConstVariable
-	{
-		VariableDesc desc;
-		union 
-		{
-			std::array<std::byte, sizeof(float) * 4> datas;
-			std::u32string_view str;
-		};
-	};
 
 	struct mscf : Msc::mscf_interface
 	{
@@ -78,6 +40,13 @@ namespace Dumpling::Mscf
 			Section redefine_section;
 			Section predefine_section;
 		};
+
+		struct UndefineImport
+		{
+			std::u32string name;
+			Section section;
+		};
+		
 	}
 
 	mscf translate(std::u32string const& code);

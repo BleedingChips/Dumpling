@@ -1,27 +1,7 @@
 property{
 
-    [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
-        float2 Potato = float2(1.0, 1.0);
-      []{
-            float2 Potato2 = float2(2.0, 2.0);
-            float2<float2> Data[100] = {};
-        }
-
-    [min = float2(1.0, 1.0)]
-    {
-        [min = float2(1.0, 1.0), max = float2(2.0, 2.0), desc = "GoGoGoGo"]
-        float2 Potato = float2(1.0, 1.0);
-        []{
-            float2 Potato2 = float2(2.0, 2.0);
-            float2<float2> Data[100] = {};
-        }
-    }
-
-    [ PPC, desc = "DefineWTF"]
-    {
-        float2 Demo = float2(2.0, 1.0);
-        float2 Cc;
-    }
+    [min = 1.0, max = 2.0]
+    float Potato2 = 1.0;
 
     struct Wtf
     {
@@ -34,6 +14,19 @@ property{
     SamplerState WTF = "WTF";
     SamplerState WTF2 = "WTF22";
 }
+
+import "CS\WTF\Gogo.mscf" as GoGo;
+
+code Random [GoGo.WTF, GoGo.PPi] @{
+    float2 Function(float) {return float2(1.0, 1.0);}
+}@;
+
+material "Type" as pp <
+    WTF = 1.0
+> {
+    snippet VS [Random, GoGo.WTF] (float2 Position, out float4 Color, out float2 Texture) @{}@;
+    snippet VS [Random, GoGo.WTF] (float2 Position, out float3 Color, out float2 WTF) @{}@;
+};
 
 /*
 import "CS\WTF\GoGo.h" as GoGo;

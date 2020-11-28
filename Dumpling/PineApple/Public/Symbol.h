@@ -19,7 +19,7 @@ namespace PineApple::Symbol
 		struct Mask
 		{
 			Mask(const Mask&) = default;
-			Mask(size_t inputindex) : index(inputindex){}
+			Mask(size_t inputindex) : index(inputindex + 1){}
 			Mask() =default;
 			Mask& operator=(Mask const&) = default;
 			operator bool() const noexcept { return index != 0; }
@@ -50,25 +50,33 @@ namespace PineApple::Symbol
 			bool Exist() const noexcept{return type != ResultType::Inavailable;}
 		};
 
+		Result<const std::any> FindRaw(Mask mask) const;
+
+		Result<std::any> FindRaw(Mask mask)
+		{
+			auto result = static_cast<Table const*>(this)->FindRaw(mask);
+			return {result.type, result.name, result.section, const_cast<std::any*>(result.require_data) };
+		}
+
 		template<typename RequireType>
 		auto Find(Mask mask) ->Result<std::remove_reference_t<RequireType>>
 		{
-			auto result = static_cast<Table const*>(this)->Table::Find<std::add_const_t<RequireType>>(mask);
-			return { result.type, result.name, result.section, const_cast<std::remove_reference_t<RequireType>*>(result.require_data) };
+			auto result = static_cast<Table const*>(this)->Find<RequireType>(mask);
+			auto ptr = const_cast<std::remove_reference_t<RequireType>*>(result.require_data);
+			return {result.type, result.name, result.section, ptr};
 		}
 
 		template<typename RequireType>
 		auto Find(Mask mask) const ->Result<std::add_const_t<std::remove_reference_t<RequireType>>>
 		{
-			auto storage = FindImp(mask);
-			if (storage != nullptr)
-			{
-				std::add_const_t<std::remove_reference_t<RequireType>>* require = std::any_cast<std::add_const_t<std::remove_reference_t<RequireType>>>(&storage->property);
-				if (require != nullptr)
-					return { ResultType::Available, storage->name, storage->section,  require };
-				return { ResultType::ExistButNotRequireType, storage->name, storage->section, nullptr };
-			}
-			return { ResultType::Inavailable, {}, {}, nullptr };
+			auto result = FindRaw(mask);
+			auto ptr = std::any_cast<std::add_const_t<std::remove_reference_t<RequireType>>>(result.require_data);
+			if(ptr != nullptr)
+				return { ResultType::Available, result.name, result.section, ptr };
+			else if(result.type == ResultType::Available)
+				return { ResultType::ExistButNotRequireType, result.name, result.section, ptr };
+			else
+				return { ResultType::Inavailable, {}, {}, nullptr };
 		}
 
 		size_t PopElementAsUnactive(size_t count);
@@ -90,9 +98,6 @@ namespace PineApple::Symbol
 			Section section;
 			std::any property;
 		};
-
-		Storage* FindImp(Mask mask){ return const_cast<Storage*>( static_cast<Table const*>(this)->FindImp(mask));  }
-		Storage const* FindImp(Mask mask) const;
 		
 		struct Mapping
 		{
@@ -133,6 +138,7 @@ namespace PineApple::Symbol
 		static size_t ReservedSize(StorageInfo out, StorageInfo in) noexcept;
 
 	private:
+		
 		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const;
 		virtual StorageInfo Finalize(StorageInfo cur) const;
 		StorageInfo info;
