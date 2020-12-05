@@ -24,8 +24,50 @@ namespace Dumpling::Mscf
 {
 	using namespace PineApple::Symbol;
 
+	Mask Commands::PushData(Table& table, bool value, Section section)
+	{
+		auto Mask = table.FindActiveLast(U"bool");
+		assert(Mask);
+		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
+		return Mask;
+	}
+
+	Mask Commands::PushData(Table& table, std::u32string_view value, Section section)
+	{
+		auto Mask = table.FindActiveLast(U"string");
+		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
+		return Mask;
+	}
+
+	Mask Commands::PushData(Table& table, float value, Section section)
+	{
+		auto Mask = table.FindActiveLast(U"float");
+		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
+		return Mask;
+	}
+
+	Mask Commands::PushData(Table& table, int32_t value, Section section)
+	{
+		auto Mask = table.FindActiveLast(U"int");
+		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
+		return Mask;
+	}
+
+	/*
+	void Commands::PushData(Mask mask, Table& table, std::byte const* data, size_t data_length, Section section)
+	{
+		assert(mask);
+		auto result = table.Find<TypeProperty>(mask);
+		assert(result);
+		auto old_size = ConstDataTable.size();
+		ConstDataTable.resize(ConstDataTable.size() + data_length, static_cast<std::byte>(0x00));
+		std::memcpy(ConstDataTable.data() + old_size, data, data_length);
+		AllCommands.push_back({ ValueScriptionC{mask, {old_size, data_length}}, section});
+	}
+	*/
+
 	void CreateInsideType(Table& table, Commands& Comm,
-		std::u32string_view Name, Mask MemberType, std::u32string_view const* MemberName, size_t Count, std::optional<Commands::DataType> DefaultData
+		std::u32string_view Name, Mask MemberType, std::u32string_view const* MemberName, size_t Count
 	)
 	{
 		TypeProperty TP;
@@ -34,16 +76,11 @@ namespace Dumpling::Mscf
 			ValueProperty Vp{MemberType, {}, {}, {}};
 			auto V1 = table.Insert(MemberName[i], std::move(Vp));
 			TP.values.push_back(V1);
-			if(DefaultData.has_value())
-				Comm.PushData(*DefaultData, {});
+			//Comm.PushDefaultData(MemberType, {});
 		}
 		table.PopElementAsUnactive(Count);
 		Mask Result = table.Insert(Name, std::move(TP));
-		if(DefaultData.has_value())
-		{
-			Comm.CoverToType(Result, Count, {});
-			Comm.EqualData(Result, {});
-		}
+		Comm.EqualValue(Result, Count, {});
 	}
 
 	std::tuple<Table, Commands> CreateContent()
@@ -53,59 +90,52 @@ namespace Dumpling::Mscf
 
 		static std::u32string_view MemberName[] = {U"x", U"y", U"z", U"w"};
 
+		auto FloatT = table.Insert(U"float", TypeProperty{});
+		commands.PushData(table, 0.0f, {});
+		commands.EqualValue(FloatT, 1, {});
+
+		auto IntT = table.Insert(U"int", TypeProperty{});
+		commands.PushData(table, static_cast<int32_t>(0), {});
+		commands.EqualValue(IntT, 1, {});
+
+		auto BoolT = table.Insert(U"bool", TypeProperty{});
+		commands.PushData(table, true, {});
+		commands.EqualValue(BoolT, 1, {});
+		
+		auto StrT = table.Insert(U"str", TypeProperty{});
+		commands.PushData(table, std::u32string_view{}, {});
+		commands.EqualValue(BoolT, 1, {});
+		
 		{
 			static std::u32string_view DefineTypeName[] = { U"float2", U"float3", U"float4" };
-			auto Base1 = table.Insert(U"float", TypeProperty{});
 			for(size_t i = 0; i < std::size(DefineTypeName); ++i)
-				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, float(0));
+				CreateInsideType(table, commands, DefineTypeName[i], FloatT, MemberName, i + 2);
 		}
 
 		{
 			static std::u32string_view DefineTypeName[] = { U"int2", U"int3", U"int4" };
-			auto Base1 = table.Insert(U"int", TypeProperty{});
 			for (size_t i = 0; i < std::size(DefineTypeName); ++i)
-				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, int64_t(0));
+				CreateInsideType(table, commands, DefineTypeName[i], IntT, MemberName, i + 2);
 		}
-
-		/*
-		{
-			static std::u32string_view DefineTypeName[] = { U"uint2", U"uint3", U"uint4" };
-			auto Base1 = table.Insert(U"uint", TypeProperty{});
-			for (size_t i = 0; i < std::size(DefineTypeName); ++i)
-				CreateInsideType(table, commands, DefineTypeName[i], Base1, MemberName, i + 2, int64_t(0));
-		}
-		*/
 
 		{
 			static std::u32string_view MaterialMemberName[] = { U"v1", U"v2", U"v3", U"v4" };
-			auto F3Type = table.FindActiveLast(U"float4");
-			assert(F3Type);
-			CreateInsideType(table, commands, U"matrix", F3Type, MaterialMemberName, 4, std::nullopt);
+			auto F4Type = table.FindActiveLast(U"float4");
+			assert(F4Type);
+			CreateInsideType(table, commands, U"matrix", F4Type, MaterialMemberName, 4);
 		}
 
 		{
 			static std::tuple<TextureType, std::u32string_view> DefineType[] = {
 				{TextureType::Tex1, U"Texture1D"}, {TextureType::Tex2, U"Texture2D"}, {TextureType::Tex3, U"Texture3D"}
 			};
+			
 			for (size_t i = 0; i < std::size(DefineType); ++i)
-			{
 				auto Mask = table.Insert(std::get<1>(DefineType[i]), TextureProperty{std::get<0>(DefineType[i])});
-				commands.PushData(std::u32string_view{}, {});
-				commands.CoverToType(Mask, 1, {});
-				commands.EqualData(Mask, {});
-			}
 		}
 
 		{
 			auto Mask = table.Insert(U"SamplerState", SamplerProperty{});
-			commands.PushData(std::u32string_view{}, {});
-			commands.CoverToType(Mask, 1, {});
-			commands.EqualData(Mask, {});
-		}
-
-		{
-			table.Insert(U"__MateData", MateDataProperty{});
-			table.Insert(U"__UntypedList", UnTypedListProperty{});
 		}
 
 		return {std::move(table), std::move(commands)};
@@ -117,20 +147,21 @@ namespace Dumpling::Mscf
 		return Content;
 	}
 
-	auto HlslStorageInfoLinker::Handle(StorageInfo cur, StorageInfo input) const ->HandleResult
+	auto HlslStorageInfoLinker::Handle(MemoryModel cur, MemoryModel input) const ->HandleResult
 	{
 		auto old = cur;
 		static constexpr size_t AlignSize = sizeof(float) * 4;
-		cur.align = StorageInfoLinker::MaxAlign(cur, input);
+		cur.align = MemoryModelMaker::MaxAlign(cur, input);
 		size_t rever_size = cur.size % AlignSize;
 		if (input.size >= AlignSize || rever_size < input.size)
 			cur.size += rever_size;
-		cur.size += StorageInfoLinker::ReservedSize(cur, input);
+		cur.size += MemoryModelMaker::ReservedSize(cur, input);
 		return { cur.align, cur.size - old.size };
 	}
 
 	Content Parser(std::u32string_view code, Table& table, Commands& commands)
 	{
+		/*
 		auto& Mref = MscfEbnfInstance();
 		auto History = Ebnf::Process(MscfEbnfInstance(), code);
 		auto P = History.Expand();
@@ -159,20 +190,20 @@ namespace Dumpling::Mscf
 				case 4: {
 					auto& Data = E[0];
 					if (Data.TryGetData<int64_t>())
-						commands.PushData(*Data.TryGetData<int64_t>(), Data.section);
+						return commands.PushData(table, static_cast<int32_t>(Data.GetData<int64_t>()), Data.section);
 					else if (Data.TryGetData<float>())
-						commands.PushData(*Data.TryGetData<float>(), Data.section);
+						return commands.PushData(table, Data.GetData<float>(), Data.section);
 					else if (Data.TryGetData<StringView>())
-						commands.PushData(*Data.TryGetData<StringView>(), Data.section);
+						return commands.PushData(table, Data.GetData<StringView>(), Data.section);
 					else
 						assert(false);
 					return {};
 				} break;
 				case 5: {
-					commands.PushData(true, E.section);
+					return commands.PushData(table, true, E.section);
 				} break;
 				case 6: {
-					commands.PushData(false, E.section);
+					return commands.PushData(table, false, E.section);
 				} break;
 				case 7: {
 					auto P = E[0].GetData<StringView>();
@@ -185,18 +216,22 @@ namespace Dumpling::Mscf
 						if (Ite.IsNoterminal())
 							++index;
 					}
-					commands.CoverToType(TypeMask, index, E.section);
+					commands.MakeValue(TypeMask, index, E.section);
+					return TypeMask;
 				} break;
 				case 22: {
 					auto P = table.FindActiveLast(U"__MateData");
 					assert(P);
-					size_t used = 0;
+					std::vector<Mask> AllData;
 					for (auto& Ite : E)
 					{
 						if (Ite.IsNoterminal())
-							++used;
+							AllData.push_back(Ite.GetData<Mask>());
 					}
-					commands.CoverToType(P, used, E.section);
+					if(AllData.size() == 0)
+						return commands.MakeList({}, 0, E.section);
+					else
+						return commands.MakeList(AllData[0], AllData.size(), E.section);
 				} break;
 				case 8: {
 					std::vector<int64_t> Result;
@@ -497,7 +532,37 @@ namespace Dumpling::Mscf
 			}
 			return {};
 		});
+		
 		return std::move(std::any_cast<Content&>(Result));
+		*/
+		return {};
+	}
+
+	void RemoveSameMateData(std::vector<Mask>& output, Table& table)
+	{
+		std::set<std::u32string_view> AllName;
+		output.erase(std::remove_if(output.begin(), output.end(), [&](Mask mask)->bool
+		{
+			auto Find = table.Find<ValueProperty>(mask);
+			assert(Find.Exist());
+			if(Find)
+			{
+				auto ite = AllName.insert(Find.name);
+				return !ite.second;
+			}
+			return false;
+		}), output.end());
+	}
+
+	void FilterAndCheck(Content& content, Table& table)
+	{
+		std::map<std::u32string_view, Section> AllName;
+		/*
+		for(auto& ite : content.propertys)
+		{
+			
+		}
+		*/
 	}
 
 	/*

@@ -91,7 +91,7 @@ namespace PineApple::Symbol
 		return std::move(result);
 	}
 
-	size_t StorageInfoLinker::operator()(StorageInfo const& info_i)
+	size_t MemoryModelMaker::operator()(MemoryModel const& info_i)
 	{
 		auto re = Handle(info, info_i);
 		info.align = re.align;
@@ -101,12 +101,12 @@ namespace PineApple::Symbol
 		return offset;
 	}
 
-	size_t StorageInfoLinker::MaxAlign(StorageInfo out, StorageInfo in) noexcept
+	size_t MemoryModelMaker::MaxAlign(MemoryModel out, MemoryModel in) noexcept
 	{
 		return out.align < in.align ? in.align : out.align;
 	}
 
-	size_t StorageInfoLinker::ReservedSize(StorageInfo out, StorageInfo in) noexcept
+	size_t MemoryModelMaker::ReservedSize(MemoryModel out, MemoryModel in) noexcept
 	{
 		auto mod = out.size % in.align;
 		if (mod == 0)
@@ -115,129 +115,15 @@ namespace PineApple::Symbol
 			return out.align - mod;
 	}
 
-	StorageInfoLinker::HandleResult StorageInfoLinker::Handle(StorageInfo cur, StorageInfo input) const
+	MemoryModelMaker::HandleResult MemoryModelMaker::Handle(MemoryModel cur, MemoryModel input) const
 	{
 		return { MaxAlign(cur, input), ReservedSize(cur, input) };
 	}
 
-	StorageInfo StorageInfoLinker::Finalize(StorageInfo cur) const
+	MemoryModel MemoryModelMaker::Finalize(MemoryModel cur) const
 	{
 		auto result = cur;
 		result.size += ReservedSize(result, result);
 		return result;
 	}
-
-
-	/*
-	std::tuple<StorageInfo, std::vector<size_t>> CalculateSpace_Default_C(StorageInfo const* info, size_t length, StorageInfo min = {})
-	{
-		std::vector<size_t> offset;
-		for (size_t index = 0; index < length; ++index)
-		{
-			auto& ref = info[index];
-			min.aligned = min.aligned < ref.aligned ? ref.aligned : min.aligned;
-			auto mod = min.size % ref.aligned;
-			if (mod == 0)
-				offset.push_back(min.size);
-			else {
-				min.size += ref.aligned - mod;
-				offset.push_back(min.size);
-			}
-			min.size += ref.size;
-		}
-		return {min, std::move(offset)};
-	}
-
-	std::tuple<StorageInfo, std::vector<size_t>> CalculateSpace_Default_HLSL(StorageInfo const* info, size_t length, StorageInfo min = {})
-	{
-		std::vector<size_t> offset;
-		for (size_t index = 0; index < length; ++index)
-		{
-			auto& ref = info[index];
-			min.aligned = min.aligned < ref.aligned ? ref.aligned : min.aligned;
-			auto mod = min.size % ref.aligned;
-			if (mod == 0)
-				offset.push_back(min.size);
-			else {
-				min.size += ref.aligned - mod;
-				offset.push_back(min.size);
-			}
-			min.size += ref.size;
-		}
-		return { min, std::move(offset) };
-	}
-	*/
-
-	/*
-	Command::Data Command::Data::Make(std::u32string_view name, std::byte const* datas, size_t length)
-	{
-		std::vector<std::byte> data(length);
-		std::memcpy(data.data(), datas, length);
-		return Data{name, std::move(data)};
-	}
-	*/
-	
-	/*
-	template<typename Storage, typename StorageTuple, typename Mapping> 
-	Mask InsertExe(Storage&& s, std::vector<StorageTuple>& stack, std::vector<Mapping>& mapping)
-	{
-		auto mask = mapping.size() + 1;
-		stack.push_back({ std::move(s), {mask} });
-		mapping.push_back({false, stack.size() - 1});
-		return {mask};
-	}
-
-	auto Table::InsertValue(Value value) -> Mask
-	{
-		return InsertExe(std::move(value), value_stack, value_mapping);
-	}
-
-	auto Table::InsertType(std::u32string type_name, std::vector<Value> member, std::any pro = {}) -> Mask
-	{
-		return InsertExe(Type{ std::move(type_name), std::move(member), std::move(pro) }, type_stack, type_mapping);
-	}
-
-	template<typename StorageTuple>
-	Mask FindExe(std::u32string_view name, std::vector<StorageTuple> const& stack)
-	{
-		for (auto ite = stack.rbegin(); ite != stack.rend(); ++ite)
-		{
-			auto& [ref, mask] = *ite;
-			if(ref.name == name)
-				return mask;
-		}
-		return {0};
-	}
-
-	auto Table::FindType(std::u32string const& type_name) const -> Mask
-	{
-		return FindExe(type_name, type_stack);
-	}
-
-	auto Table::FindValue(std::u32string const& value_name) const -> Mask
-	{
-		return FindExe(value_name, value_stack);
-	}
-
-	template<typename StorageTuple>
-	void PopActionScopeExe(size_t s, std::vector<StorageTuple>& stack, std::vector<StorageTuple>& backup_stack, std::vector<Table::StorageMask>& mapping)
-	{
-		if (s != 0)
-		{
-			assert(s <= stack.size());
-			auto cur = backup_stack.size();
-			backup_stack.insert(backup_stack.end(), std::move_iterator(stack.begin() + stack.size() - s), std::move_iterator(stack.end()));
-			stack.resize(stack.size() - s);
-			auto mapping_offset = mapping.size() - s;
-			for (size_t i = 0; i < cur; ++i)
-				mapping[mapping_offset + i] ={true,  cur + i};
-		}
-	}
-
-	void Table::PopActionScope(Record record)
-	{
-		PopActionScopeExe(record.value_count, value_stack, background_value_stack, value_mapping);
-		PopActionScopeExe(record.table_count, type_stack, background_type_stack, type_mapping);
-	}
-	*/
 }

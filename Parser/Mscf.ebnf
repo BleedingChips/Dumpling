@@ -24,7 +24,9 @@ $ := <Statement>
 
 <DefineVariable> := <TypeRequire> Id <ArrayProperty> [ '=' ( <BaseConstValue> | <BaseConstValueList> ) ] : [11]
 
-<StructDesc> := 'struct' Id '{' { <DefineVariable> ';' | ';' } '}' ';' : [12]
+<StructDefineVariable> := Id Id : [23]
+
+<StructDesc> := 'struct' Id '{' { <StructDefineVariable> ';' | ';' } '}' ';' : [12]
 
 <MateDateElement> := Id [ '=' <BaseConstValue> ] : [13]
 

@@ -7,6 +7,8 @@ namespace Dumpling::Mscf
 	
 	using Mask = PineApple::Symbol::Table::Mask;
 	using Section = PineApple::Symbol::Section;
+	using MemoryModel = PineApple::Symbol::MemoryModel;
+	using Table = PineApple::Symbol::Table;
 
 	struct ValueProperty
 	{
@@ -73,45 +75,63 @@ namespace Dumpling::Mscf
 
 	struct MaterialProperty
 	{
-		std::variant<std::u32string_view, ReferencesPath> complie_type;
+		std::variant<std::u32string_view, ReferencesPath> compile_type;
 		std::vector<Mask> property;
 		std::vector<Mask> snippets;
 	};
 
 	struct Content
 	{
-		std::vector<Mask> propertys;
+		std::vector<Mask> property;
 		std::vector<Mask> statement;
 	};
 
 	struct Commands
 	{
-		using DataType = std::variant<int64_t, float, std::u32string_view, bool>;
+		
 	private:
-		struct Data { DataType datas; };
-		struct CoverType { Mask type; size_t parameter; };
-		struct EqualToData { Mask value; };
+		
+		struct ValueDescriptionC { Mask type; std::tuple<size_t, size_t> data; };
+		struct MakeValueC { Mask type; size_t count; };
+		struct EqualValueC { Mask type; size_t count; };
+		struct MakeListC { Mask type; size_t count; };
+		
 	public:
-		void PushData(DataType command, Section section){ AllCommands.push_back({Data{command}, section }); }
-		void CoverToType(Mask type, size_t parameter, Section section){ AllCommands.push_back({CoverType{type, parameter}, section }); }
-		void EqualData(Mask type, Section section) { AllCommands.push_back({EqualToData{ type }, section }); }
+		
+		//void PushData(DataType command, Section section){ AllCommands.push_back({ ValueScriptionC{command}, section }); }
+		Mask PushData(Table& table, bool value, Section section);
+		Mask PushData(Table& table, std::u32string_view value, Section section);
+		Mask PushData(Table& table, float value, Section section);
+		Mask PushData(Table& table, int32_t value, Section section);
+		Mask PushData(Mask mask, Table& table, std::byte const* data, size_t data_length, Section section);
+		Mask MakeValue(Mask type, size_t parameter, Section section){ AllCommands.emplace_back(MakeValueC{type, parameter}, section); return type; }
+		Mask MakeList(Mask type, size_t parameter, Section section) { AllCommands.emplace_back(MakeListC{type, parameter}, section ); return type; }
+		Mask EqualValue(Mask type, size_t parameter, Section section) { AllCommands.emplace_back(EqualValueC{ type, parameter }, section); return type; }
+		
 	private:
-		using CommandType = std::variant<Data, CoverType, EqualToData>;
+		
+		using CommandType = std::variant<ValueDescriptionC, MakeValueC, EqualValueC, MakeListC>;
+		
+		std::vector<std::byte> ConstDataTable;
 		std::vector<std::tuple<CommandType, Section>> AllCommands;
 	};
 
-	using Table = PineApple::Symbol::Table;
+	
 
 	std::tuple<Table, Commands> CreateDefaultContent();
 
-	struct HlslStorageInfoLinker : PineApple::Symbol::StorageInfoLinker
+	struct HlslStorageInfoLinker : PineApple::Symbol::MemoryModelMaker
 	{
-		using PineApple::Symbol::StorageInfoLinker::StorageInfoLinker;
-		using StorageInfo = PineApple::Symbol::StorageInfo;
-		virtual HandleResult Handle(StorageInfo cur, StorageInfo input) const override;
+		using PineApple::Symbol::MemoryModelMaker::MemoryModelMaker;
+		using MemoryModel = PineApple::Symbol::MemoryModel;
+		virtual HandleResult Handle(MemoryModel cur, MemoryModel input) const override;
 	};
 
 	Content Parser(std::u32string_view code, Table& table, Commands& commands);
+
+	void FilterAndCheck(Content& content, Table& table);
+	
+	void Mapping(Table& table, Commands& commands, Content& Content);
 
 	/*
 
