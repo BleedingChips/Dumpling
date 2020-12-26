@@ -131,24 +131,38 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Ebnf.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Lexical.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Lr0.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\StrEncode.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\StrFormat.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\StrScanner.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Symbol.cpp" />
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Unfa.cpp" />
+    <ClCompile Include="..\..\..\..\Potato\Potato\Private\tool.cpp" />
     <ClCompile Include="..\..\..\Dumpling\FrameWork\Private\path_system.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dx12.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dx12_form.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dxgi.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\win32.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Msc\Private\mscf.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Msc\Private\mscf_define.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\CharEncode.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Ebnf.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Lr0.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Nfa.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Interval.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\StrFormat.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Symbol.cpp" />
-    <ClCompile Include="..\..\..\Dumpling\Potato\Private\tool.cpp" />
     <ClCompile Include="demo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Ebnf.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Interval.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Lexical.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Lr0.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\StrEncode.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\StrFormat.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\StrScanner.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Symbol.h" />
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Unfa.h" />
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\auto_adapter.h" />
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\smart_pointer.h" />
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\tmp.h" />
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\tmpcall.h" />
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\tool.h" />
+    <ClInclude Include="..\..\..\Dumpling\Broccoli\Public\ShaderVariable.h" />
     <ClInclude Include="..\..\..\Dumpling\FrameWork\Public\path_system.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\descriptor_table_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\dx12.h" />
@@ -160,22 +174,6 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\pre_define_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\resource_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\win32.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\Private\mscf_define.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\Private\mscf_parser_table.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\Public\msc.h" />
-    <ClInclude Include="..\..\..\Dumpling\Msc\Public\mscf.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\CharEncode.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Ebnf.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Lr0.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Nfa.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Interval.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\StrFormat.h" />
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Symbol.h" />
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\auto_adapter.h" />
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\smart_pointer.h" />
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\tmp.h" />
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\tmpcall.h" />
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\tool.h" />
     <ClInclude Include="Testing.h" />
   </ItemGroup>
   <ItemGroup>

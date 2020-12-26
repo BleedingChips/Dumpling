@@ -25,38 +25,38 @@
     <Filter Include="Gui">
       <UniqueIdentifier>{10391c24-ebf1-4dc7-83be-8f1903636707}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Msc">
-      <UniqueIdentifier>{11df9cb0-38c7-4f78-b137-81ee21ee6cb1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="PineApple">
-      <UniqueIdentifier>{b299ca8e-4d02-4cc7-a857-b57c672be365}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Potato">
-      <UniqueIdentifier>{9df6561d-f9a4-4715-9dec-87e8eb4f5206}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="PineApple\Public">
-      <UniqueIdentifier>{70643781-5f81-4325-aabe-c18744776aa6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="PineApple\Private">
-      <UniqueIdentifier>{a240b5fa-4cc5-4219-9372-f951ab533294}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Potato\Private">
-      <UniqueIdentifier>{8b3d1583-6340-40fc-81cc-3cc79f902f71}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Potato\Public">
-      <UniqueIdentifier>{890ffea0-3e30-40cb-b07b-efff4bd95a46}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Msc\Private">
-      <UniqueIdentifier>{820f933b-a03d-405f-96ff-5e37239bbf5f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Msc\Public">
-      <UniqueIdentifier>{04f56bb0-19cf-4634-9f02-ce37dd95dfe0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Gui\Public">
       <UniqueIdentifier>{aa08481a-9218-4cf6-b419-9e9cbfcecedc}</UniqueIdentifier>
     </Filter>
     <Filter Include="Gui\Private">
       <UniqueIdentifier>{13250c7c-d9d4-4990-a357-163a4b13a3e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Broccoli">
+      <UniqueIdentifier>{c3eebfdb-da3d-4464-a2c5-749a1ed1e415}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Broccoli\Public">
+      <UniqueIdentifier>{0475b67e-8b0a-4275-bdde-e91c00cd2642}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Broccoli\Private">
+      <UniqueIdentifier>{36b06077-77b0-4995-8bf8-9a91020380bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PineApple">
+      <UniqueIdentifier>{d40076dd-71d4-435e-accb-3ce0d8a2524f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PineApple\Public">
+      <UniqueIdentifier>{bf167e8f-80a5-4b4c-829c-1723e28dceeb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PineApple\Private">
+      <UniqueIdentifier>{44e72fd7-ee19-438a-8b0a-703b9910f40d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Potato">
+      <UniqueIdentifier>{b2c77ddc-e965-4cf2-845a-5f134ceec0d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Potato\Public">
+      <UniqueIdentifier>{bc446748-a521-4e90-b013-ca0e80c26aa2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Potato\Private">
+      <UniqueIdentifier>{8db90e6f-96e6-4f13-b8ec-198a3f673f8f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -78,35 +78,32 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\win32.cpp">
       <Filter>Gui\Public</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Msc\Private\mscf.cpp">
-      <Filter>Msc\Private</Filter>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Ebnf.cpp">
+      <Filter>PineApple\Private</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Potato\Private\tool.cpp">
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Lexical.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Lr0.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\StrEncode.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\StrFormat.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\StrScanner.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Symbol.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\PineApple\PineApple\Private\Unfa.cpp">
+      <Filter>PineApple\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Potato\Potato\Private\tool.cpp">
       <Filter>Potato\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\CharEncode.cpp">
-      <Filter>PineApple\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Ebnf.cpp">
-      <Filter>PineApple\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Lr0.cpp">
-      <Filter>PineApple\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Nfa.cpp">
-      <Filter>PineApple\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\StrFormat.cpp">
-      <Filter>PineApple\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Symbol.cpp">
-      <Filter>PineApple\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\Msc\Private\mscf_define.cpp">
-      <Filter>Msc\Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Dumpling\PineApple\Private\Interval.cpp">
-      <Filter>PineApple\Private</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -146,53 +143,50 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\win32.h">
       <Filter>Gui\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\Public\msc.h">
-      <Filter>Msc\Public</Filter>
+    <ClInclude Include="..\..\..\Dumpling\Broccoli\Public\ShaderVariable.h">
+      <Filter>Broccoli\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\Public\mscf.h">
-      <Filter>Msc\Public</Filter>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Ebnf.h">
+      <Filter>PineApple\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\Private\mscf_parser_table.h">
-      <Filter>Msc\Private</Filter>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Interval.h">
+      <Filter>PineApple\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\auto_adapter.h">
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Lexical.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Lr0.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\StrEncode.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\StrFormat.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\StrScanner.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Symbol.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\PineApple\PineApple\Public\Unfa.h">
+      <Filter>PineApple\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\auto_adapter.h">
       <Filter>Potato\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\smart_pointer.h">
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\smart_pointer.h">
       <Filter>Potato\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\tmp.h">
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\tmp.h">
       <Filter>Potato\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\tmpcall.h">
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\tmpcall.h">
       <Filter>Potato\Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Potato\Public\tool.h">
+    <ClInclude Include="..\..\..\..\Potato\Potato\Public\tool.h">
       <Filter>Potato\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\CharEncode.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Ebnf.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Lr0.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Nfa.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\StrFormat.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Symbol.h">
-      <Filter>PineApple\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\Msc\Private\mscf_define.h">
-      <Filter>Msc\Private</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Dumpling\PineApple\Public\Interval.h">
-      <Filter>PineApple\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

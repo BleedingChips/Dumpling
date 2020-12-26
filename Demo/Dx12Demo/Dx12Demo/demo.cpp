@@ -1,9 +1,9 @@
 #include "../../../Dumpling/Gui/Win32/dx12_form.h"
 #include "../../../Dumpling/FrameWork/Public/path_system.h"
-#include "../../../Dumpling/Msc/Public/mscf.h"
-#include "../../../Dumpling/PineApple/Public/CharEncode.h"
-#include "../../../Dumpling/PineApple/Public/Symbol.h"
-#include <assert.h>
+#include "../../../../PineApple/PineApple/Public/Ebnf.h"
+#include "../../../../Potato/Potato/Public/tool.h"
+#include "../../../Dumpling/Broccoli/Public/ShaderVariable.h"
+#include <cassert>
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -44,18 +44,59 @@ bool FUNC(bool t1, FuncObj&& OJ)
     return false;
 }
 
+using namespace Broccoli::ShaderVariable;
+
+
+struct A
+{
+	template<typename Type>
+	bool operator()()
+	{
+		
+	}
+};
+
+
 int main()
 {
 
-	auto P = FUNC(true, [](){});
+	Variable<
+		Define<int32_t, "value1">,
+		Define<std::array<int32_t, 2>, "value2">,
+		Define<std::array<int32_t, 4>, "value3">
+	> sv;
+
+	sv.Get<"value1">() = 1;
+	sv.Get<"value2">() = std::array<int32_t, 2>{2, 3};
+	sv.Get<"value3">() = std::array<int32_t, 4>{ 4, 5, 6, 7 };
+
+	Variable<
+		Define<int32_t, "value1">,
+		Define<std::array<int32_t, 2>, "value2">,
+		Define<int32_t, "value3">,
+		Define<std::array<int32_t, 4>, "value4">
+	> s2;
+
+	struct Variable2
+	{
+		int32_t value1;
+		std::array<int32_t, 2> value2;
+		std::array<int32_t, 4> value3;
+	} s3;
+
+	std::cout << "sizeof sv: " << sizeof(decltype(sv)) << ", variable3 offset :"
+		<< reinterpret_cast<std::byte*>(&sv.Get<"value3">()) - reinterpret_cast<std::byte*>(&sv)
+		<<std::endl;
+	std::cout << "sizeof s2: " << sizeof(decltype(s2)) << ", variable3 offset :"
+		<< reinterpret_cast<std::byte*>(&s2.Get<"value3">()) - reinterpret_cast<std::byte*>(&s2)
+		<< ", variable4 offset : "
+		<< reinterpret_cast<std::byte*>(&s2.Get<"value4">()) - reinterpret_cast<std::byte*>(&s2)
+		<< std::endl;
+	std::cout << "sizeof s3: " << sizeof(decltype(s3)) << ", variable3 offset :"
+		<< reinterpret_cast<std::byte*>(&s3.value3) - reinterpret_cast<std::byte*>(&s3)
+		<< std::endl;
 
 	
-	using Interval = Interval<int>;
-
-	Interval re({{1, 4}, {7,14}, {4, 7}, {}});
-	re = re - Interval({8, 10});
-
-
 	using namespace Dumpling::Path;
 
 	auto Re2 = UpSearch(U"Content");
@@ -64,13 +105,6 @@ int main()
 	assert(Finded);
 	auto Data = LoadEntireFile(*Finded);
 	assert(Data);
-
-	std::u32string AT = CharEncode::Wrapper(Data->data(), Data->size()).To<char32_t>();
-	auto E = Dumpling::Mscf::translate(AT);
-
-	auto P1234 = U"你好";
-
-	std::string Datacc = PineApple::CharEncode::Wrapper<char32_t>(P1234).To<char>();
 
 
 	//auto String = LoadEntireBinaryFile();
