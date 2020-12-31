@@ -58,6 +58,15 @@
     <Filter Include="Potato\Private">
       <UniqueIdentifier>{8db90e6f-96e6-4f13-b8ec-198a3f673f8f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SugerCane">
+      <UniqueIdentifier>{4c85671f-654e-412e-b485-cd56d178ea08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SugerCane\Public">
+      <UniqueIdentifier>{1f2f92d4-35b7-418e-b632-438f30a9b489}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SugerCane\Private">
+      <UniqueIdentifier>{2f00d11f-f920-40ee-babc-0ffe124fce27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="demo.cpp">
@@ -104,6 +113,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\Potato\Potato\Private\tool.cpp">
       <Filter>Potato\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Dumpling\SugerCane\Private\ParserTable.cpp">
+      <Filter>SugerCane\Private</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -187,6 +199,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\..\Potato\Potato\Public\tool.h">
       <Filter>Potato\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\SugerCane\Public\Mscf.h">
+      <Filter>SugerCane\Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Dumpling\SugerCane\Public\ParserTable.h">
+      <Filter>SugerCane\Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

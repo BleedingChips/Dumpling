@@ -145,6 +145,7 @@
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dx12_form.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\dxgi.cpp" />
     <ClCompile Include="..\..\..\Dumpling\Gui\Win32\win32.cpp" />
+    <ClCompile Include="..\..\..\Dumpling\SugerCane\Private\ParserTable.cpp" />
     <ClCompile Include="demo.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -174,6 +175,8 @@
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\pre_define_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\resource_dx12.h" />
     <ClInclude Include="..\..\..\Dumpling\Gui\Win32\win32.h" />
+    <ClInclude Include="..\..\..\Dumpling\SugerCane\Public\Mscf.h" />
+    <ClInclude Include="..\..\..\Dumpling\SugerCane\Public\ParserTable.h" />
     <ClInclude Include="Testing.h" />
   </ItemGroup>
   <ItemGroup>

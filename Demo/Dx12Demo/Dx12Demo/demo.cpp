@@ -44,7 +44,7 @@ bool FUNC(bool t1, FuncObj&& OJ)
     return false;
 }
 
-using namespace Broccoli::ShaderVariable;
+using namespace Broccoli::Shader
 
 
 struct A
@@ -60,7 +60,7 @@ struct A
 int main()
 {
 
-	Variable<
+	Buffer<
 		Define<int32_t, "value1">,
 		Define<std::array<int32_t, 2>, "value2">,
 		Define<std::array<int32_t, 4>, "value3">
@@ -70,7 +70,7 @@ int main()
 	sv.Get<"value2">() = std::array<int32_t, 2>{2, 3};
 	sv.Get<"value3">() = std::array<int32_t, 4>{ 4, 5, 6, 7 };
 
-	Variable<
+	Buffer<
 		Define<int32_t, "value1">,
 		Define<std::array<int32_t, 2>, "value2">,
 		Define<int32_t, "value3">,

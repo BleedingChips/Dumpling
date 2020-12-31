@@ -1,24 +1,16 @@
 #pragma once
 #include <string>
-#include "msc.h"
 #include <array>
 #include <string>
 #include <map>
 #include <set>
 #include <array>
 
-#include "../../PineApple/Public/Ebnf.h"
+#include "../../../../PineApple/PineApple/Public/Ebnf.h"
 
-namespace Dumpling::Mscf
+namespace SugerCane::Mscf
 {
 	using Section = PineApple::Ebnf::Section;
-
-	
-
-	struct mscf : Msc::mscf_interface
-	{
-
-	};
 
 	namespace Error
 	{
@@ -49,6 +41,11 @@ namespace Dumpling::Mscf
 		
 	}
 
-	mscf translate(std::u32string const& code);
+	struct Mscf
+	{
+		
+	};
+
+	Mscf Translate(std::u32string const& code);
 
 }

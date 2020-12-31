@@ -4,7 +4,7 @@
 #include <type_traits>
 #include "../../../../Potato/Potato/Public/tmp.h"
 
-namespace Broccoli::ShaderVariable
+namespace Broccoli::Shader
 {	
 	/*
 	template<typename Type>
@@ -91,12 +91,7 @@ namespace Broccoli::ShaderVariable
 		template<VariableAlignasAndSizeTuple last_tuple, typename ...Type>
 		struct VariableSizeAndAlignasDetect
 		{
-			static constexpr VariableAlignasAndSizeTuple SizeAlignesTuple() { return {
-				((last_tuple.require_size % last_tuple.require_alignas) == 0) ?
-					last_tuple.require_size : last_tuple.require_size + last_tuple.require_alignas - (last_tuple.require_size % last_tuple.require_alignas),
-				last_tuple.require_alignas,
-				last_tuple.require_last_size
-			}; }
+			static constexpr VariableAlignasAndSizeTuple SizeAlignesTuple() {return last_tuple; }
 		};
 
 		template<VariableAlignasAndSizeTuple last_tuple, typename Type, typename ...OtherType>
@@ -122,7 +117,7 @@ namespace Broccoli::ShaderVariable
 	}
 
 	template<typename ...Type>
-	struct Variable
+	struct Buffer
 	{
 		static_assert(Potato::Tmp::bool_and<true, Implement::IsAcceptableDefineV<Type>...>::value, "Variable only require Define<your_type, value_name> as type parameters");
 		static_assert(!Implement::SameName(Type::name...), "Variable only require unique value name");
@@ -131,6 +126,66 @@ namespace Broccoli::ShaderVariable
 		template<Potato::Tmp::const_string str>
 		decltype(auto) Get(){ return  help::GetImplement(buffer.data(), Potato::Tmp::const_string_holder<str>{});}
 	};
+
+	template<typename Type, size_t N>
+	struct BaseVariable
+	{
+		static_assert(alignof(Type) >= alignof(float));
+		std::enable_if_t<N >= 1, Type&> X() noexcept { return storage[0]; }
+		std::enable_if_t<N >= 2, Type&> Y() noexcept { return storage[1]; }
+		std::enable_if_t<N >= 3, Type&> Z() noexcept { return storage[2]; }
+		std::enable_if_t<N >= 4, Type&> W() noexcept { return storage[3]; }
+		std::enable_if_t<N >= 1, Type const&> X() const noexcept { return storage[0]; }
+		std::enable_if_t<N >= 2, Type const&> Y() const noexcept { return storage[1]; }
+		std::enable_if_t<N >= 3, Type const&> Z() const noexcept { return storage[2]; }
+		std::enable_if_t<N >= 4, Type const&> W() const noexcept { return storage[3]; }
+		std::enable_if_t<N >= 1, Type&> R() noexcept { return storage[0]; }
+		std::enable_if_t<N >= 2, Type&> G() noexcept { return storage[1]; }
+		std::enable_if_t<N >= 3, Type&> B() noexcept { return storage[2]; }
+		std::enable_if_t<N >= 4, Type&> A() noexcept { return storage[3]; }
+		std::enable_if_t<N >= 1, Type const&> R() const noexcept { return storage[0]; }
+		std::enable_if_t<N >= 2, Type const&> G() const noexcept { return storage[1]; }
+		std::enable_if_t<N >= 3, Type const&> B() const noexcept { return storage[2]; }
+		std::enable_if_t<N >= 4, Type const&> A() const noexcept { return storage[3]; }
+		
+		constexpr BaseVariable(Type const & p)
+		{
+			for(auto & ite : storage)
+				ite = p;
+		}
+		
+		template<typename RequireType>
+		constexpr operator BaseVariable<RequireType, N>() const noexcept
+		{
+			BaseVariable<RequireType, N> result;
+			for(size_t i = 0; i < N; ++i)
+				result.storage[i] = static_cast<RequireType>(storage[i]);
+		}
+		constexpr Type& operator[](size_t index) noexcept { static_assert(index < N); return storage[index]; }
+		constexpr Type const& operator[](size_t index) const noexcept { static_assert(index < N); return storage[index]; }
+		constexpr BaseVariable(BaseVariable const& BV) = default;
+		constexpr BaseVariable& operator=(BaseVariable const& BV) = default;
+		constexpr BaseVariable(std::enable_if_t<N >= 2, BaseVariable<Type, 1>> const& BV) : BaseVariable(BV.X()){}
+	private:
+		std::array<Type, N> storage;
+	};
+
+	using Float = BaseVariable<float, 1>;
+	using Float2 = BaseVariable<float, 2>;
+	using Float3 = BaseVariable<float, 3>;
+	using Float4 = BaseVariable<float, 4>;
+
+	using Int = BaseVariable<int32_t, 1>;
+	using Int2 = BaseVariable<int32_t, 2>;
+	using Int3 = BaseVariable<int32_t, 3>;
+	using Int4 = BaseVariable<int32_t, 4>;
+
+	using Uint = BaseVariable<uint32_t, 1>;
+	using Uint2 = BaseVariable<uint32_t, 2>;
+	using Uint3 = BaseVariable<uint32_t, 3>;
+	using Uint4 = BaseVariable<uint32_t, 4>;
+
+	using Materix = BaseVariable<Float4, 4>;
 
 	/*
 	template<typename Type, size_t N, typename = std::enable_if_t<(N>0)>>
