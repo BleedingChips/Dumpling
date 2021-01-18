@@ -1,6 +1,5 @@
 
-#include "../../../../PineApple/PineApple/Public/Ebnf.h"
-#include "../../../../PineApple/PineApple/Public/StrEncode.h"
+#include "Potato/Public/Ebnf.h"
 
 namespace SugerCane::Mscf
 {

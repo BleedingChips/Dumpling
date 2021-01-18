@@ -1,8 +1,8 @@
-#include "../../../Dumpling/Gui/Win32/dx12_form.h"
-#include "../../../Dumpling/FrameWork/Public/path_system.h"
-#include "../../../../PineApple/PineApple/Public/Ebnf.h"
-#include "../../../../Potato/Potato/Public/tool.h"
-#include "../../../Dumpling/Broccoli/Public/ShaderVariable.h"
+#include "Potato/Public/Ebnf.h"
+#include "Potato/Public/Misc.h"
+#include "Dumpling/Public/ShaderVariable.h"
+#include "Potato/Public/FileSystem.h"
+#include "Potato/Public/StrFormat.h"
 #include <cassert>
 #include <iostream>
 #include <chrono>
@@ -14,87 +14,39 @@
 #include <sstream>
 
 
-using namespace Dumpling;
-using Dxgi::FormatPixel;
-
-using namespace Dxgi::DataType;
-using Win32::ThrowIfFault;
 using namespace Potato;
-using namespace PineApple;
-using namespace Dx12;
 
-namespace fs = std::filesystem;
-
-
-template<typename FuncObj, typename = std::enable_if_t<!std::is_same_v<decltype(std::declval<FuncObj&&>()()), void>>>
-auto FUNC(bool t1, FuncObj&& OJ) -> std::optional<decltype(OJ())>
+struct PathInit
 {
-	if(t1)
-		return OJ();
-	else
-		return std::nullopt;
-}
-
-template<typename FuncObj, typename = std::enable_if_t<std::is_same_v<decltype(std::declval<FuncObj&&>()()), void>>>
-bool FUNC(bool t1, FuncObj&& OJ)
-{
-  if (t1)
-    return true;
-  else
-    return false;
-}
-
-using namespace Broccoli::Shader
-
-
-struct A
-{
-	template<typename Type>
-	bool operator()()
+	PathInit()
 	{
-		
+		auto P = FileSystem::Current();
+		P = P.FindFileFromParent(U"Demo", 4);
+		if (P)
+		{
+			auto Resource = P.Append(U"Dx12Demo/Content");
+			if (Resource)
+			{
+				FileSystem::GobalPathMapping().Regedit(U"Content", Resource);
+			}
+			auto Source = P.Append(U"../Dumpling");
+			if (Source)
+			{
+				FileSystem::GobalPathMapping().Regedit(U"Source", Source);
+			}
+		}
 	}
-};
-
+}path_init;
 
 int main()
 {
-
-	Buffer<
-		Define<int32_t, "value1">,
-		Define<std::array<int32_t, 2>, "value2">,
-		Define<std::array<int32_t, 4>, "value3">
-	> sv;
-
-	sv.Get<"value1">() = 1;
-	sv.Get<"value2">() = std::array<int32_t, 2>{2, 3};
-	sv.Get<"value3">() = std::array<int32_t, 4>{ 4, 5, 6, 7 };
-
-	Buffer<
-		Define<int32_t, "value1">,
-		Define<std::array<int32_t, 2>, "value2">,
-		Define<int32_t, "value3">,
-		Define<std::array<int32_t, 4>, "value4">
-	> s2;
-
-	struct Variable2
-	{
-		int32_t value1;
-		std::array<int32_t, 2> value2;
-		std::array<int32_t, 4> value3;
-	} s3;
-
-	std::cout << "sizeof sv: " << sizeof(decltype(sv)) << ", variable3 offset :"
-		<< reinterpret_cast<std::byte*>(&sv.Get<"value3">()) - reinterpret_cast<std::byte*>(&sv)
-		<<std::endl;
-	std::cout << "sizeof s2: " << sizeof(decltype(s2)) << ", variable3 offset :"
-		<< reinterpret_cast<std::byte*>(&s2.Get<"value3">()) - reinterpret_cast<std::byte*>(&s2)
-		<< ", variable4 offset : "
-		<< reinterpret_cast<std::byte*>(&s2.Get<"value4">()) - reinterpret_cast<std::byte*>(&s2)
-		<< std::endl;
-	std::cout << "sizeof s3: " << sizeof(decltype(s3)) << ", variable3 offset :"
-		<< reinterpret_cast<std::byte*>(&s3.value3) - reinterpret_cast<std::byte*>(&s3)
-		<< std::endl;
+	auto P2 = FileSystem::Path(U"$Source:/Content/Mscf.ebnf");
+	auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");
+	auto Datas = FileSystem::LoadEntireFile(P);
+	return 0;
+	
+	/*
+	fs::directory_entry de(fs::current_path());
 
 	
 	using namespace Dumpling::Path;
@@ -105,16 +57,16 @@ int main()
 	assert(Finded);
 	auto Data = LoadEntireFile(*Finded);
 	assert(Data);
+	*/
 
 
 	//auto String = LoadEntireBinaryFile();
 
-	return 0;
-
+/*
 #ifdef _DEBUG
 	Dx12::InitDebugLayout();
 #endif
-
+	
 	//auto Cur = std::filesystem::current_path();
 	auto Cur = *Path::UpSearch(U"Demo");
 	auto Target = *Path::Search(U"DFGenerator.cso", Cur);
@@ -228,6 +180,7 @@ int main()
 	{
 		
 	}
+	*/
 
 	//auto KK = Dx12::LoadEntireFile(total_path);
 
