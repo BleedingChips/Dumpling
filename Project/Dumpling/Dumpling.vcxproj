@@ -147,11 +147,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Dumpling\Private\MscfDefine.h" />
+    <ClInclude Include="..\..\Dumpling\Private\ParserTable.h" />
     <ClInclude Include="..\..\Dumpling\Public\Mscf.h" />
-    <ClInclude Include="..\..\Dumpling\Public\ParserTable.h" />
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Dumpling\Private\Mscf.cpp" />
+    <ClCompile Include="..\..\Dumpling\Private\MscfDefine.cpp" />
     <ClCompile Include="..\..\Dumpling\Private\ParserTable.cpp" />
   </ItemGroup>
   <ItemGroup>

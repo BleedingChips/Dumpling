@@ -1,14 +1,14 @@
 #pragma once
 #include <variant>
 #include <vector>
-#include "../../PineApple/Public/Symbol.h"
+#include "Potato/Public/Symbol.h"
 namespace Dumpling::Mscf
 {
 	
-	using Mask = PineApple::Symbol::Table::Mask;
-	using Section = PineApple::Symbol::Section;
-	using MemoryModel = PineApple::Symbol::MemoryModel;
-	using Table = PineApple::Symbol::Table;
+	using Mask = Potato::Symbol::Table::Mask;
+	using Section = Potato::Symbol::Section;
+	using MemoryModel = Potato::Symbol::MemoryModel;
+	using Table = Potato::Symbol::Table;
 
 	struct ValueProperty
 	{

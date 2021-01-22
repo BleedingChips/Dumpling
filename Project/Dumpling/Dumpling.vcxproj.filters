@@ -15,15 +15,24 @@
     <ClInclude Include="..\..\Dumpling\Public\Mscf.h">
       <Filter>Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Dumpling\Public\ParserTable.h">
-      <Filter>Public</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h">
       <Filter>Public</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dumpling\Private\ParserTable.h">
+      <Filter>Private</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dumpling\Private\MscfDefine.h">
+      <Filter>Private</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Dumpling\Private\ParserTable.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Dumpling\Private\Mscf.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Dumpling\Private\MscfDefine.cpp">
       <Filter>Private</Filter>
     </ClCompile>
   </ItemGroup>

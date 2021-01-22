@@ -6,14 +6,20 @@
 #include <set>
 #include <array>
 
-#include "../../../../PineApple/PineApple/Public/Ebnf.h"
+#include "Potato/Public/Ebnf.h"
 
-namespace SugerCane::Mscf
+namespace Dumpling::Mscf
 {
-	using Section = PineApple::Ebnf::Section;
+	using Section = Potato::Ebnf::Section;
 
 	namespace Error
 	{
+
+		struct Interface
+		{
+			
+		};
+		
 		struct UndefineType
 		{
 			std::u32string type_name;

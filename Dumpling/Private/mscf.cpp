@@ -1,14 +1,10 @@
-#include "../Public/mscf.h"
-#include "../../PineApple/Public/CharEncode.h"
-#include "mscf_define.h"
+#include "../Public/Mscf.h"
+#include "Potato/Public/StrEncode.h"
+#include "MscfDefine.h"
 #include <array>
-
-
 
 namespace Dumpling::Mscf
 {
-	
-	using namespace PineApple::Symbol;
 	using String = std::u32string;
 	using StringView = std::u32string_view;
 
@@ -28,7 +24,7 @@ namespace Dumpling::Mscf
 	}
 	*/
 
-	mscf translate(String const& code)
+	Mscf translate(String const& code)
 	{
 		auto [table, commands] = CreateDefaultContent();
 		auto Content = Parser(code, table, commands);

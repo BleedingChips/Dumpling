@@ -1,5 +1,5 @@
-#include "mscf_define.h"
-#include "../Public/mscf.h"
+#include "MscfDefine.h"
+#include "../Public/Mscf.h"
 #include <array>
 #include "mscf_parser_table.h"
 
