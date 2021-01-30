@@ -1,135 +1,71 @@
 #include "MscfDefine.h"
 #include "../Public/Mscf.h"
+#include "ParserTable.h"
+#include "Potato/Public/StrScanner.h"
 #include <array>
-#include "mscf_parser_table.h"
 
 namespace Dumpling::Mscf
 {
-	using namespace PineApple::Symbol;
+	using namespace Potato;
 
-	Mask Commands::PushData(Table& table, bool value, Section section)
+	MscfContent MscfParser(std::u32string_view code)
 	{
-		auto Mask = table.FindActiveLast(U"bool");
-		assert(Mask);
-		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
-		return Mask;
-	}
-
-	Mask Commands::PushData(Table& table, std::u32string_view value, Section section)
-	{
-		auto Mask = table.FindActiveLast(U"string");
-		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
-		return Mask;
-	}
-
-	Mask Commands::PushData(Table& table, float value, Section section)
-	{
-		auto Mask = table.FindActiveLast(U"float");
-		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
-		return Mask;
-	}
-
-	Mask Commands::PushData(Table& table, int32_t value, Section section)
-	{
-		auto Mask = table.FindActiveLast(U"int");
-		PushData(Mask, table, reinterpret_cast<std::byte const*>(&value), sizeof(decltype(value)), section);
-		return Mask;
-	}
-
-	/*
-	void Commands::PushData(Mask mask, Table& table, std::byte const* data, size_t data_length, Section section)
-	{
-		assert(mask);
-		auto result = table.Find<TypeProperty>(mask);
-		assert(result);
-		auto old_size = ConstDataTable.size();
-		ConstDataTable.resize(ConstDataTable.size() + data_length, static_cast<std::byte>(0x00));
-		std::memcpy(ConstDataTable.data() + old_size, data, data_length);
-		AllCommands.push_back({ ValueScriptionC{mask, {old_size, data_length}}, section});
-	}
-	*/
-
-	void CreateInsideType(Table& table, Commands& Comm,
-		std::u32string_view Name, Mask MemberType, std::u32string_view const* MemberName, size_t Count
-	)
-	{
-		TypeProperty TP;
-		for (size_t i = 0; i < Count; ++i)
+		auto& Table = MscfEbnfInstance();
+		try
 		{
-			ValueProperty Vp{MemberType, {}, {}, {}};
-			auto V1 = table.Insert(MemberName[i], std::move(Vp));
-			TP.values.push_back(V1);
-			//Comm.PushDefaultData(MemberType, {});
-		}
-		table.PopElementAsUnactive(Count);
-		Mask Result = table.Insert(Name, std::move(TP));
-		Comm.EqualValue(Result, Count, {});
-	}
-
-	std::tuple<Table, Commands> CreateContent()
-	{
-		Table table;
-		Commands commands;
-
-		static std::u32string_view MemberName[] = {U"x", U"y", U"z", U"w"};
-
-		auto FloatT = table.Insert(U"float", TypeProperty{});
-		commands.PushData(table, 0.0f, {});
-		commands.EqualValue(FloatT, 1, {});
-
-		auto IntT = table.Insert(U"int", TypeProperty{});
-		commands.PushData(table, static_cast<int32_t>(0), {});
-		commands.EqualValue(IntT, 1, {});
-
-		auto BoolT = table.Insert(U"bool", TypeProperty{});
-		commands.PushData(table, true, {});
-		commands.EqualValue(BoolT, 1, {});
-		
-		auto StrT = table.Insert(U"str", TypeProperty{});
-		commands.PushData(table, std::u32string_view{}, {});
-		commands.EqualValue(BoolT, 1, {});
-		
+			auto His = Ebnf::Process(Table, code);
+			MscfContent result;
+			His.operator()([&](Ebnf::Element& Ele) -> std::any
+			{
+				if(Ele.IsTerminal())
+				{
+					switch (Ele.shift.mask)
+					{
+					case 0:
+					{
+						float Num = 0.0f;
+						Potato::StrScanner::DirectProcess(Ele.shift.capture, Num);
+						return result.const_data.Insert(result.symbol, Num);
+					}break;
+					case 1:
+					{
+						int32_t Num = 0;
+						Potato::StrScanner::DirectProcess(Ele.shift.capture, Num);
+						return result.const_data.Insert(result.symbol, Num);
+					}break;
+					case 2:
+					{
+						return result.const_data.Insert(result.symbol, std::u32string_view{ Ele.shift.capture.begin() + 1, Ele.shift.capture.end() -2 });
+					}break;
+					case 3:
+					{
+						return result.const_data.Insert(result.symbol, std::u32string_view{ Ele.shift.capture.begin() + 2, Ele.shift.capture.end() - 4 });
+					}break;
+					default:
+					{
+						return Ele.shift.capture;
+					}break;
+					}
+				}else
+				{
+					switch (Ele.reduce.mask)
+					{
+					case 1:
+					{
+						result.propertys = std::move(Ele[0].MoveData<std::vector<Table::Mask>>());
+					}break;
+					case 3:{} break;
+						
+					};
+					return {};
+				}
+			});
+		}catch (Ebnf::Exception::Interface&)
 		{
-			static std::u32string_view DefineTypeName[] = { U"float2", U"float3", U"float4" };
-			for(size_t i = 0; i < std::size(DefineTypeName); ++i)
-				CreateInsideType(table, commands, DefineTypeName[i], FloatT, MemberName, i + 2);
-		}
-
-		{
-			static std::u32string_view DefineTypeName[] = { U"int2", U"int3", U"int4" };
-			for (size_t i = 0; i < std::size(DefineTypeName); ++i)
-				CreateInsideType(table, commands, DefineTypeName[i], IntT, MemberName, i + 2);
-		}
-
-		{
-			static std::u32string_view MaterialMemberName[] = { U"v1", U"v2", U"v3", U"v4" };
-			auto F4Type = table.FindActiveLast(U"float4");
-			assert(F4Type);
-			CreateInsideType(table, commands, U"matrix", F4Type, MaterialMemberName, 4);
-		}
-
-		{
-			static std::tuple<TextureType, std::u32string_view> DefineType[] = {
-				{TextureType::Tex1, U"Texture1D"}, {TextureType::Tex2, U"Texture2D"}, {TextureType::Tex3, U"Texture3D"}
-			};
 			
-			for (size_t i = 0; i < std::size(DefineType); ++i)
-				auto Mask = table.Insert(std::get<1>(DefineType[i]), TextureProperty{std::get<0>(DefineType[i])});
 		}
-
-		{
-			auto Mask = table.Insert(U"SamplerState", SamplerProperty{});
-		}
-
-		return {std::move(table), std::move(commands)};
 	}
-
-	std::tuple<Table, Commands> CreateDefaultContent()
-	{
-		static std::tuple<Table, Commands> Content = CreateContent();
-		return Content;
-	}
-
+	
 	auto HlslStorageInfoLinker::Handle(MemoryModel cur, MemoryModel input) const ->HandleResult
 	{
 		auto old = cur;
@@ -141,7 +77,7 @@ namespace Dumpling::Mscf
 		cur.size += MemoryModelMaker::ReservedSize(cur, input);
 		return { cur.align, cur.size - old.size };
 	}
-
+	
 	Content Parser(std::u32string_view code, Table& table, Commands& commands)
 	{
 		/*

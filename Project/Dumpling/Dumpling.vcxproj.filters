@@ -24,6 +24,9 @@
     <ClInclude Include="..\..\Dumpling\Private\MscfDefine.h">
       <Filter>Private</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Dumpling\Private\ParserDefine.h">
+      <Filter>Private</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Dumpling\Private\ParserTable.cpp">
@@ -33,6 +36,9 @@
       <Filter>Private</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Dumpling\Private\MscfDefine.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Dumpling\Private\ParserDefine.cpp">
       <Filter>Private</Filter>
     </ClCompile>
   </ItemGroup>

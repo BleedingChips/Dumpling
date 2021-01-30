@@ -2,44 +2,18 @@
 #include <variant>
 #include <vector>
 #include "Potato/Public/Symbol.h"
+#include "ParserDefine.h"
 namespace Dumpling::Mscf
 {
-	
-	using Mask = Potato::Symbol::Table::Mask;
-	using Section = Potato::Symbol::Section;
-	using MemoryModel = Potato::Symbol::MemoryModel;
-	using Table = Potato::Symbol::Table;
 
+	using namespace Potato::Symbol;
+	
 	struct ValueProperty
 	{
-		Mask type;
-		Mask sampler;
+		Table::Mask type;
+		Table::Mask sampler;
 		std::vector<int64_t> array_count;
-		std::vector<Mask> mate_data;
 	};
-
-	struct TypeProperty
-	{
-		std::vector<Mask> values;
-	};
-
-	enum class TextureType
-	{
-		Tex1,
-		Tex2,
-		Tex3,
-	};
-
-	struct TextureProperty
-	{
-		TextureType type;
-	};
-
-	struct SamplerProperty {};
-
-	struct MateDataProperty {};
-
-	struct UnTypedListProperty {};
 	
 	struct ImportProperty
 	{
@@ -76,58 +50,48 @@ namespace Dumpling::Mscf
 	struct MaterialProperty
 	{
 		std::variant<std::u32string_view, ReferencesPath> compile_type;
-		std::vector<Mask> property;
-		std::vector<Mask> snippets;
+		std::vector<Table::Mask> property;
+		std::vector<Table::Mask> snippets;
 	};
 
 	struct Content
 	{
-		std::vector<Mask> property;
-		std::vector<Mask> statement;
+		std::vector<Table::Mask> property;
+		std::vector<Table::Mask> statement;
 	};
 
-	struct Commands
+	struct C_PushData{  ConstDataTable::Mask mask;  };
+	struct C_MakeArray{  size_t count; };
+	struct C_ConverType { Table::Mask mask; size_t count; };
+	struct C_SetValue { Table::Mask mask; };
+
+	namespace Exception
 	{
-		
-	private:
-		
-		struct ValueDescriptionC { Mask type; std::tuple<size_t, size_t> data; };
-		struct MakeValueC { Mask type; size_t count; };
-		struct EqualValueC { Mask type; size_t count; };
-		struct MakeListC { Mask type; size_t count; };
-		
-	public:
-		
-		//void PushData(DataType command, Section section){ AllCommands.push_back({ ValueScriptionC{command}, section }); }
-		Mask PushData(Table& table, bool value, Section section);
-		Mask PushData(Table& table, std::u32string_view value, Section section);
-		Mask PushData(Table& table, float value, Section section);
-		Mask PushData(Table& table, int32_t value, Section section);
-		Mask PushData(Mask mask, Table& table, std::byte const* data, size_t data_length, Section section);
-		Mask MakeValue(Mask type, size_t parameter, Section section){ AllCommands.emplace_back(MakeValueC{type, parameter}, section); return type; }
-		Mask MakeList(Mask type, size_t parameter, Section section) { AllCommands.emplace_back(MakeListC{type, parameter}, section ); return type; }
-		Mask EqualValue(Mask type, size_t parameter, Section section) { AllCommands.emplace_back(EqualValueC{ type, parameter }, section); return type; }
-		
-	private:
-		
-		using CommandType = std::variant<ValueDescriptionC, MakeValueC, EqualValueC, MakeListC>;
-		
-		std::vector<std::byte> ConstDataTable;
-		std::vector<std::tuple<CommandType, Section>> AllCommands;
+	}
+
+	template<typename Type>
+	auto MakeException(Type&& type) { return Potato::Misc::create_exception_tuple<Exception::Interface>(type); }
+
+	struct MscfContent
+	{
+		MscfContent() = default;
+		MscfContent(MscfContent&& MPT) = default;
+		using CommandType = std::variant<C_PushData, C_MakeArray, C_ConverType, C_SetValue>;
+		Parser::ParserSymbolTable symbol;
+		Parser::ParserConstData const_data;
+		std::vector<CommandType> commands;
+		std::vector<Table::Mask> propertys;
+		std::vector<Table::Mask> statements;
 	};
 
-	
-
-	std::tuple<Table, Commands> CreateDefaultContent();
-
-	struct HlslStorageInfoLinker : PineApple::Symbol::MemoryModelMaker
+	struct HlslStorageInfoLinker : MemoryModelMaker
 	{
-		using PineApple::Symbol::MemoryModelMaker::MemoryModelMaker;
-		using MemoryModel = PineApple::Symbol::MemoryModel;
+		using MemoryModelMaker::MemoryModelMaker;
+		using MemoryModel = MemoryModel;
 		virtual HandleResult Handle(MemoryModel cur, MemoryModel input) const override;
 	};
 
-	Content Parser(std::u32string_view code, Table& table, Commands& commands);
+	Content MscfParser(std::u32string_view code, Table& table, Commands& commands);
 
 	void FilterAndCheck(Content& content, Table& table);
 	
