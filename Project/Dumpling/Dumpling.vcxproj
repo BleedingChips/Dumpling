@@ -147,20 +147,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Dumpling\Private\MscfDefine.h" />
+    <ClInclude Include="..\..\Dumpling\Private\MtTable.h" />
     <ClInclude Include="..\..\Dumpling\Private\ParserDefine.h" />
-    <ClInclude Include="..\..\Dumpling\Private\ParserTable.h" />
     <ClInclude Include="..\..\Dumpling\Public\Mscf.h" />
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Dumpling\Private\Mscf.cpp" />
-    <ClCompile Include="..\..\Dumpling\Private\MscfDefine.cpp" />
+    <ClCompile Include="..\..\Dumpling\Private\MtTable.cpp" />
     <ClCompile Include="..\..\Dumpling\Private\ParserDefine.cpp" />
-    <ClCompile Include="..\..\Dumpling\Private\ParserTable.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Dumpling\Content\Mscf.ebnf" />
+    <None Include="..\..\Dumpling\Content\mi.ebnf" />
+    <None Include="..\..\Dumpling\Content\mt.ebnf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,18 +1,22 @@
 #pragma once
 #include <variant>
 #include <vector>
-#include "Potato/Public/Symbol.h"
+#include "Potato/Public/Grammar.h"
 #include "ParserDefine.h"
+#include <string_view>
 namespace Dumpling::Mscf
 {
 
-	using namespace Potato::Symbol;
+	using namespace Potato::Grammar;
+
+	struct MateDataProperty {};
 	
 	struct ValueProperty
 	{
-		Table::Mask type;
-		Table::Mask sampler;
-		std::vector<int64_t> array_count;
+		SymbolMask type;
+		SymbolMask sampler;
+		std::vector<int32_t> array_count;
+		std::vector<SymbolMask> mate_data;
 	};
 	
 	struct ImportProperty
@@ -22,7 +26,7 @@ namespace Dumpling::Mscf
 
 	struct ReferencesPath
 	{
-		Mask property_reference;
+		SymbolMask property_reference;
 		std::vector<std::u32string_view> references;
 	};
 
@@ -35,13 +39,14 @@ namespace Dumpling::Mscf
 	struct InoutParameter
 	{
 		bool is_input;
-		Mask type;
+		SymbolMask type;
 		std::u32string_view name;
 		Section section;
 	};
 	
 	struct SnippetProperty
 	{
+		std::u32string_view name;
 		std::vector<ReferencesPath> references;
 		std::u32string_view code;
 		std::vector<InoutParameter> parameters;
@@ -50,23 +55,26 @@ namespace Dumpling::Mscf
 	struct MaterialProperty
 	{
 		std::variant<std::u32string_view, ReferencesPath> compile_type;
-		std::vector<Table::Mask> property;
-		std::vector<Table::Mask> snippets;
+		std::vector<SnippetProperty> snippets;
+		std::vector<SymbolMask> propertys;
 	};
 
 	struct Content
 	{
-		std::vector<Table::Mask> property;
-		std::vector<Table::Mask> statement;
+		std::vector<SymbolMask> property;
+		std::vector<SymbolMask> statements;
 	};
 
-	struct C_PushData{  ConstDataTable::Mask mask;  };
-	struct C_MakeArray{  size_t count; };
-	struct C_ConverType { Table::Mask mask; size_t count; };
-	struct C_SetValue { Table::Mask mask; };
+	struct C_PushData{  ValueMask mask;  };
+	struct C_MarkAsArray{ size_t count = 0; };
+	struct C_ConverType { SymbolMask mask; size_t count; };
+	struct C_SetValue { SymbolMask to;  };
 
 	namespace Exception
 	{
+		struct Interface{};
+
+		struct UndefineSymbol { std::u32string name; };
 	}
 
 	template<typename Type>
@@ -76,12 +84,15 @@ namespace Dumpling::Mscf
 	{
 		MscfContent() = default;
 		MscfContent(MscfContent&& MPT) = default;
-		using CommandType = std::variant<C_PushData, C_MakeArray, C_ConverType, C_SetValue>;
-		Parser::ParserSymbolTable symbol;
-		Parser::ParserConstData const_data;
-		std::vector<CommandType> commands;
-		std::vector<Table::Mask> propertys;
-		std::vector<Table::Mask> statements;
+		using CommandType = std::variant<C_PushData, C_MarkAsArray, C_ConverType, C_SetValue>;
+		template<typename Type>
+		decltype(auto) InsertValue(Type const& t){ return const_data.InsertValue(symbol, t); }
+		decltype(auto) ReservedLazyValue(){ return const_data.ReservedLazyValue(); }
+		void PushCommand(CommandType CT, Section Se){commands.push_back({std::move(CT), Se});}
+		Parser::ParserSymbol symbol;
+		Parser::ParserValue const_data;
+		std::vector<std::tuple<CommandType, Section>> commands;
+		Content content;
 	};
 
 	struct HlslStorageInfoLinker : MemoryModelMaker
@@ -91,11 +102,13 @@ namespace Dumpling::Mscf
 		virtual HandleResult Handle(MemoryModel cur, MemoryModel input) const override;
 	};
 
+	/*
 	Content MscfParser(std::u32string_view code, Table& table, Commands& commands);
 
 	void FilterAndCheck(Content& content, Table& table);
 	
 	void Mapping(Table& table, Commands& commands, Content& Content);
+	*/
 
 	/*
 

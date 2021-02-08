@@ -18,32 +18,29 @@
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h">
       <Filter>Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Dumpling\Private\ParserTable.h">
-      <Filter>Private</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Dumpling\Private\MscfDefine.h">
-      <Filter>Private</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Dumpling\Private\ParserDefine.h">
+      <Filter>Private</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Dumpling\Private\MtTable.h">
       <Filter>Private</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Dumpling\Private\ParserTable.cpp">
-      <Filter>Private</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Dumpling\Private\Mscf.cpp">
-      <Filter>Private</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Dumpling\Private\MscfDefine.cpp">
       <Filter>Private</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Dumpling\Private\ParserDefine.cpp">
       <Filter>Private</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Dumpling\Private\MtTable.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Dumpling\Content\Mscf.ebnf">
+    <None Include="..\..\Dumpling\Content\mi.ebnf">
+      <Filter>Content</Filter>
+    </None>
+    <None Include="..\..\Dumpling\Content\mt.ebnf">
       <Filter>Content</Filter>
     </None>
   </ItemGroup>

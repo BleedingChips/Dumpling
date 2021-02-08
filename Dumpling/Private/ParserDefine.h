@@ -1,9 +1,9 @@
 #pragma once
-#include "Potato/Public/Symbol.h"
+#include "Potato/Public/Grammar.h"
 
 namespace Dumpling::Parser
 {
-	using namespace Potato::Symbol;
+	using namespace Potato::Grammar;
 
 	enum class BuildInType : uint8_t
 	{
@@ -24,6 +24,7 @@ namespace Dumpling::Parser
 		Tex3,
 		Sampler,
 		String,
+		Bool,
 	};
 
 	namespace Exception
@@ -34,18 +35,19 @@ namespace Dumpling::Parser
 	template<typename Type>
 	auto MakeException(Type&& type) { return Potato::Misc::create_exception_tuple<Exception::Interface>(type); }
 
-	struct ParserSymbolTable : Table
+	struct ParserSymbol : Symbol
 	{
-		ParserSymbolTable();
-		ParserSymbolTable(ParserSymbolTable&&) = default;
-		ParserSymbolTable(ParserSymbolTable const&) = default;
+		ParserSymbol();
+		ParserSymbol(ParserSymbol&&) = default;
+		ParserSymbol(ParserSymbol const&) = default;
 	};
 	
-	struct ParserConstData : ConstDataTable
+	struct ParserValue : Value
 	{
-		ConstDataTable::Mask Insert(ParserSymbolTable const&, float);
-		ConstDataTable::Mask Insert(ParserSymbolTable const&, int32_t);
-		ConstDataTable::Mask Insert(ParserSymbolTable const&, std::u32string_view);
+		ValueMask InsertValue(ParserSymbol const&, float);
+		ValueMask InsertValue(ParserSymbol const&, int32_t);
+		ValueMask InsertValue(ParserSymbol const&, std::u32string_view);
+		ValueMask InsertValue(ParserSymbol const&, bool);
 	};
 	
 }

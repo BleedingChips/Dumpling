@@ -1,0 +1,135 @@
+^ := '\s+|/\*.*?\*/|//.*?\n'
+Code := '@\{[.\n]*?\}@' : [3]
+FloatNumber := '-?[0-9]+\.[0-9]+' : [0]
+IntNumber := '-?[1-9][0-9]*' : [1]
+String := '".*?[^\\]"|""' : [2]
+Id := '[a-zA-Z_][a-zA-Z_0-9]*'
+
+%%%
+
+$ := <Statement>
+
+<BaseConstValue> := IntNumber | FloatNumber | String : [4]
+    := 'true' : [5]
+    := 'false' : [6]
+    := Id '(' [ <BaseConstValue> {',' <BaseConstValue> } ] ')' : [7]
+
+<BaseConstValueList> := '{'[ <BaseConstValue> {',' <BaseConstValue> } ] '}' : [22]
+
+<ArrayProperty> := '[' ']' : [8]
+    := <ArrayProperty> '[' IntNumber ']' : [9]
+    :=  : [10]
+
+<TypeRequire> := Id [ '<' Id '>' ] : [20]
+
+<DefineVariable> := <TypeRequire> Id <ArrayProperty> [ '=' ( <BaseConstValue> | <BaseConstValueList> ) ] : [11]
+
+<StructDefineVariable> := Id Id : [23]
+
+<StructDesc> := 'struct' Id '{' { <StructDefineVariable> ';' | ';' } '}' ';' : [12]
+
+<MateDateElement> := Id [ '=' <BaseConstValue> ] : [13]
+
+<MateDate> := [ '[' [<MateDateElement> {',' <MateDateElement> } ] ']' ] : [14]
+
+<PropertyDefine> := <MateDate> '{' { <PropertyDefine> } '}' : [15]
+    := <MateDate> <DefineVariable> ';' : [16]
+
+<PropertyDefineList> := : [17]
+    := <PropertyDefineList> <PropertyDefine> : [18]
+    := <PropertyDefineList> <StructDesc> : [19]
+
+<PropertyStatement> := 'property' '{' <PropertyDefineList> '}' : [21]
+
+<ImportStatement> := 'import' String 'as' Id ';' : [30]
+
+<ReferencePath> := Id : [31]
+    := <ReferencePath> '.' Id : [32]
+
+<References> := [ '[' [ <ReferencePath> { ',' <ReferencePath> } ] ']' ] : [33]
+
+<CodeStatement> := 'code' Id <References> Code ';' : [34]
+
+<MaterialSettingDate> := [ '<' [<MateDateElement> {',' <MateDateElement> } ] '>' ] : [14]
+
+<SectionParemeter> := [ 'in' | 'out' ] Id Id : [36]
+
+<SectionParemeterList> := '(' [<SectionParemeter> {',' <SectionParemeter> } ] ')' : [37]
+
+<SectionStatement> := 'snippet' Id <References> <SectionParemeterList> Code ';' : [38]
+
+<MaterialElementList> := : [17]
+    := <MaterialElementList> <SectionStatement> : [18]
+    := <MaterialElementList> <CodeStatement> : [19]
+
+<MaterialStatement> := 'material' String 'as' Id <MaterialSettingDate> '{' <MaterialElementList> '}' ';' : [42]
+    := 'using' 'material' <ReferencePath> 'as' Id <MaterialSettingDate> '{' <MaterialElementList> '}' ';' : [46]
+
+<StatementElement> := <PropertyStatement> : [1]
+    := : [3]
+    := <StatementElement> <ImportStatement> : [43]
+    := <StatementElement> <CodeStatement> : [43]
+    := <StatementElement> <MaterialStatement> : [43]
+
+<Statement> := <StatementElement> : [44]
+
+/*
+
+<DefineProperty> := <MateDate> <Type> Id { '[' IntNumber ']' } [ '=' <ConstNumber>  ]
+
+<DefinePropertyStatement> := <DefinePropertyStatement> <DefineProperty> ';'
+    := <DefinePropertyStatement> <MateDate> '{' <DefinePropertyStatement> '}'
+    := 
+    := <DefinePropertyStatement> ';'
+
+<ImportStatement> := 'import' String 'as' Id ';'
+
+<PropertyStatement> := 'property' '{' <DefinePropertyStatement>  '}' ';'
+
+<IncludeElement> := Id
+    := <IncludeElement> '.' Id
+
+<IncludeElementList> := <IncludeElement>
+    := <IncludeElementList> ',' <IncludeElement>
+
+<Include> := '[' <IncludeElementList> ']'
+    := '[' ']'
+    :=
+
+<CodeStatement> := 'code' Id <Include> Code ';'
+
+<Conflig> := '<' <MateDateElementList> '>'
+    := '<' '>'
+
+<InOutFlag> := 'in'
+    := 'out'
+    :=
+
+<InoutElementList> := <InOutFlag> 'in' <NumberType> Id
+    := <InoutElementList> ',' <InOutFlag> <NumberType> Id
+
+<SectionStatement> := 'section' Id <Include> '(' [<InoutElementList>] ')' Code ';'
+
+<DefineMarcoStatement> := 'define' Id String ';'
+    := 'define' Id ';'
+
+<MaterialStatementElement> := <MaterialStatementElement> <SectionStatement>
+    := <MaterialStatementElement> <DefineMarcoStatement>
+    := 
+
+<MaterialStatement> := <NullableMateData> 'material' Id 'as' Id <Conflig> '{' <MaterialStatementElement> '}' ';'
+    := <NullableMateData> 'using' 'material' <IncludeElement> 'as' Id <Conflig> ';'
+
+
+
+<StatemenetElement> :=  <StatemenetElement> <ImportStatement>
+    := <StatemenetElement> <CodeStatement>
+    := <StatemenetElement> <MaterialStatement> 
+    := 
+
+<Statement> := <StatemenetElement>
+    := <PropertyStatement> <StatemenetElement>
+
+*/
+
+

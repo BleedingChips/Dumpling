@@ -2,7 +2,7 @@
 namespace Dumpling::Parser
 {
 	
-	ParserSymbolTable::ParserSymbolTable()
+	ParserSymbol::ParserSymbol()
 	{
 		struct Tuple
 		{
@@ -26,33 +26,41 @@ namespace Dumpling::Parser
 			{BuildInType::Tex1, U"Texture1D"},
 			{BuildInType::Tex2, U"Texture2D"},
 			{BuildInType::Tex3, U"Texture3D"},
-			{BuildInType::Sampler, U"Sampler"},
+			{BuildInType::Sampler, U"SamplerState"},
 			{BuildInType::String, U"String"},
+			{BuildInType::Bool, U"bool"},
 		};
 
 		for(auto& ite : AllList)
 			Insert(ite.name, ite.type, {});
 	}
 	
-	ConstDataTable::Mask ParserConstData::Insert(ParserSymbolTable const& table, float Input)
+	ValueMask ParserValue::InsertValue(ParserSymbol const& table, float Input)
 	{
-		auto Mask = table.FindActiveLast(U"float");
+		auto Mask = table.FindActiveSymbolAtLast(U"float");
 		assert(Mask);
-		return ConstDataTable::Insert(Mask, Input);
+		return Value::InsertValue(Mask, Input);
 	}
 
-	ConstDataTable::Mask ParserConstData::Insert(ParserSymbolTable const& table, int32_t Input)
+	ValueMask ParserValue::InsertValue(ParserSymbol const& table, int32_t Input)
 	{
-		auto Mask = table.FindActiveLast(U"int");
+		auto Mask = table.FindActiveSymbolAtLast(U"int");
 		assert(Mask);
-		return ConstDataTable::Insert(Mask, Input);
+		return Value::InsertValue(Mask, Input);
 	}
 
-	ConstDataTable::Mask ParserConstData::Insert(ParserSymbolTable const& table, std::u32string_view Input)
+	ValueMask ParserValue::InsertValue(ParserSymbol const& table, std::u32string_view Input)
 	{
-		auto Mask = table.FindActiveLast(U"String");
+		auto Mask = table.FindActiveSymbolAtLast(U"String");
 		assert(Mask);
-		return ConstDataTable::Insert(Mask, Input);
+		return Value::InsertValue(Mask, Input);
+	}
+
+	ValueMask ParserValue::InsertValue(ParserSymbol const& table, bool Input)
+	{
+		auto Mask = table.FindActiveSymbolAtLast(U"bool");
+		assert(Mask);
+		return Value::InsertValue(Mask, Input);
 	}
 
 	
