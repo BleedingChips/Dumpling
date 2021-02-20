@@ -1,0 +1,11 @@
+import "base.mi" as WTF{
+	K = 1.0;
+	Data = float2(1.0, 1.0);
+	data = "sdasdkl.jpg";
+};
+
+
+
+render WTF;
+render WTF2;
+

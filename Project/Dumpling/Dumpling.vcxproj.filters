@@ -43,5 +43,11 @@
     <None Include="..\..\Dumpling\Content\mt.ebnf">
       <Filter>Content</Filter>
     </None>
+    <None Include="..\..\Dumpling\Content\test.mi">
+      <Filter>Content</Filter>
+    </None>
+    <None Include="..\..\Dumpling\Content\test.mt">
+      <Filter>Content</Filter>
+    </None>
   </ItemGroup>
 </Project>

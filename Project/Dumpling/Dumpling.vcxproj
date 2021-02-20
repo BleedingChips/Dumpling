@@ -160,6 +160,8 @@
   <ItemGroup>
     <None Include="..\..\Dumpling\Content\mi.ebnf" />
     <None Include="..\..\Dumpling\Content\mt.ebnf" />
+    <None Include="..\..\Dumpling\Content\test.mi" />
+    <None Include="..\..\Dumpling\Content\test.mt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
