@@ -1,5 +1,7 @@
 #pragma once
+
 #include "Potato/Public/Grammar.h"
+#include "Potato/Public/Misc.h"
 
 namespace Dumpling::Parser
 {
@@ -7,7 +9,7 @@ namespace Dumpling::Parser
 
 	enum class BuildInType : uint8_t
 	{
-		FLOAT,
+		FLOAT = 0,
 		FLOAT2,
 		FLOAT3,
 		FLOAT4,
@@ -27,13 +29,8 @@ namespace Dumpling::Parser
 		Bool,
 	};
 
-	namespace Exception
-	{
-		struct Interface {};
-	}
-
-	template<typename Type>
-	auto MakeException(Type&& type) { return Potato::Misc::create_exception_tuple<Exception::Interface>(type); }
+	std::u32string_view Translate(BuildInType Input);
+	BuildInType Translate(std::u32string_view Input);
 
 	struct ParserSymbol : Symbol
 	{
@@ -46,8 +43,16 @@ namespace Dumpling::Parser
 	{
 		ValueMask InsertValue(ParserSymbol const&, float);
 		ValueMask InsertValue(ParserSymbol const&, int32_t);
+		ValueMask InsertValue(ParserSymbol const& sym, int64_t val){ return InsertValue(sym, static_cast<int32_t>(val)); }
 		ValueMask InsertValue(ParserSymbol const&, std::u32string_view);
 		ValueMask InsertValue(ParserSymbol const&, bool);
 	};
 	
+}
+
+namespace Dumpling::Exception::Parser
+{
+	struct Interface {};
+
+	using BaseDefineInterface = Potato::Exception::DefineInterface<Interface>;
 }

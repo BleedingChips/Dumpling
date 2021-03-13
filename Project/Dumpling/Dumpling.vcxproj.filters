@@ -18,11 +18,11 @@
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h">
       <Filter>Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Dumpling\Private\ParserDefine.h">
-      <Filter>Private</Filter>
+    <ClInclude Include="..\..\Dumpling\Public\MtTable.h">
+      <Filter>Public</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Dumpling\Private\MtTable.h">
-      <Filter>Private</Filter>
+    <ClInclude Include="..\..\Dumpling\Public\ParserDefine.h">
+      <Filter>Public</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

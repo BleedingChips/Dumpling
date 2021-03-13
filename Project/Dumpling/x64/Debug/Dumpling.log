@@ -1,16 +1,5 @@
 ﻿  Mscf.cpp
-D:\GitHub\Dumpling\Dumpling\Private\Mscf.cpp(3,10): fatal error C1083: Cannot open include file: 'MscfDefine.h': No such file or directory
   MtTable.cpp
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.h(101,69): error C2061: syntax error: identifier 'Commands'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.h(105,37): error C2061: syntax error: identifier 'Commands'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(72,23): error C2039: 'PushConstData': is not a member of 'Dumpling::Mscf::MscfContent'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.h(79): message : see declaration of 'Dumpling::Mscf::MscfContent'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(72,23): message : This diagnostic occurred in the compiler generated function 'auto Dumpling::Mscf::MscfParser::<lambda_1>::()::<lambda_1>::operator ()(_T1 &&) const'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(178,65): error C2061: syntax error: identifier 'Commands'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(562,21): error C2672: 'Potato::Symbol::Table::Find': no matching overloaded function found
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(562,42): error C2440: 'initializing': cannot convert from 'Potato::Symbol::Mask' to 'Potato::Symbol::Table::Mask'
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(562,42): message : No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(570,1): error C3536: 'Find': cannot be used before it is initialized
-D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(570,1): error C3536: 'ite': cannot be used before it is initialized
-  ParserDefine.cpp
+D:\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(353,61): warning C4101: 'US': unreferenced local variable
   Generating Code...
+  Dumpling.vcxproj -> D:\GitHub\Dumpling\Demo\Dx12Demo\x64\Debug\Dumpling.lib

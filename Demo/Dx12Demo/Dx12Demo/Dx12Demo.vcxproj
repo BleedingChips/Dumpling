@@ -187,6 +187,17 @@
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\DirectXTex\DirectXTex\DirectXTex_Desktop_2019.vcxproj">
+      <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\Potato\Project\Potato\Potato.vcxproj">
+      <Project>{2815d62d-2759-4a71-be0a-01f5d43c0e12}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Project\Dumpling\Dumpling.vcxproj">
+      <Project>{7eb248d7-1e1c-4edf-a4b8-8cc0cc204d7b}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

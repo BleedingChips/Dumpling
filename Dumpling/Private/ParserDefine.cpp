@@ -1,34 +1,40 @@
-#include "ParserDefine.h"
+#include <array>
+#include <tuple>
+#include "../Public/ParserDefine.h"
 namespace Dumpling::Parser
 {
 	
+	decltype(auto) BuildInTypeMapping() {
+		static constexpr std::array Instance{
+			std::u32string_view(U"float"),
+			U"float2",
+			U"float3",
+			U"float4",
+			U"int",
+			U"int2",
+			U"int3",
+			U"int4",
+			U"uint",
+			U"uint2",
+			U"uint3",
+			U"uint4",
+			U"Texture1D",
+			U"Texture2D",
+			U"Texture3D",
+			U"SamplerState",
+			U"String",
+			U"bool",
+		};
+		return Instance;
+	}
+
+
 	ParserSymbol::ParserSymbol()
 	{
 		struct Tuple
 		{
 			BuildInType type;
 			std::u32string_view name;
-		};
-		
-		static Tuple AllList[] = {
-			{BuildInType::FLOAT, U"float"},
-			{BuildInType::FLOAT2, U"float2"},
-			{BuildInType::FLOAT3, U"float3"},
-			{BuildInType::FLOAT4, U"float4"},
-			{BuildInType::Int, U"int"},
-			{BuildInType::Int2, U"int2"},
-			{BuildInType::Int3, U"int3"},
-			{BuildInType::Int4, U"int4"},
-			{BuildInType::Uint, U"uint"},
-			{BuildInType::Uint2, U"uint2"},
-			{BuildInType::Uint3, U"uint3"},
-			{BuildInType::Uint4, U"uint4"},
-			{BuildInType::Tex1, U"Texture1D"},
-			{BuildInType::Tex2, U"Texture2D"},
-			{BuildInType::Tex3, U"Texture3D"},
-			{BuildInType::Sampler, U"SamplerState"},
-			{BuildInType::String, U"String"},
-			{BuildInType::Bool, U"bool"},
 		};
 
 		for(auto& ite : AllList)

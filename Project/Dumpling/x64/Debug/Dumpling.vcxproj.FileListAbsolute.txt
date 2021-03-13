@@ -1,2 +1,0 @@
-D:\GitHub\Dumpling\Demo\Dx12Demo\x64\Debug\Dumpling.pdb
-D:\GitHub\Dumpling\Project\Dumpling\x64\Debug\Dumpling.pdb

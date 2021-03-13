@@ -3,6 +3,7 @@
 #include "Dumpling/Public/ShaderVariable.h"
 #include "Potato/Public/FileSystem.h"
 #include "Potato/Public/StrFormat.h"
+#include "Dumpling/Public/Mscf.h"
 #include <cassert>
 #include <iostream>
 #include <chrono>
@@ -43,6 +44,9 @@ int main()
 	auto P2 = FileSystem::Path(U"$Source:/Content/Mscf.ebnf");
 	auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");
 	auto Datas = FileSystem::LoadEntireFile(P);
+	auto Load = FileSystem::LoadEntireFile(FileSystem::GobalPathMapping()(U"$Source:/Content/test.mt"));
+	auto Str = StrEncode::DocumentWrapper(Load.data(), Load.size()).ToString<char32_t>();
+	Dumpling::Mscf::Translate(Str);
 	return 0;
 	
 	/*

@@ -4,7 +4,7 @@
 #include "Potato/Public/Grammar.h"
 #include "ParserDefine.h"
 #include <string_view>
-namespace Dumpling::Mscf
+namespace Dumpling::MscfParser
 {
 
 	using namespace Potato::Grammar;
@@ -14,12 +14,14 @@ namespace Dumpling::Mscf
 	struct ValueProperty
 	{
 		SymbolMask type;
+		std::u32string_view type_name;
 		SymbolMask sampler;
+		std::u32string_view sampler_name;
 		std::vector<int32_t> array_count;
-		std::vector<SymbolMask> mate_data;
+		std::vector<SymbolAreaMask> mate_data;
 	};
 	
-	struct ImportProperty
+	struct ImportStatement
 	{
 		std::u32string_view path;
 	};
@@ -27,12 +29,13 @@ namespace Dumpling::Mscf
 	struct ReferencesPath
 	{
 		SymbolMask property_reference;
+		std::u32string_view reference_name;
 		std::vector<std::u32string_view> references;
 	};
 
-	struct CodeProperty
+	struct CodeStatement
 	{
-		std::vector<ReferencesPath> reference;
+		SymbolAreaMask references;
 		std::u32string_view code;
 	};
 
@@ -40,45 +43,49 @@ namespace Dumpling::Mscf
 	{
 		bool is_input;
 		SymbolMask type;
+		std::u32string_view type_name;
 		std::u32string_view name;
-		Section section;
 	};
 	
-	struct SnippetProperty
+	struct SnippetStatement
 	{
-		std::u32string_view name;
-		std::vector<ReferencesPath> references;
+		SymbolAreaMask references;
 		std::u32string_view code;
-		std::vector<InoutParameter> parameters;
+		SymbolAreaMask parameters;
 	};
 
-	struct MaterialProperty
+	struct MaterialStatement
 	{
-		std::variant<std::u32string_view, ReferencesPath> compile_type;
-		std::vector<SnippetProperty> snippets;
-		std::vector<SymbolMask> propertys;
+		SymbolAreaMask mate_data;
+		std::u32string_view shading_mode;
+		SymbolAreaMask propertys;
+	};
+
+	struct PropertyStatement
+	{
+		SymbolAreaMask propertys;
 	};
 
 	struct Content
 	{
-		std::vector<SymbolMask> property;
-		std::vector<SymbolMask> statements;
+		SymbolAreaMask statements;
+	};
+
+	struct MaterialUsingStatement
+	{
+		ReferencesPath reference_path;
+	};
+
+	struct MaterialDefineStatement
+	{
+		std::u32string_view define_target;
+		std::u32string_view define_source;
 	};
 
 	struct C_PushData{  ValueMask mask;  };
 	struct C_MarkAsArray{ size_t count = 0; };
-	struct C_ConverType { SymbolMask mask; size_t count; };
+	struct C_ConverType { std::u32string_view type_name; SymbolMask mask; size_t count; };
 	struct C_SetValue { SymbolMask to;  };
-
-	namespace Exception
-	{
-		struct Interface{};
-
-		struct UndefineSymbol { std::u32string name; };
-	}
-
-	template<typename Type>
-	auto MakeException(Type&& type) { return Potato::Misc::create_exception_tuple<Exception::Interface>(type); }
 
 	struct MscfContent
 	{
@@ -94,6 +101,8 @@ namespace Dumpling::Mscf
 		std::vector<std::tuple<CommandType, Section>> commands;
 		Content content;
 	};
+
+	MscfContent MscfParser(std::u32string_view code);
 
 	struct HlslStorageInfoLinker : MemoryModelMaker
 	{
@@ -196,3 +205,4 @@ namespace Dumpling::Mscf
 	ValueBuildCommand DefaultCommand(LRTable const& Table);
 	*/
 }
+

@@ -147,9 +147,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Dumpling\Private\MtTable.h" />
-    <ClInclude Include="..\..\Dumpling\Private\ParserDefine.h" />
     <ClInclude Include="..\..\Dumpling\Public\Mscf.h" />
+    <ClInclude Include="..\..\Dumpling\Public\MtTable.h" />
+    <ClInclude Include="..\..\Dumpling\Public\ParserDefine.h" />
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h" />
   </ItemGroup>
   <ItemGroup>

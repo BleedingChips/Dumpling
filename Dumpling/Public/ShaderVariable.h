@@ -2,7 +2,7 @@
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
-#include "../../../../Potato/Potato/Public/tmp.h"
+#include "Potato/Public/TMP.h"
 
 namespace Broccoli::Shader
 {	
@@ -25,7 +25,7 @@ namespace Broccoli::Shader
 	constexpr std::size_t MaxSpace = sizeof(float) * 4;
 
 	
-	template<typename Type, Potato::Tmp::const_string str>
+	template<typename Type, Potato::ConstString str>
 	struct Define
 	{
 		using StorageType = Type;
@@ -36,13 +36,13 @@ namespace Broccoli::Shader
 	{
 
 		template<size_t N>
-		constexpr bool SameNameForEach(Potato::Tmp::const_string<N> require_str)
+		constexpr bool SameNameForEach(Potato::ConstString<N> require_str)
 		{
 			return false;
 		}
 
 		template<size_t N, size_t N3, size_t ...N2>
-		constexpr bool SameNameForEach(Potato::Tmp::const_string<N> require_str, Potato::Tmp::const_string<N3> require_str2, Potato::Tmp::const_string<N2> ...other_str)
+		constexpr bool SameNameForEach(Potato::ConstString<N> require_str, Potato::ConstString<N3> require_str2, Potato::ConstString<N2> ...other_str)
 		{
 			return (require_str == require_str2) || SameNameForEach(require_str, other_str...);
 		}
@@ -53,7 +53,7 @@ namespace Broccoli::Shader
 		}
 
 		template<size_t N, size_t ...N1>
-		constexpr bool SameName(Potato::Tmp::const_string<N> require_str, Potato::Tmp::const_string<N1> ... other_str)
+		constexpr bool SameName(Potato::ConstString<N> require_str, Potato::ConstString<N1> ... other_str)
 		{
 			return SameNameForEach(require_str, other_str...) || SameName(other_str...);
 		}
@@ -61,7 +61,7 @@ namespace Broccoli::Shader
 		template<typename Type>
 		struct IsAcceptableDefine { static constexpr bool value = false; };
 
-		template<typename Type, Potato::Tmp::const_string str>
+		template<typename Type, Potato::ConstString str>
 		struct IsAcceptableDefine<Define<Type, str>> { static constexpr bool value = true; };
 
 		template<typename Type>
@@ -100,7 +100,7 @@ namespace Broccoli::Shader
 			static constexpr VariableAlignasAndSizeTuple tuple = CalculateVariableAlignasAndSizeTuple(last_tuple, { sizeof(typename Type::StorageType), alignof(typename Type::StorageType), 0 });
 			using AppendType = VariableSizeAndAlignasDetect<tuple, OtherType...>;
 			
-			static typename Type::StorageType& GetImplement(std::byte* buffer,  Potato::Tmp::const_string_holder<Type::name>)
+			static typename Type::StorageType& GetImplement(std::byte* buffer,  Potato::ConstStringHolder<Type::name>)
 			{
 				return *reinterpret_cast<typename Type::StorageType*>(buffer + tuple.require_last_size);
 			}
@@ -119,12 +119,12 @@ namespace Broccoli::Shader
 	template<typename ...Type>
 	struct Buffer
 	{
-		static_assert(Potato::Tmp::bool_and<true, Implement::IsAcceptableDefineV<Type>...>::value, "Variable only require Define<your_type, value_name> as type parameters");
-		static_assert(!Implement::SameName(Type::name...), "Variable only require unique value name");
+		//static_assert(Potato::Tmp::bool_and<true, Implement::IsAcceptableDefineV<Type>...>::value, "Variable only require Define<your_type, value_name> as type parameters");
+		//static_assert(!Implement::SameName(Type::name...), "Variable only require unique value name");
 		using help = Implement::VariableSizeAndAlignasDetect < Implement::VariableAlignasAndSizeTuple{ 0, alignof(float), 0}, Type... >;
 		std::array<std::byte, help::SizeAlignesTuple().require_size> buffer;
-		template<Potato::Tmp::const_string str>
-		decltype(auto) Get(){ return  help::GetImplement(buffer.data(), Potato::Tmp::const_string_holder<str>{});}
+		template<Potato::ConstString str>
+		decltype(auto) Get(){ return  help::GetImplement(buffer.data(), Potato::ConstStringHolder<str>{});}
 	};
 
 	template<typename Type, size_t N>

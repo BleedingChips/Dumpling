@@ -1,6 +1,6 @@
 #include "../Public/Mscf.h"
 #include "Potato/Public/StrEncode.h"
-#include "MscfDefine.h"
+#include "../Public/MtTable.h"
 #include <array>
 
 namespace Dumpling::Mscf
@@ -24,12 +24,13 @@ namespace Dumpling::Mscf
 	}
 	*/
 
-	Mscf translate(String const& code)
+	MscfDocumenet Translate(std::u32string_view code)
 	{
-		auto [table, commands] = CreateDefaultContent();
-		auto Content = Parser(code, table, commands);
-		auto P = table.Find<TypeProperty>(table.FindActiveLast(U"float3"));
-		volatile int i =0;
+		auto P = MscfParser::MscfParser(code);
+		//auto [table, commands] = CreateDefaultContent();
+		//auto Content = Parser(code, table, commands);
+		//auto P = table.Find<TypeProperty>(table.FindActiveLast(U"float3"));
+		//volatile int i =0;
 		return {};
 	}
 	/*
@@ -197,10 +198,12 @@ namespace Dumpling::Mscf
 	}
 	*/
 
+	/*
 	void Translate(std::u32string_view InputCode)
 	{
 
 	}
+	*/
 
 
 
