@@ -1,4 +1,19 @@
 property{
+
+    struct WERRYUYU
+    {
+        float2 iop;
+    };
+
+    struct YUI
+    {
+        WERRYUYU iop;
+    };
+
+    struct YUIR
+    {
+    };
+
     [min = float2(1.0, 2.0), max = float2(2.0, 2.0)]
     {
         float2 Data;
@@ -7,7 +22,7 @@ property{
         float K = 1.0;
     }
 
-    Texture2D<float2> data;
+    Texture2D<YUIR> data;
     SamplerState SS = "dsadasd";
 };
 

@@ -5,14 +5,17 @@
 
 namespace Dumpling::Parser
 {
-	using namespace Potato::Grammar;
+	using Section = Potato::Grammar::Section;
+	using SymbolMask = Potato::Grammar::SymbolMask;
+	using AreaMask = Potato::Grammar::AreaMask;
+	using ValueMask = Potato::Grammar::ValueMask;
 
 	enum class BuildInType : uint8_t
 	{
-		FLOAT = 0,
-		FLOAT2,
-		FLOAT3,
-		FLOAT4,
+		Float = 0,
+		Float2,
+		Float3,
+		Float4,
 		Int,
 		Int2,
 		Int3,
@@ -21,33 +24,43 @@ namespace Dumpling::Parser
 		Uint2,
 		Uint3,
 		Uint4,
+		Bool,
+		Matrix,
 		Tex1,
 		Tex2,
 		Tex3,
 		Sampler,
 		String,
-		Bool,
 	};
 
-	std::u32string_view Translate(BuildInType Input);
-	BuildInType Translate(std::u32string_view Input);
+	using MemoryMode = Potato::Grammar::MemoryModel;
 
-	struct ParserSymbol : Symbol
+	struct BuildInTypeProperty
 	{
-		ParserSymbol();
-		ParserSymbol(ParserSymbol&&) = default;
-		ParserSymbol(ParserSymbol const&) = default;
+		std::u32string_view name;
+		bool is_sample_type;
+		MemoryMode mode;
 	};
-	
-	struct ParserValue : Value
+
+	std::optional<BuildInTypeProperty> GetBuildInTypeProperty(BuildInType inputType);
+
+	struct Table : Potato::Grammar::Table
 	{
-		ValueMask InsertValue(ParserSymbol const&, float);
-		ValueMask InsertValue(ParserSymbol const&, int32_t);
-		ValueMask InsertValue(ParserSymbol const& sym, int64_t val){ return InsertValue(sym, static_cast<int32_t>(val)); }
-		ValueMask InsertValue(ParserSymbol const&, std::u32string_view);
-		ValueMask InsertValue(ParserSymbol const&, bool);
+		ValueMask InsertValue(float Data){ 
+			return  Potato::Grammar::Table::InsertValue({}, GetBuildInTypeProperty(BuildInType::Float)->name, {reinterpret_cast<std::byte const*>(&Data), sizeof(Data)});
+		}
+		ValueMask InsertValue(std::int32_t Data) {
+			return  Potato::Grammar::Table::InsertValue({}, GetBuildInTypeProperty(BuildInType::Int3)->name, { reinterpret_cast<std::byte const*>(&Data), sizeof(Data) });
+		}
+		ValueMask InsertValue(std::int64_t Data){ return InsertValue(static_cast<std::int32_t>(Data)); }
+		ValueMask InsertValue(std::u32string_view Data){
+			return  Potato::Grammar::Table::InsertValue({}, GetBuildInTypeProperty(BuildInType::Float)->name, { reinterpret_cast<std::byte const*>(&Data), sizeof(Data) });
+		}
+		ValueMask InsertValue(bool Data) {
+			uint32_t va = (Data ? 1 : 0);
+			return  Potato::Grammar::Table::InsertValue({}, GetBuildInTypeProperty(BuildInType::Bool)->name, { reinterpret_cast<std::byte const*>(&va), sizeof(va) });
+		}
 	};
-	
 }
 
 namespace Dumpling::Exception::Parser
@@ -55,4 +68,12 @@ namespace Dumpling::Exception::Parser
 	struct Interface {};
 
 	using BaseDefineInterface = Potato::Exception::DefineInterface<Interface>;
+	using Section = Dumpling::Parser::Section;
+
+	struct UndefineSymbol
+	{
+		using ExceptionInterface = BaseDefineInterface;
+		std::u32string name;
+		Section section;
+	};
 }

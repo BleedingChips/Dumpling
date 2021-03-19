@@ -25,11 +25,46 @@ namespace Dumpling::Mscf
 		Material,
 	};
 
+	struct MscfDocument
+	{
+		struct Type
+		{
+			std::u32string name;
+			struct Member
+			{
+				std::optional<BuildInType> type;
+				size_t reference_type;
+				std::u32string name;
+				size_t offset;
+				size_t length;
+			};
+			std::vector<Member> members;
+			size_t align;
+			size_t length;
+		};
+		std::vector<Type> type_define;
+
+
+		//std::vector<>
+	};
+
+	/*
 	struct MscfDocumenet
 	{
 		using IndexSpan = Potato::IndexSpan<>;
 
-		std::u32string string_table;
+		struct Type
+		{
+			struct Member
+			{
+				std::u32string name;
+				BuildInType type;
+				size_t reference_type;
+				size_t offset;
+				size_t array_count;
+			};
+		};
+
 		std::vector<std::byte> data_table;
 
 		struct MappingElement
@@ -125,19 +160,23 @@ namespace Dumpling::Mscf
 		std::vector<VariableElement> export_variable;
 		std::vector<VariableElement> instance_variable;
 		std::vector<uint32_t> buffer;
-	};
 
-
-	enum class StorageType {
-		//std::u32string Value;
+		struct TypeVariant
+		{
+			IndexSpan name;
+			int32_t size;
+			int32_t alig;
+			IndexSpan type_define;
+		};
 	};
+	*/
 
 	struct Mscf
 	{
 		
 	};
 
-	MscfDocumenet Translate(std::u32string_view code);
+	MscfDocument Translate(std::u32string_view code);
 
 }
 

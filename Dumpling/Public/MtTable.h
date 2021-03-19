@@ -1,41 +1,46 @@
 #pragma once
 #include <variant>
 #include <vector>
-#include "Potato/Public/Grammar.h"
 #include "ParserDefine.h"
 #include <string_view>
 namespace Dumpling::MscfParser
 {
 
-	using namespace Potato::Grammar;
+	using namespace Dumpling::Parser;
 
-	struct MateDataProperty {};
-	
-	struct ValueProperty
+	struct TypeProperty : Potato::Grammar::TypeProperty
 	{
-		SymbolMask type;
-		std::u32string_view type_name;
 		SymbolMask sampler;
 		std::u32string_view sampler_name;
-		std::vector<int32_t> array_count;
-		std::vector<SymbolAreaMask> mate_data;
 	};
+
+	using TypeSymbol = Potato::Grammar::TypeSymbol;
+
+	struct ValueSymbol
+	{
+		TypeProperty type;
+		std::vector<std::optional<size_t>> arrays;
+		std::vector<AreaMask> mate_data;
+		bool is_member = false;
+	};
+
+	struct MateDataSymbol {};
 	
-	struct ImportStatement
+	struct ImportSymbol
 	{
 		std::u32string_view path;
 	};
 
-	struct ReferencesPath
+	struct References
 	{
 		SymbolMask property_reference;
 		std::u32string_view reference_name;
-		std::vector<std::u32string_view> references;
+		std::vector<std::u32string_view> sub_references;
 	};
 
-	struct CodeStatement
+	struct CodeSymbol
 	{
-		SymbolAreaMask references;
+		std::vector<References> reference;
 		std::u32string_view code;
 	};
 
@@ -47,36 +52,31 @@ namespace Dumpling::MscfParser
 		std::u32string_view name;
 	};
 	
-	struct SnippetStatement
+	struct SnippetSymbol
 	{
-		SymbolAreaMask references;
+		std::vector<References> reference;
 		std::u32string_view code;
-		SymbolAreaMask parameters;
+		std::vector<InoutParameter> parameters;
 	};
 
-	struct MaterialStatement
+	struct MaterialSymbol
 	{
-		SymbolAreaMask mate_data;
+		AreaMask mate_data;
 		std::u32string_view shading_mode;
-		SymbolAreaMask propertys;
+		AreaMask propertys;
 	};
 
-	struct PropertyStatement
+	struct PropertySymbol
 	{
-		SymbolAreaMask propertys;
+		AreaMask propertys;
 	};
 
-	struct Content
+	struct MaterialUsingSymbol
 	{
-		SymbolAreaMask statements;
+		References reference_path;
 	};
 
-	struct MaterialUsingStatement
-	{
-		ReferencesPath reference_path;
-	};
-
-	struct MaterialDefineStatement
+	struct MaterialDefineSymbol
 	{
 		std::u32string_view define_target;
 		std::u32string_view define_source;
@@ -84,30 +84,24 @@ namespace Dumpling::MscfParser
 
 	struct C_PushData{  ValueMask mask;  };
 	struct C_MarkAsArray{ size_t count = 0; };
-	struct C_ConverType { std::u32string_view type_name; SymbolMask mask; size_t count; };
+	struct C_ConverType { SymbolMask mask; std::u32string_view name; size_t count; };
 	struct C_SetValue { SymbolMask to;  };
 
-	struct MscfContent
+	struct MscfContent : Table
 	{
 		MscfContent() = default;
 		MscfContent(MscfContent&& MPT) = default;
 		using CommandType = std::variant<C_PushData, C_MarkAsArray, C_ConverType, C_SetValue>;
-		template<typename Type>
-		decltype(auto) InsertValue(Type const& t){ return const_data.InsertValue(symbol, t); }
-		decltype(auto) ReservedLazyValue(){ return const_data.ReservedLazyValue(); }
 		void PushCommand(CommandType CT, Section Se){commands.push_back({std::move(CT), Se});}
-		Parser::ParserSymbol symbol;
-		Parser::ParserValue const_data;
 		std::vector<std::tuple<CommandType, Section>> commands;
-		Content content;
 	};
 
 	MscfContent MscfParser(std::u32string_view code);
 
-	struct HlslStorageInfoLinker : MemoryModelMaker
+	struct HlslStorageInfoLinker : Potato::Grammar::MemoryModelMaker
 	{
 		using MemoryModelMaker::MemoryModelMaker;
-		using MemoryModel = MemoryModel;
+		using MemoryModel = Potato::Grammar::MemoryModel;
 		virtual HandleResult Handle(MemoryModel cur, MemoryModel input) const override;
 	};
 

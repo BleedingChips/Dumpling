@@ -53,12 +53,12 @@ namespace Dumpling::MscfParser
 				case 7:
 				{
 					auto name = E[0].Consume<std::u32string_view>();
-					auto TypeMask = result.symbol.FindActiveSymbolAtLast(name);
+					auto TypeMask = result.FindActiveSymbolAtLast(name);
 					size_t count = 0;
 					for (auto& ite : E)
 						if (ite.IsNoterminal())
 							count += 1;
-					result.PushCommand(C_ConverType{ name, TypeMask, count }, E.section);
+					result.PushCommand(C_ConverType{ TypeMask, name, count }, E.section);
 				}break;
 				case 22:
 				{
@@ -70,55 +70,55 @@ namespace Dumpling::MscfParser
 				}break;
 				case 8:
 				{
-					std::vector<int32_t> result;
-					result.push_back(0);
-					return std::move(result);
+					ValueSymbol vs;
+					vs.type = E[0].Consume<TypeProperty>();
+					return std::tuple<ValueSymbol, std::u32string_view>{std::move(vs), E[1].Consume<std::u32string_view>()};
 				}break;
 				case 9:
 				{
-					auto result = E[0].Consume<std::vector<int32_t>>();
-					auto Next = E[1].Consume<int32_t>();
-					result.push_back(Next);
-					return std::move(result);
+					auto [vs, name] = E[0].Consume<std::tuple<ValueSymbol, std::u32string_view>>();
+					vs.arrays.push_back(E[1].Consume<int32_t>());
+					return std::tuple<ValueSymbol, std::u32string_view>{std::move(vs), name};
 				}break;
 				case 10:
 				{
-					return std::vector<int32_t>{};
+					auto [vs, name] = E[0].Consume<std::tuple<ValueSymbol, std::u32string_view>>();
+					vs.arrays.push_back(std::nullopt);
+					return std::tuple<ValueSymbol, std::u32string_view>{std::move(vs), name};
 				}break;
 				case 20:
 				{
-					ValueProperty Vp;
-					Vp.type_name = E[0].Consume<std::u32string_view>();
-					Vp.type = result.symbol.FindActiveSymbolAtLast(Vp.type_name);
+					TypeProperty tp;
+					tp.name = E[0].Consume<std::u32string_view>();
+					tp.type = result.FindActiveSymbolAtLast(tp.name);
 					if (E.production.size() > 1)
 					{
-						Vp.sampler_name = E[2].Consume<std::u32string_view>();
-						Vp.sampler = result.symbol.FindActiveSymbolAtLast(Vp.sampler_name);
+						tp.sampler_name = E[2].Consume<std::u32string_view>();
+						tp.sampler = result.FindActiveSymbolAtLast(tp.sampler_name);
 					}
-					return Vp;
+					return tp;
 				}break;
 				case 11:
 				{
-					auto P = E[0].Consume<ValueProperty>();
-					auto value_name = E[1].Consume<std::u32string_view>();
-					P.array_count = E[2].Consume<std::vector<int32_t>>();
-					auto mask = result.symbol.Insert(value_name, std::move(P), E.section);
-					if(E.production.size() > 4)
-						result.PushCommand(C_SetValue{mask}, E.section);
-					return mask;
+					auto [vs, name] = E[0].Consume<std::tuple<ValueSymbol, std::u32string_view>>();
+					auto vm = result.InsertSymbol(name, std::move(vs), E.section);
+					if(E.production.size() > 1)
+						result.PushCommand(C_SetValue{ vm }, E.section);
+					return vm;
 				}break;
 				case 23:
 				{
-					ValueProperty Vp;
-					Vp.type_name = E[0].Consume<std::u32string_view>();
-					Vp.type = result.symbol.FindActiveSymbolAtLast(Vp.type_name);
+					ValueSymbol Vp;
+					Vp.type.name = E[0].Consume<std::u32string_view>();
+					Vp.type.type = result.FindActiveSymbolAtLast(Vp.type.name);
+					Vp.is_member = true;
 					auto name2 = E[1].Consume<std::u32string_view>();
-					auto mask = result.symbol.Insert(name2, std::move(Vp), E.section);
+					auto mask = result.InsertSymbol(name2, std::move(Vp), E.section);
 					return mask;
 				}break;
 				case 12:
 				{
-					TypeProperty Tp;
+					TypeSymbol Tp;
 					size_t count = 0;
 					for(size_t i = 2; i < E.production.size(); ++i)
 					{
@@ -126,13 +126,13 @@ namespace Dumpling::MscfParser
 						if(ref.IsNoterminal())
 							count +=1;
 					}
-					Tp.member = result.symbol.PopElementAsUnactive(count);
-					return result.symbol.Insert(E[1].Consume<std::u32string_view>(), Tp, E.section);
+					Tp.member = result.PopSymbolAsUnactive(count);
+					return result.InsertSymbol(E[1].Consume<std::u32string_view>(), Tp, E.section);
 				}break;
 				case 13:
 				{
-					MateDataProperty MDP;
-					auto mask = result.symbol.Insert(E[0].Consume<std::u32string_view>(), MDP, E.section);
+					MateDataSymbol MDP;
+					auto mask = result.InsertSymbol(E[0].Consume<std::u32string_view>(), MDP, E.section);
 					result.PushCommand(C_SetValue{mask}, E.section);
 					return mask;
 				}break;
@@ -145,11 +145,11 @@ namespace Dumpling::MscfParser
 							if(ref.IsNoterminal())
 								++index;
 						}
-						return result.symbol.PopElementAsUnactive(index);
+						return result.PopSymbolAsUnactive(index);
 					}break;
 				case 15:
 					{
-						auto mate = E[0].Consume<SymbolAreaMask>();
+						auto mate = E[0].Consume<AreaMask>();
 						size_t count = 0;
 						for(size_t i = 2; i < E.production.size(); ++i)
 						{
@@ -159,22 +159,23 @@ namespace Dumpling::MscfParser
 								count += ref;
 							}
 						}
-						auto P = result.symbol.FindLastActive(count);
-						for (Symbol::Property& ite : P)
-						{
-							auto P2 = ite.TryCast<ValueProperty>();
-							if(P2 != nullptr)
-								P2->mate_data.push_back(mate);
-						}
+						
+						result.FindActiveProperty(count, [&](Table::Property& P){
+							AnyViewer(P.property, [&](ValueSymbol& VP){
+								VP.mate_data.push_back(mate);
+							});
+						});
 						return count;
 					}break;
 				case 16:
 					{
-						auto mate = E[0].Consume<SymbolAreaMask>();
+						auto mate = E[0].Consume<AreaMask>();
 						auto mask = E[1].Consume<SymbolMask>();
-						auto P = result.symbol.FindSymbol(mask)->TryCast<ValueProperty>();
-						assert(P != nullptr);
-						P->mate_data.push_back(mate);
+						result.FindProperty(mask, [&](Table::Property& P){
+							AnyViewer(P.property, [&](ValueSymbol& VP){
+								VP.mate_data.push_back(mate);
+							});
+						});
 						return size_t(1);
 					}break;
 				case 17:
@@ -195,50 +196,49 @@ namespace Dumpling::MscfParser
 				case 21:
 					{
 					    auto P = E[2].Consume<size_t>();
-						auto area = result.symbol.PopElementAsUnactive(P);
-						PropertyStatement PP{area};
-						return result.symbol.Insert({}, PP, E.section);
+						auto area = result.PopSymbolAsUnactive(P);
+						PropertySymbol PP{area};
+						return result.InsertSymbol(U"$.Property", PP, E.section);
 					}break;
 				case 30:
 				    {
-						ImportStatement Ip;
+						ImportSymbol Ip;
 						Ip.path = E[1].Consume<std::u32string_view>();
-						return result.symbol.Insert(E[3].Consume<std::u32string_view>(), std::move(Ip), E.section);
+						return result.InsertSymbol(E[3].Consume<std::u32string_view>(), std::move(Ip), E.section);
 				    }break;
 				case 31:
 				    {
-				        ReferencesPath rp;
+						References rp;
 						rp.reference_name = E[0].Consume<std::u32string_view>();
-						rp.property_reference = result.symbol.FindActiveSymbolAtLast(rp.reference_name);
+						rp.property_reference = result.FindActiveSymbolAtLast(rp.reference_name);
 						return rp;
 				    }break;
 				case 32:
 					{
-						auto P = E[0].Consume<ReferencesPath>();
-						P.references.push_back(E[2].Consume<std::u32string_view>());
+						auto P = E[0].Consume<References>();
+						P.sub_references.push_back(E[2].Consume<std::u32string_view>());
 						return std::move(P);
 					}break;
 				case 33:
 					{
-						size_t count = 0;
+						std::vector<References> all_reference;
 						for(size_t i= 0; i < E.production.size(); ++i)
 						{
 							auto& ref = E[i];
 							if (ref.IsNoterminal())
 							{
-								auto P = ref.Consume<ReferencesPath>();
-								result.symbol.Insert({}, P, E[i].section);
-								++count;
+								auto P = ref.Consume<References>();
+								all_reference.push_back(std::move(P));
 							}
 						}
-						return result.symbol.PopElementAsUnactive(count);
+						return all_reference;
 					}break;
 				case 34:
 					{
-						CodeStatement cp;
-						cp.references = E[2].Consume<SymbolAreaMask>();
+						CodeSymbol cp;
+						cp.reference = E[2].Consume<std::vector<References>>();
 						cp.code = E[3].Consume<std::u32string_view>();
-						return result.symbol.Insert(E[1].Consume<std::u32string_view>(), std::move(cp), E.section);
+						return result.InsertSymbol(E[1].Consume<std::u32string_view>(), std::move(cp), E.section);
 					}break;
 				case 36:
 					{
@@ -253,69 +253,59 @@ namespace Dumpling::MscfParser
 							    Ip.is_input = false;
 						}
 						Ip.type_name = E[0 + shift].Consume<std::u32string_view>();
-						Ip.type = result.symbol.FindActiveSymbolAtLast(Ip.type_name);
+						Ip.type = result.FindActiveSymbolAtLast(Ip.type_name);
 						Ip.name = E[1+shift].Consume<std::u32string_view>();
-						return result.symbol.Insert({}, Ip, E.section);
+						return Ip;
 					}break;
 				case 37:
 				    {
-				        size_t count = 0;
+				        std::vector<InoutParameter> pars;
 						for(size_t i = 0; i < E.production.size(); ++i)
 						{
 							if(E[i].IsNoterminal())
-								count += 1;
+								pars.push_back(E[i].Consume<InoutParameter>());
 						}
-						return result.symbol.PopElementAsUnactive(count);
+						return pars;
 				    }break;
 				case 38:
 				    {
-						SnippetStatement Sp;
+						SnippetSymbol Sp;
 						auto name = E[1].Consume<std::u32string_view>();
-						Sp.references = E[2].Consume<SymbolAreaMask>();
-						Sp.parameters = E[3].Consume<SymbolAreaMask>();
+						Sp.reference = E[2].Consume<std::vector<References>>();
+						Sp.parameters = E[3].Consume<std::vector<InoutParameter>>();
 						Sp.code = E[4].Consume<std::u32string_view>();
-						return result.symbol.Insert(name, std::move(Sp), E.section);
+						return result.InsertSymbol(name, std::move(Sp), E.section);
 				    }break;
 				case 39:
 				{
-					MaterialUsingStatement MUP;
-					MUP.reference_path = E[2].Consume<ReferencesPath>();
-					return result.symbol.Insert(E[4].Consume<std::u32string_view>(), std::move(MUP), E.section);
+					MaterialUsingSymbol MUP;
+					MUP.reference_path = E[2].Consume<References>();
+					return result.InsertSymbol(E[4].Consume<std::u32string_view>(), std::move(MUP), E.section);
 				}break;
 				case 40:
 				{
-					MaterialDefineStatement MDP;
+					MaterialDefineSymbol MDP;
 					MDP.define_target = E[1].Consume<std::u32string_view>();
 					MDP.define_source = E[2].Consume<std::u32string_view>();
-					return result.symbol.Insert({}, std::move(MDP), E.section);
+					return result.InsertSymbol({}, std::move(MDP), E.section);
 				}break;
 				case 42:
 				{
-					MaterialStatement Mp;
-					Mp.mate_data = E[0].Consume<SymbolAreaMask>();
+					MaterialSymbol Mp;
+					Mp.mate_data = E[0].Consume<AreaMask>();
 					Mp.shading_mode = E[2].Consume<std::u32string_view>();
 					auto name = E[4].Consume<std::u32string_view>();
 					size_t statemenet_count = E[6].Consume<size_t>();
-					Mp.propertys = result.symbol.PopElementAsUnactive(statemenet_count);
-					return result.symbol.Insert(name, std::move(Mp), E.section);
+					Mp.propertys = result.PopSymbolAsUnactive(statemenet_count);
+					return result.InsertSymbol(name, std::move(Mp), E.section);
 				}break;
 				case 1:
 				{
-					return size_t(1);
 				}break;
-				case 3:{return size_t(0); }break;
-				case 43:
-				{
-					return size_t(E[0].Consume<size_t>() + 1);
-				}break;
-				case 45:
-					return std::move(E[0].data);
-				case 44:
-				{
-					result.content.statements = result.symbol.PopElementAsUnactive(E[0].Consume<size_t>());
-					return {};
-				} break;
-				};
+				default:
+					assert(false);
+					break;
+				}
 				return {};
 			},
 			[&](Ebnf::TElement& E)-> std::any

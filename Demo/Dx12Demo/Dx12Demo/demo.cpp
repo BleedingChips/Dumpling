@@ -4,6 +4,7 @@
 #include "Potato/Public/FileSystem.h"
 #include "Potato/Public/StrFormat.h"
 #include "Dumpling/Public/Mscf.h"
+#include "Potato/Public/AutoAdapter.h"
 #include <cassert>
 #include <iostream>
 #include <chrono>
@@ -39,14 +40,29 @@ struct PathInit
 	}
 }path_init;
 
+struct A{};
+
+struct B{};
+
+struct C{};
+
+
 int main()
 {
+	auto Poo = [](A , B, C){};
+	//static_assert(Potato::Adaptable<decltype(P), A, B, C>::value, "sdasd");
+	Potato::Adaptable<decltype(Poo), A, B> uio;
+	return 0;
 	auto P2 = FileSystem::Path(U"$Source:/Content/Mscf.ebnf");
 	auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");
 	auto Datas = FileSystem::LoadEntireFile(P);
 	auto Load = FileSystem::LoadEntireFile(FileSystem::GobalPathMapping()(U"$Source:/Content/test.mt"));
 	auto Str = StrEncode::DocumentWrapper(Load.data(), Load.size()).ToString<char32_t>();
 	Dumpling::Mscf::Translate(Str);
+
+
+
+
 	return 0;
 	
 	/*

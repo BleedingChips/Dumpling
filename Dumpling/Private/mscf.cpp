@@ -1,36 +1,91 @@
 #include "../Public/Mscf.h"
 #include "Potato/Public/StrEncode.h"
 #include "../Public/MtTable.h"
+#include "Potato/Public/Misc.h"
 #include <array>
 
 namespace Dumpling::Mscf
 {
-	using String = std::u32string;
-	using StringView = std::u32string_view;
+	using namespace MscfParser;
+
+	using IndexSpan = Potato::IndexSpan<uint32_t>;
+	struct MscfTemporary
+	{
+		// SymbolMask to TypeDefine Index
+		std::map<size_t, size_t> type_define_mapping;
+	};
+
+	void ProcessTypeMemoryMode(MscfContent& content, MscfDocument& output, MscfTemporary& temporary)
+	{
+		content.FindPropertyData(content.FindActiveSymbolAtLast(U"$.Property"), [&](PropertySymbol& pro){
+			content.FindProperty(pro.propertys, [&](Table::Property& pro2){
+				Potato::AnyViewer(pro2.property, [&](TypeSymbol& TS){
+					MscfDocument::Type define;
+					define.name = pro2.mask.Name();
+				});
+			});
+		});
+	}
+
+	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+	// explicit deduction guide (not needed as of C++20)
+	template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
+
+	void ProcessConstData(MscfContent& content, MscfContent& output, MscfTemporary& temporary)
+	{
+		std::vector<std::byte> Temporarydatas;
+		std::vector<std::tuple<ValueMask, bool, size_t>> variable;
+		for (auto& ite : content.commands)
+		{
+			auto& [com, sec] = ite;
+			std::visit(overloaded(
+			[&](C_ConverType C){
+			}, 
+			[&](C_MarkAsArray C){
+				
+			}, 
+			[&](C_PushData C){
+				variable.push_back({C.mask, false, 0});
+			}, 
+			[&](C_SetValue C){
+				assert(variable.size() >= 1);
+				auto [mask, isnew, arr] = *variable.rbegin();
+				variable.pop_back();
+
+			}), com);
+		}
+	}
 
 	/*
-	void CheckRedefine(Table const& table, std::vector<Mask> const& masks)
+	void ProcessMateDataInfo(MscfContent& content, MscfContent& output)
 	{
-		std::map<StringView, Section> NameSet;
-		for(auto ite : masks)
-		{
-			assert(ite);
-			auto result = table.FindRaw(ite);
-			assert(result);
-			auto re = NameSet.insert({result.name, result.section});
-			if(!re.second)
-				throw Error::RedefineProperty{String(re.first->first), result.section , re.first->second };
-		}
+		content.FindAllProperty([](Table::Property& P){
+			Potato::AnyViewer(P.property, 
+			[&](MateDataProperty& VP){
+				
+			}
+			);
+		});
+	}
+	*/
+	
+	/*
+	void GeneratedTypeInfo(MscfContent& content, MscfDocumenet& output)
+	{
+		std::u32string data;
+		size_t tab = 0;
+		std::map<size_t, std::tuple<std::u32string_view, MemoryMode>> mapping;
+		content.FindAllProperty([](Table::Property const& P){
+			Potato::AnyViewer(P.property, [&](TypeProperty& Tp){
+				
+			});
+		});
 	}
 	*/
 
-	MscfDocumenet Translate(std::u32string_view code)
+	MscfDocument Translate(std::u32string_view code)
 	{
-		auto P = MscfParser::MscfParser(code);
-		//auto [table, commands] = CreateDefaultContent();
-		//auto Content = Parser(code, table, commands);
-		//auto P = table.Find<TypeProperty>(table.FindActiveLast(U"float3"));
-		//volatile int i =0;
+		auto content = MscfParser::MscfParser(code);
 		return {};
 	}
 	/*

@@ -16,13 +16,13 @@ $ := <Statement>
 
 <BaseConstValueList> := '{'[ <BaseConstValue> {',' <BaseConstValue> } ] '}' : [22]
 
-<ArrayProperty> := '[' ']' : [8]
-    := <ArrayProperty> '[' IntNumber ']' : [9]
-    :=  : [10]
+<VariableTypeRequire> := Id [ '<' Id '>' ] : [20]
 
-<TypeRequire> := Id [ '<' Id '>' ] : [20]
+<VariableAttriableDefine> := <VariableTypeRequire> Id : [8]
+    := <VariableAttriableDefine> '[' ']' : [10]
+    := <VariableAttriableDefine> '[' IntNumber ']' : [9]
 
-<DefineVariable> := <TypeRequire> Id <ArrayProperty> [ '=' ( <BaseConstValue> | <BaseConstValueList> ) ] ';' : [11]
+<DefineVariable> := <VariableAttriableDefine> [ '=' ( <BaseConstValue> | <BaseConstValueList> ) ] ';' : [11]
 
 <StructDefineVariable> := Id Id : [23]
 
@@ -66,11 +66,11 @@ $ := <Statement>
 <MaterialStatement> := <MateDate> 'material' String 'as' Id '{' <MaterialElementList> '}' ';' : [42]
 
 <StatementElement> := <PropertyStatement> : [1]
-    := : [3]
-    := <StatementElement> <ImportStatement> : [43]
-    := <StatementElement> <CodeStatement> : [43]
-    := <StatementElement> <MaterialStatement> : [43]
-    := <StatementElement> <SnippetStatement> : [43]
-    := <StatementElement> ';' : [45]
+    := : [1]
+    := <StatementElement> <ImportStatement> : [1]
+    := <StatementElement> <CodeStatement> : [1]
+    := <StatementElement> <MaterialStatement> : [1]
+    := <StatementElement> <SnippetStatement> : [1]
+    := <StatementElement> ';' : [1]
 
-<Statement> := <StatementElement> : [44]
+<Statement> := <StatementElement> : [1]

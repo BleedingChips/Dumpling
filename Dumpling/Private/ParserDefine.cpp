@@ -4,72 +4,39 @@
 namespace Dumpling::Parser
 {
 	
-	decltype(auto) BuildInTypeMapping() {
-		static constexpr std::array Instance{
-			std::u32string_view(U"float"),
-			U"float2",
-			U"float3",
-			U"float4",
-			U"int",
-			U"int2",
-			U"int3",
-			U"int4",
-			U"uint",
-			U"uint2",
-			U"uint3",
-			U"uint4",
-			U"Texture1D",
-			U"Texture2D",
-			U"Texture3D",
-			U"SamplerState",
-			U"String",
-			U"bool",
+	std::map<BuildInType, BuildInTypeProperty> const& BuildInTypeMapping() {
+		static std::map<BuildInType, BuildInTypeProperty> Instance{
+			{BuildInType::Float, {U"float", true, {4, 4}}},
+			{BuildInType::Float2, {U"float2", true, {4, 8}}},
+			{BuildInType::Float3, {U"float3", true, {4, 12}}},
+			{BuildInType::Float4, {U"float4", true, {4, 16}}},
+			{BuildInType::Int, {U"int", true, {4, 4}}},
+			{BuildInType::Int2, {U"int2", true, {4, 8}}},
+			{BuildInType::Int3, {U"int3", true, {4, 12}}},
+			{BuildInType::Int4, {U"int4", true, {4, 16}}},
+			{BuildInType::Uint, {U"uint", true, {4, 4}}},
+			{BuildInType::Uint2, {U"uint2", true, {4, 8}}},
+			{BuildInType::Uint3, {U"uint3", true, {4, 12}}},
+			{BuildInType::Uint4, {U"uint4", true, {4, 16}}},
+			{BuildInType::Bool, {U"bool", true, {4, 4}}},
+			{BuildInType::Matrix, {U"float4x4", true, {4, 64}}},
+			{BuildInType::Tex1, {U"Texture1D", false, {4, 16}}},
+			{BuildInType::Tex2, {U"Texture2D", false, {4, 16}}},
+			{BuildInType::Tex3, {U"Texture3D", false, {4, 16}}},
+			{BuildInType::Sampler, {U"SamplerState", false, {4, 8}}},
+			{BuildInType::String, {U"String", false, {4, 8}}},
 		};
 		return Instance;
 	}
 
-
-	ParserSymbol::ParserSymbol()
+	std::optional<BuildInTypeProperty> GetBuildInTypeProperty(BuildInType inputType)
 	{
-		struct Tuple
-		{
-			BuildInType type;
-			std::u32string_view name;
-		};
-
-		for(auto& ite : AllList)
-			Insert(ite.name, ite.type, {});
+		auto& ref = BuildInTypeMapping();
+		auto re = ref.find(inputType);
+		if (re != ref.end())
+			return re->second;
+		else
+			return std::nullopt;
 	}
-	
-	ValueMask ParserValue::InsertValue(ParserSymbol const& table, float Input)
-	{
-		auto Mask = table.FindActiveSymbolAtLast(U"float");
-		assert(Mask);
-		return Value::InsertValue(Mask, Input);
-	}
-
-	ValueMask ParserValue::InsertValue(ParserSymbol const& table, int32_t Input)
-	{
-		auto Mask = table.FindActiveSymbolAtLast(U"int");
-		assert(Mask);
-		return Value::InsertValue(Mask, Input);
-	}
-
-	ValueMask ParserValue::InsertValue(ParserSymbol const& table, std::u32string_view Input)
-	{
-		auto Mask = table.FindActiveSymbolAtLast(U"String");
-		assert(Mask);
-		return Value::InsertValue(Mask, Input);
-	}
-
-	ValueMask ParserValue::InsertValue(ParserSymbol const& table, bool Input)
-	{
-		auto Mask = table.FindActiveSymbolAtLast(U"bool");
-		assert(Mask);
-		return Value::InsertValue(Mask, Input);
-	}
-
-	
-
 	
 }
