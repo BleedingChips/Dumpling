@@ -4,7 +4,6 @@
 #include "Potato/Public/FileSystem.h"
 #include "Potato/Public/StrFormat.h"
 #include "Dumpling/Public/Mscf.h"
-#include "Potato/Public/AutoAdapter.h"
 #include <cassert>
 #include <iostream>
 #include <chrono>
@@ -49,9 +48,16 @@ struct C{};
 
 int main()
 {
-	auto Poo = [](A , B, C){};
+	auto Poo = [](A , B, C&){
+	
+		volatile int i = 0;
+	};
 	//static_assert(Potato::Adaptable<decltype(P), A, B, C>::value, "sdasd");
-	Potato::Adaptable<decltype(Poo), A, B> uio;
+	//Potato::Adaptable<decltype(Poo), A, B, C> iop{};
+	A a;
+	B b;
+	C c;
+	Potato::AutoInvote(Poo, c, a, b);
 	return 0;
 	auto P2 = FileSystem::Path(U"$Source:/Content/Mscf.ebnf");
 	auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");

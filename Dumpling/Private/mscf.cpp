@@ -17,11 +17,11 @@ namespace Dumpling::Mscf
 
 	void ProcessTypeMemoryMode(MscfContent& content, MscfDocument& output, MscfTemporary& temporary)
 	{
-		content.FindPropertyData(content.FindActiveSymbolAtLast(U"$.Property"), [&](PropertySymbol& pro){
-			content.FindProperty(pro.propertys, [&](Table::Property& pro2){
-				Potato::AnyViewer(pro2.property, [&](TypeSymbol& TS){
-					MscfDocument::Type define;
-					define.name = pro2.mask.Name();
+		content.FindProperty(content.FindActiveSymbolAtLast(U"$.Property"), [&](PropertySymbol& pro){
+			content.FindProperty(pro.propertys, [&](TypeSymbol& pro2, Table::Property& pro3){
+				MscfDocument::Type define;
+				define.name = pro3.mask.Name();
+				content.FindProperty(pro2.member, [&](ValueSymbol& vs, Table::Property& pro4){
 				});
 			});
 		});
