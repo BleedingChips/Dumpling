@@ -9,6 +9,7 @@ namespace Dumpling::Parser
 	using SymbolMask = Potato::Grammar::SymbolMask;
 	using AreaMask = Potato::Grammar::AreaMask;
 	using ValueMask = Potato::Grammar::ValueMask;
+	using MemoryTag = Potato::Grammar::MemoryTag;
 
 	enum class BuildInType : uint8_t
 	{
@@ -33,16 +34,15 @@ namespace Dumpling::Parser
 		String,
 	};
 
-	using MemoryMode = Potato::Grammar::MemoryModel;
-
 	struct BuildInTypeProperty
 	{
 		std::u32string_view name;
 		bool is_sample_type;
-		MemoryMode mode;
+		MemoryTag mode;
 	};
 
-	std::optional<BuildInTypeProperty> GetBuildInTypeProperty(BuildInType inputType);
+	std::optional<BuildInTypeProperty> GetBuildInTypeProperty(BuildInType input);
+	std::optional<BuildInType> GetBuildInType(std::u32string_view input);
 
 	struct Table : Potato::Grammar::Table
 	{
@@ -61,6 +61,8 @@ namespace Dumpling::Parser
 			return  Potato::Grammar::Table::InsertValue({}, GetBuildInTypeProperty(BuildInType::Bool)->name, { reinterpret_cast<std::byte const*>(&va), sizeof(va) });
 		}
 	};
+
+	//std::tuple<std::vector<uint32_t>, std::tuple<>>
 }
 
 namespace Dumpling::Exception::Parser

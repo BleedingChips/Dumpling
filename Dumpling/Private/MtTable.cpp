@@ -42,23 +42,37 @@ namespace Dumpling::MscfParser
 						mask = result.InsertValue(ref);
 					});
 					result.PushCommand(C_PushData{mask}, E.section);
+					switch (E[0].shift.mask)
+					{
+					case 1:
+						return TypeProperty{{}, GetBuildInTypeProperty(BuildInType::Int)->name};
+					case 0:
+						return TypeProperty{{}, GetBuildInTypeProperty(BuildInType::Float)->name};
+					case 2:
+						return TypeProperty{{},GetBuildInTypeProperty(BuildInType::String)->name};
+					default:
+						break;
+					}
 					return mask;
 				} break;
 				case 5:
-					return result.InsertValue(true);
+					result.InsertValue(true);
+					return TypeProperty{ {},GetBuildInTypeProperty(BuildInType::Bool)->name };
 					break;
 				case 6:
-					return result.InsertValue(false);
+					result.InsertValue(false);
+					return TypeProperty{ {},GetBuildInTypeProperty(BuildInType::Bool)->name };
 					break;
 				case 7:
 				{
-					auto name = E[0].Consume<std::u32string_view>();
-					auto TypeMask = result.FindActiveSymbolAtLast(name);
+					auto type_name = E[0].Consume<std::u32string_view>();
+					TypeProperty type{ result.FindActiveSymbolAtLast(type_name), type_name };
 					size_t count = 0;
 					for (auto& ite : E)
 						if (ite.IsNoterminal())
 							count += 1;
-					result.PushCommand(C_ConverType{ TypeMask, name, count }, E.section);
+					result.PushCommand(C_ConverType{ type, count }, E.section);
+					return type;
 				}break;
 				case 22:
 				{
@@ -71,7 +85,7 @@ namespace Dumpling::MscfParser
 				case 8:
 				{
 					ValueSymbol vs;
-					vs.type = E[0].Consume<TypeProperty>();
+					vs.type = E[0].Consume<ValueTypeProperty>();
 					return std::tuple<ValueSymbol, std::u32string_view>{std::move(vs), E[1].Consume<std::u32string_view>()};
 				}break;
 				case 9:
@@ -88,13 +102,13 @@ namespace Dumpling::MscfParser
 				}break;
 				case 20:
 				{
-					TypeProperty tp;
+					ValueTypeProperty tp;
 					tp.name = E[0].Consume<std::u32string_view>();
 					tp.type = result.FindActiveSymbolAtLast(tp.name);
 					if (E.production.size() > 1)
 					{
-						tp.sampler_name = E[2].Consume<std::u32string_view>();
-						tp.sampler = result.FindActiveSymbolAtLast(tp.sampler_name);
+						auto sampler_name = E[2].Consume<std::u32string_view>();
+						tp.sampler = { result.FindActiveSymbolAtLast(sampler_name), sampler_name };
 					}
 					return tp;
 				}break;
@@ -132,8 +146,11 @@ namespace Dumpling::MscfParser
 				case 13:
 				{
 					MateDataSymbol MDP;
-					auto mask = result.InsertSymbol(E[0].Consume<std::u32string_view>(), MDP, E.section);
-					result.PushCommand(C_SetValue{mask}, E.section);
+					if(E.production.size() > 1)
+						MDP.type = E[2].Consume<TypeProperty>();
+					auto mask = result.InsertSymbol(E[0].Consume<std::u32string_view>(), std::move(MDP), E.section);
+					if(E.production.size() > 1)
+						result.PushCommand(C_SetValue{mask}, E.section);
 					return mask;
 				}break;
 				case 14:
@@ -236,9 +253,10 @@ namespace Dumpling::MscfParser
 				case 34:
 					{
 						CodeSymbol cp;
-						cp.reference = E[2].Consume<std::vector<References>>();
-						cp.code = E[3].Consume<std::u32string_view>();
-						return result.InsertSymbol(E[1].Consume<std::u32string_view>(), std::move(cp), E.section);
+						cp.matedata = E[0].Consume<AreaMask>();
+						cp.reference = E[3].Consume<std::vector<References>>();
+						cp.code = E[4].Consume<std::u32string_view>();
+						return result.InsertSymbol(E[2].Consume<std::u32string_view>(), std::move(cp), E.section);
 					}break;
 				case 36:
 					{
@@ -270,10 +288,11 @@ namespace Dumpling::MscfParser
 				case 38:
 				    {
 						SnippetSymbol Sp;
-						auto name = E[1].Consume<std::u32string_view>();
-						Sp.reference = E[2].Consume<std::vector<References>>();
-						Sp.parameters = E[3].Consume<std::vector<InoutParameter>>();
-						Sp.code = E[4].Consume<std::u32string_view>();
+						Sp.matedata = E[0].Consume<AreaMask>();
+						auto name = E[2].Consume<std::u32string_view>();
+						Sp.reference = E[3].Consume<std::vector<References>>();
+						Sp.parameters = E[4].Consume<std::vector<InoutParameter>>();
+						Sp.code = E[5].Consume<std::u32string_view>();
 						return result.InsertSymbol(name, std::move(Sp), E.section);
 				    }break;
 				case 39:
@@ -349,18 +368,6 @@ namespace Dumpling::MscfParser
 			
 		}
 		return {};
-	}
-	
-	auto HlslStorageInfoLinker::Handle(MemoryModel cur, MemoryModel input) const ->HandleResult
-	{
-		auto old = cur;
-		static constexpr size_t AlignSize = sizeof(float) * 4;
-		cur.align = MemoryModelMaker::MaxAlign(cur, input);
-		size_t rever_size = cur.size % AlignSize;
-		if (input.size >= AlignSize || rever_size < input.size)
-			cur.size += rever_size;
-		cur.size += MemoryModelMaker::ReservedSize(cur, input);
-		return { cur.align, cur.size - old.size };
 	}
 
 	/*

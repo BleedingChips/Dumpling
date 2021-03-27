@@ -15,6 +15,7 @@ namespace Dumpling::Mscf
 	
 	using Section = Potato::Ebnf::Section;
 	using BuildInType = Dumpling::Parser::BuildInType;
+	using MemoryTag = Potato::Grammar::MemoryTag;
 
 	enum class StorageType : uint8_t
 	{
@@ -27,25 +28,54 @@ namespace Dumpling::Mscf
 
 	struct MscfDocument
 	{
+
+		enum class Category
+		{
+			Type,
+			Value,
+			Code,
+		};
+
 		struct Type
 		{
 			std::u32string name;
 			struct Member
 			{
-				std::optional<BuildInType> type;
-				size_t reference_type;
+				std::variant<BuildInType, size_t> type;
 				std::u32string name;
 				size_t offset;
-				size_t length;
 			};
 			std::vector<Member> members;
-			size_t align;
-			size_t length;
+			MemoryTag memory_tag;
 		};
+
+		struct MateData
+		{
+			std::variant<BuildInType, size_t> type;
+			Potato::IndexSpan<> data;
+			std::vector<std::optional<size_t>> array_count;
+		};
+
+		struct Value
+		{
+			std::variant<BuildInType, size_t> type;
+			std::variant<BuildInType, size_t> sampler;
+			std::vector<std::optional<size_t>> array_count;
+			Potato::IndexSpan<> data;
+			std::vector<size_t> mate_data;
+		};
+
+		struct Code
+		{
+			std::vector<size_t> mate_data;
+			std::u32string code;
+		};
+
+		std::vector<uint32_t> data;
+		std::vector<std::u32string> import;
 		std::vector<Type> type_define;
-
-
-		//std::vector<>
+		std::vector<MateData> mate_datas;
+		std::vector<Value> values;
 	};
 
 	/*

@@ -12,17 +12,69 @@ namespace Dumpling::Mscf
 	struct MscfTemporary
 	{
 		// SymbolMask to TypeDefine Index
-		std::map<size_t, size_t> type_define_mapping;
+		enum class Category
+		{
+			Class,
+			Value,
+			MateData,
+		};
+		std::map<size_t, std::tuple<size_t, Category>> define_mapping;
 	};
 
 	void ProcessTypeMemoryMode(MscfContent& content, MscfDocument& output, MscfTemporary& temporary)
 	{
 		content.FindProperty(content.FindActiveSymbolAtLast(U"$.Property"), [&](PropertySymbol& pro){
+			content.FindProperty(pro.propertys, [&](Table::Property& pro2){
+				Potato::AnyViewer(pro2.property,
+				[&](TypeSymbol& ts)
+				{
+					MscfDocument::Type define;
+					Potato::Grammar::MemoryTagFatcory<Potato::Grammar::HlslMemoryTagStyle> factory;
+					define.name = pro2.mask.Name();
+					content.FindProperty(ts.member, [&](ValueSymbol& vs, Table::Property& pro4) 
+					{
+						assert(vs.is_member);
+						MscfDocument::Type::Member meb;
+						meb.name = pro4.mask.Name();
+						if (vs.type.type)
+						{
+							auto P = temporary.define_mapping.find(vs.type.type.Index());
+							if (P != temporary.define_mapping.end())
+							{
+								meb.type = std::get<0>(P->second);
+								MscfDocument::Type& ref = output.type_define[std::get<size_t>(meb.type)];
+								meb.offset = factory.InsertMember(ref.memory_tag);
+							}
+							else {
+								throw Potato::Exception::MakeExceptionTuple(Exception::Mscf::UndefineType{ std::u32string(pro4.mask.Name()), pro4.section });
+							}
+						}
+						else {
+							auto In = Parser::GetBuildInType(vs.type.name);
+							if(In)
+								meb.type = *In;
+							else
+								throw Potato::Exception::MakeExceptionTuple(Exception::Mscf::UndefineType{ std::u32string(pro4.mask.Name()), pro4.section });
+							meb.offset = factory.InsertMember(GetBuildInTypeProperty(*In)->mode);
+						}
+						define.members.push_back(std::move(meb));
+					});
+					define.memory_tag = factory.Finalize();
+					temporary.define_mapping.insert({ pro2.mask.Index(), {output.type_define.size(), MscfTemporary::Category::Class} });
+					output.type_define.push_back(std::move(define));
+					
+				},
+				[&](ValueSymbol& vs){
+					
+				}
+				);
+
+
+
+
+			});
 			content.FindProperty(pro.propertys, [&](TypeSymbol& pro2, Table::Property& pro3){
-				MscfDocument::Type define;
-				define.name = pro3.mask.Name();
-				content.FindProperty(pro2.member, [&](ValueSymbol& vs, Table::Property& pro4){
-				});
+				
 			});
 		});
 	}
@@ -86,6 +138,22 @@ namespace Dumpling::Mscf
 	MscfDocument Translate(std::u32string_view code)
 	{
 		auto content = MscfParser::MscfParser(code);
+		MscfDocument doc;
+		MscfTemporary temp;
+		ProcessTypeMemoryMode(content, doc, temp);
+
+		int32_t uio;
+
+		using Pxx = int32_t*;
+
+		const Pxx PK = &uio;
+
+		using Px = decltype(PK);
+
+		std::string P = typeid(Px).name();
+
+		static_assert(std::is_same_v<Px, int32_t* const>, "sadasd");
+
 		return {};
 	}
 	/*

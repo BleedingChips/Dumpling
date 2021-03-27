@@ -29,14 +29,23 @@ namespace Dumpling::Parser
 		return Instance;
 	}
 
-	std::optional<BuildInTypeProperty> GetBuildInTypeProperty(BuildInType inputType)
+	std::optional<BuildInTypeProperty> GetBuildInTypeProperty(BuildInType input)
 	{
 		auto& ref = BuildInTypeMapping();
-		auto re = ref.find(inputType);
+		auto re = ref.find(input);
 		if (re != ref.end())
 			return re->second;
 		else
 			return std::nullopt;
 	}
-	
+
+	std::optional<BuildInType> GetBuildInType(std::u32string_view input)
+	{
+		for (auto& ite : BuildInTypeMapping())
+		{
+			if(ite.second.name == input)
+				return ite.first;
+		}
+		return std::nullopt;
+	}
 }

@@ -8,23 +8,27 @@ namespace Dumpling::MscfParser
 
 	using namespace Dumpling::Parser;
 
-	struct TypeProperty : Potato::Grammar::TypeProperty
+	using TypeProperty = Potato::Grammar::TypeProperty;
+
+
+	struct ValueTypeProperty : TypeProperty
 	{
-		SymbolMask sampler;
-		std::u32string_view sampler_name;
+		TypeProperty sampler;
 	};
 
 	using TypeSymbol = Potato::Grammar::TypeSymbol;
 
 	struct ValueSymbol
 	{
-		TypeProperty type;
+		ValueTypeProperty type;
 		std::vector<std::optional<size_t>> arrays;
 		std::vector<AreaMask> mate_data;
 		bool is_member = false;
 	};
 
-	struct MateDataSymbol {};
+	struct MateDataSymbol {
+		std::optional<TypeProperty> type;
+	};
 	
 	struct ImportSymbol
 	{
@@ -42,6 +46,7 @@ namespace Dumpling::MscfParser
 	{
 		std::vector<References> reference;
 		std::u32string_view code;
+		AreaMask matedata;
 	};
 
 	struct InoutParameter
@@ -57,6 +62,7 @@ namespace Dumpling::MscfParser
 		std::vector<References> reference;
 		std::u32string_view code;
 		std::vector<InoutParameter> parameters;
+		AreaMask matedata;
 	};
 
 	struct MaterialSymbol
@@ -84,7 +90,7 @@ namespace Dumpling::MscfParser
 
 	struct C_PushData{  ValueMask mask;  };
 	struct C_MarkAsArray{ size_t count = 0; };
-	struct C_ConverType { SymbolMask mask; std::u32string_view name; size_t count; };
+	struct C_ConverType { TypeProperty type; size_t count; };
 	struct C_SetValue { SymbolMask to;  };
 
 	struct MscfContent : Table
@@ -97,13 +103,6 @@ namespace Dumpling::MscfParser
 	};
 
 	MscfContent MscfParser(std::u32string_view code);
-
-	struct HlslStorageInfoLinker : Potato::Grammar::MemoryModelMaker
-	{
-		using MemoryModelMaker::MemoryModelMaker;
-		using MemoryModel = Potato::Grammar::MemoryModel;
-		virtual HandleResult Handle(MemoryModel cur, MemoryModel input) const override;
-	};
 
 	/*
 	Content MscfParser(std::u32string_view code, Table& table, Commands& commands);

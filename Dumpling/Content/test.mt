@@ -1,5 +1,4 @@
 property{
-
     struct WERRYUYU
     {
         float2 iop;

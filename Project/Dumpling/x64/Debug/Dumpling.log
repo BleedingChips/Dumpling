@@ -1,6 +1,2 @@
 ﻿  Mscf.cpp
-  MtTable.cpp
-C:\Users\chips\Documents\GitHub\Dumpling\Dumpling\Private\MtTable.cpp(343,61): warning C4101: “US”: 未引用的局部变量
-  ParserDefine.cpp
-  正在生成代码...
-  Dumpling.vcxproj -> C:\Users\chips\Documents\GitHub\Dumpling\Demo\Dx12Demo\x64\Debug\Dumpling.lib
+  Dumpling.vcxproj -> D:\GitHub\Dumpling\Demo\Dx12Demo\x64\Debug\Dumpling.lib

@@ -48,13 +48,13 @@ $ := <Statement>
 
 <References> := [ '[' [ <ReferencePath> { ',' <ReferencePath> } ] ']' ] : [33]
 
-<CodeStatement> := 'code' Id <References> Code ';' : [34]
+<CodeStatement> :=  <MateDate> 'code' Id <References> Code ';' : [34]
 
 <SnippetParemeter> := [ 'in' | 'out' ] Id Id : [36]
 
 <SnippetParemeterList> := '(' [<SnippetParemeter> {',' <SnippetParemeter> } ] ')' : [37]
 
-<SnippetStatement> := 'snippet' Id <References> <SnippetParemeterList> Code ';' : [38]
+<SnippetStatement> :=  <MateDate> 'snippet' Id <References> <SnippetParemeterList> Code ';' : [38]
 
 <UsingSnippetStatement> := 'using' 'snippet' <ReferencePath> 'as' Id ';' : [39]
 
