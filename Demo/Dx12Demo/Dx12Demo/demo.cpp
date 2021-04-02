@@ -52,7 +52,7 @@ int main()
 	auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");
 	auto Datas = FileSystem::LoadEntireFile(P);
 	auto Load = FileSystem::LoadEntireFile(FileSystem::GobalPathMapping()(U"$Source:/Content/test.mt"));
-	auto Str = StrEncode::DocumentWrapper(Load.data(), Load.size()).ToString<char32_t>();
+	auto Str = StrEncode::DocumentWrapper(Load).ToString<char32_t>();
 	Dumpling::Mscf::Translate(Str);
 
 

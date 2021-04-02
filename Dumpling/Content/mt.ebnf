@@ -39,7 +39,7 @@ $ := <Statement>
     := <PropertyDefineList> <PropertyDefine> : [18]
     := <PropertyDefineList> <StructDesc> : [19]
 
-<PropertyStatement> := 'property' '{' <PropertyDefineList> '}' ';' : [21]
+<PropertyStatement> := <MateDate> 'property' Id '{' <PropertyDefineList> '}' ';' : [21]
 
 <ImportStatement> := 'import' String 'as' Id ';' : [30]
 
@@ -65,12 +65,12 @@ $ := <Statement>
 
 <MaterialStatement> := <MateDate> 'material' String 'as' Id '{' <MaterialElementList> '}' ';' : [42]
 
-<StatementElement> := <PropertyStatement> : [1]
-    := : [1]
+<StatementElement> := : [1]
     := <StatementElement> <ImportStatement> : [1]
     := <StatementElement> <CodeStatement> : [1]
     := <StatementElement> <MaterialStatement> : [1]
     := <StatementElement> <SnippetStatement> : [1]
+    := <StatementElement> <PropertyStatement> : [1]
     := <StatementElement> ';' : [1]
 
 <Statement> := <StatementElement> : [1]

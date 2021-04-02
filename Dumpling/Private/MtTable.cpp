@@ -13,7 +13,7 @@ namespace Dumpling::MscfParser
 		static Ebnf::Table WTF = []()->Ebnf::Table{
 			auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/mt.ebnf");
 			auto Datas = FileSystem::LoadEntireFile(P);
-			auto Code = StrEncode::DocumentWrapper(Datas.data(), Datas.size()).ToString<char32_t>();
+			auto Code = StrEncode::DocumentWrapper(Datas).ToString<char32_t>();
 			if(!Code.empty())
 			{
 				return Ebnf::CreateTable(Code);
@@ -212,10 +212,12 @@ namespace Dumpling::MscfParser
 					}break;
 				case 21:
 					{
-					    auto P = E[2].Consume<size_t>();
+						auto mate_data = E[0].Consume<AreaMask>();
+					    auto P = E[4].Consume<size_t>();
+						auto Name = E[2].Consume<std::u32string_view>();
 						auto area = result.PopSymbolAsUnactive(P);
-						PropertySymbol PP{area};
-						return result.InsertSymbol(U"$.Property", PP, E.section);
+						PropertySymbol PP{area, mate_data};
+						return result.InsertSymbol(Name, PP, E.section);
 					}break;
 				case 30:
 				    {

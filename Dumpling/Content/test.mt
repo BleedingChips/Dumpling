@@ -1,4 +1,5 @@
-property{
+[]
+property WTFPro {
     struct WERRYUYU
     {
         float2 iop;

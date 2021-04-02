@@ -75,6 +75,7 @@ namespace Dumpling::MscfParser
 	struct PropertySymbol
 	{
 		AreaMask propertys;
+		AreaMask mate_datas;
 	};
 
 	struct MaterialUsingSymbol
