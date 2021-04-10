@@ -45,11 +45,11 @@ namespace Dumpling::MscfParser
 					switch (E[0].shift.mask)
 					{
 					case 1:
-						return TypeProperty{{}, GetBuildInTypeProperty(BuildInType::Int)->name};
+						return TypeProperty{GetBuildInTypeProperty(BuildInType::Int)->name};
 					case 0:
-						return TypeProperty{{}, GetBuildInTypeProperty(BuildInType::Float)->name};
+						return TypeProperty{GetBuildInTypeProperty(BuildInType::Float)->name};
 					case 2:
-						return TypeProperty{{},GetBuildInTypeProperty(BuildInType::String)->name};
+						return TypeProperty{GetBuildInTypeProperty(BuildInType::String)->name};
 					default:
 						break;
 					}
@@ -57,16 +57,16 @@ namespace Dumpling::MscfParser
 				} break;
 				case 5:
 					result.InsertValue(true);
-					return TypeProperty{ {},GetBuildInTypeProperty(BuildInType::Bool)->name };
+					return TypeProperty{GetBuildInTypeProperty(BuildInType::Bool)->name };
 					break;
 				case 6:
 					result.InsertValue(false);
-					return TypeProperty{ {},GetBuildInTypeProperty(BuildInType::Bool)->name };
+					return TypeProperty{GetBuildInTypeProperty(BuildInType::Bool)->name };
 					break;
 				case 7:
 				{
 					auto type_name = E[0].Consume<std::u32string_view>();
-					TypeProperty type{ result.FindActiveSymbolAtLast(type_name), type_name };
+					TypeProperty type{ result.FindActiveSymbolAtLast(type_name) };
 					size_t count = 0;
 					for (auto& ite : E)
 						if (ite.IsNoterminal())
@@ -103,8 +103,8 @@ namespace Dumpling::MscfParser
 				case 20:
 				{
 					ValueTypeProperty tp;
-					tp.name = E[0].Consume<std::u32string_view>();
-					tp.type = result.FindActiveSymbolAtLast(tp.name);
+					auto name = E[0].Consume<std::u32string_view>();
+					tp.id = {result.FindActiveSymbolAtLast(name), name};
 					if (E.production.size() > 1)
 					{
 						auto sampler_name = E[2].Consume<std::u32string_view>();
