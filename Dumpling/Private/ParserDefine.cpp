@@ -3,7 +3,7 @@
 #include "../Public/ParserDefine.h"
 namespace Dumpling::Parser
 {
-	
+	/*
 	std::map<BuildInType, BuildInTypeProperty> const& BuildInTypeMapping() {
 		static std::map<BuildInType, BuildInTypeProperty> Instance{
 			{BuildInType::Float, {U"float", true, {4, 4}}},
@@ -48,4 +48,5 @@ namespace Dumpling::Parser
 		}
 		return std::nullopt;
 	}
+	*/
 }

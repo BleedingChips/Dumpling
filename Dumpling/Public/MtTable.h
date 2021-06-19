@@ -5,11 +5,14 @@
 #include <string_view>
 namespace Dumpling::MscfParser
 {
-
+	/*
 	using namespace Dumpling::Parser;
 
-	using TypeProperty = Potato::Grammar::TypeProperty;
-
+	struct MscfType
+	{
+		TypeTag reference;
+		FunctionTag InitFunction;
+	};
 
 	struct ValueTypeProperty : TypeProperty
 	{
@@ -103,7 +106,9 @@ namespace Dumpling::MscfParser
 		std::vector<std::tuple<CommandType, Section>> commands;
 	};
 
+
 	MscfContent MscfParser(std::u32string_view code);
+	*/
 
 	/*
 	Content MscfParser(std::u32string_view code, Table& table, Commands& commands);

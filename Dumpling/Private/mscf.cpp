@@ -6,6 +6,7 @@
 
 namespace Dumpling::Mscf
 {
+	/*
 	using namespace MscfParser;
 
 	using IndexSpan = Potato::IndexSpan<uint32_t>;
@@ -107,6 +108,7 @@ namespace Dumpling::Mscf
 			}), com);
 		}
 	}
+	*/
 
 	/*
 	void ProcessMateDataInfo(MscfContent& content, MscfContent& output)
@@ -135,6 +137,7 @@ namespace Dumpling::Mscf
 	}
 	*/
 
+	/*
 	MscfDocument Translate(std::u32string_view code)
 	{
 		auto content = MscfParser::MscfParser(code);
@@ -156,6 +159,7 @@ namespace Dumpling::Mscf
 
 		return {};
 	}
+	*/
 	/*
 
 	mscf translate(std::u32string const& code)

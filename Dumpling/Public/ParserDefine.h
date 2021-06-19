@@ -1,16 +1,15 @@
 #pragma once
 
-#include "Potato/Public/Grammar.h"
+#include "Potato/Public/HIR.h"
+#include "Potato/Public/Ebnf.h"
 #include "Potato/Public/Misc.h"
 
 namespace Dumpling::Parser
 {
-	using Section = Potato::Grammar::Section;
-	using SymbolMask = Potato::Grammar::SymbolMask;
-	using AreaMask = Potato::Grammar::AreaMask;
-	using ValueMask = Potato::Grammar::ValueMask;
-	using MemoryTag = Potato::Grammar::MemoryTag;
+	using Potato::Section;
+	using namespace Potato::HIR;
 
+	/*
 	enum class BuildInType : uint8_t
 	{
 		Float = 0,
@@ -61,6 +60,7 @@ namespace Dumpling::Parser
 			return  Potato::Grammar::Table::InsertValue({}, GetBuildInTypeProperty(BuildInType::Bool)->name, { reinterpret_cast<std::byte const*>(&va), sizeof(va) });
 		}
 	};
+	*/
 
 	//std::tuple<std::vector<uint32_t>, std::tuple<>>
 }

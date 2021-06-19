@@ -21,8 +21,9 @@ struct PathInit
 {
 	PathInit()
 	{
-		auto P = FileSystem::Current();
-		P = P.FindFileFromParent(U"Demo", 4);
+		auto P = FileSystem::Current().FindParentDirectory([](FileSystem::Path const& P){
+			return P.Last() == U"Demo";
+		}, 4);
 		if (P)
 		{
 			auto Resource = P.Append(U"Dx12Demo/Content");
@@ -39,12 +40,6 @@ struct PathInit
 	}
 }path_init;
 
-struct A{};
-
-struct B{};
-
-struct C{};
-
 
 int main()
 {
@@ -53,7 +48,7 @@ int main()
 	auto Datas = FileSystem::LoadEntireFile(P);
 	auto Load = FileSystem::LoadEntireFile(FileSystem::GobalPathMapping()(U"$Source:/Content/test.mt"));
 	auto Str = StrEncode::DocumentWrapper(Load).ToString<char32_t>();
-	Dumpling::Mscf::Translate(Str);
+	//Dumpling::Mscf::Translate(Str);
 
 
 

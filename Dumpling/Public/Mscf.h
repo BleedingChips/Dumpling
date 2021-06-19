@@ -12,10 +12,8 @@
 
 namespace Dumpling::Mscf
 {
-	
-	using Section = Potato::Ebnf::Section;
-	using BuildInType = Dumpling::Parser::BuildInType;
-	using MemoryTag = Potato::Grammar::MemoryTag;
+	/*
+	using Section = Potato::Section;
 
 	enum class StorageType : uint8_t
 	{
@@ -77,6 +75,7 @@ namespace Dumpling::Mscf
 		std::vector<MateData> mate_datas;
 		std::vector<Value> values;
 	};
+	*/
 
 	/*
 	struct MscfDocumenet
@@ -201,18 +200,20 @@ namespace Dumpling::Mscf
 	};
 	*/
 
+	/*
 	struct Mscf
 	{
 		
 	};
 
 	MscfDocument Translate(std::u32string_view code);
+	*/
 
 }
 
 namespace Dumpling::Exception::Mscf
 {
-	using Section = Potato::Ebnf::Section;
+	using Section = Potato::Section;
 
 	struct Interface {};
 

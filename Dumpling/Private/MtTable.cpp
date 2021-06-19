@@ -7,6 +7,7 @@
 
 namespace Dumpling::MscfParser
 {
+	/*
 	using namespace Potato;
 	
 	Ebnf::Table const& MtEbnfInstance(){
@@ -371,6 +372,7 @@ namespace Dumpling::MscfParser
 		}
 		return {};
 	}
+	*/
 
 	/*
 	void RemoveSameMateData(std::vector<Mask>& output, Table& table)
