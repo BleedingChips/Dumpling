@@ -3,6 +3,53 @@
 #include "../Public/ParserDefine.h"
 namespace Dumpling::Parser
 {
+	
+	void InserBaseTypeInfo(Form& form)
+	{
+		auto f = form.InsertSymbol(U"float", ValueTypeSymbol{TypeTag{StorageType::FLOAT32}, ValueTypeSymbol::StorageType::HIRBuildIn});
+		auto i = form.InsertSymbol(U"int", ValueTypeSymbol{TypeTag{StorageType::INT32}});
+		auto ui = form.InsertSymbol(U"uint", ValueTypeSymbol{TypeTag{StorageType::UINT32}});
+		auto bo = form.InsertSymbol(U"bool", ValueTypeSymbol{TypeTag{StorageType::INT32}});
+		auto str = form.InsertSymbol(U"string", ValueTypeSymbol{TypeTag{StorageType::INT32}});
+		static std::u32string_view member[] = {U"x", U"y", U"z", U"w"};
+
+		struct BuildInData
+		{
+			std::u32string_view name[3];
+			TypeTag type;
+		};
+
+		{
+			BuildInData datas[] = {
+				{{U"float2", U"float3", U"float4"}, TypeTag{MemberMode::FLOAT32}},
+				{{U"int2", U"int3", U"int4"}, TypeTag{MemberMode::INT32}},
+				{{U"uint2", U"uint3", U"uint4"}, TypeTag{MemberMode::UINT32}},
+			};
+
+			for (size_t i = 0; i < std::size(datas); ++i)
+			{
+				auto& ref = datas[i];
+				form.StartDefineType();
+				for (size_t k = 0; k < std::size(ref.name); ++k)
+				{
+					auto name = ref.name[k];
+					form.DefineTypeMember({ref.type, {}}, name);
+				}
+				auto type = form.FinishDefineType();
+			}
+			
+			
+			
+			for (size_t i = 0; i < std::size(name); ++i)
+			{
+				form.Type().MarkTypeDefineStart();
+			}
+			
+			form.Type().InsertMember({ TypeTag{StorageType::FLOAT32} }, U"x");
+			form.Type().InsertMember({ TypeTag{StorageType::FLOAT32} }, U"y");
+		}
+	}
+
 	/*
 	std::map<BuildInType, BuildInTypeProperty> const& BuildInTypeMapping() {
 		static std::map<BuildInType, BuildInTypeProperty> Instance{
