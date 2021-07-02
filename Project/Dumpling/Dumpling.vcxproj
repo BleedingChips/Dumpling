@@ -150,6 +150,7 @@
     <ClInclude Include="..\..\Dumpling\Public\Mscf.h" />
     <ClInclude Include="..\..\Dumpling\Public\MtTable.h" />
     <ClInclude Include="..\..\Dumpling\Public\ParserDefine.h" />
+    <ClInclude Include="..\..\Dumpling\Public\BasicType.h" />
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h" />
   </ItemGroup>
   <ItemGroup>

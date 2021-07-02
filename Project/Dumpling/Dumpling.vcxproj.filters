@@ -24,6 +24,9 @@
     <ClInclude Include="..\..\Dumpling\Public\ParserDefine.h">
       <Filter>Public</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Dumpling\Public\BasicType.h">
+      <Filter>Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Dumpling\Private\Mscf.cpp">

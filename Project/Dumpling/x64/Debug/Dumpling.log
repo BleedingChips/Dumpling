@@ -1,5 +1,317 @@
 ﻿  Mscf.cpp
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(10,21): error C2871: 'HIR': a namespace with this name does not exist
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(30,11): error C3646: 'tag': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(30,14): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(36,11): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(36,14): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,47): error C2065: 'FunctionTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,58): error C3544: '_Types': parameter pack expects a type template argument
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,20): error C3203: 'tuple': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,7): error C2182: 'InserBaseTypeInfo': illegal use of type 'void'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,25): error C2065: 'Form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,31): error C2065: 'form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(45,12): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(45,15): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(46,13): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(46,17): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(51,12): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(51,15): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(52,13): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(52,17): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,4): error C2653: 'HIR': is not a class or namespace name
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,19): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,23): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,47): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,56): error C3544: '_Types': parameter pack expects a type template argument
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,20): error C3203: 'tuple': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
   MtTable.cpp
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(10,21): error C2871: 'HIR': a namespace with this name does not exist
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(30,11): error C3646: 'tag': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(30,14): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(36,11): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(36,14): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,47): error C2065: 'FunctionTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,58): error C3544: '_Types': parameter pack expects a type template argument
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,20): error C3203: 'tuple': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,7): error C2182: 'InserBaseTypeInfo': illegal use of type 'void'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,25): error C2065: 'Form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,31): error C2065: 'form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(45,12): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(45,15): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(46,13): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(46,17): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(51,12): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(51,15): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(52,13): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(52,17): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,4): error C2653: 'HIR': is not a class or namespace name
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,19): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,23): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,47): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,56): error C3544: '_Types': parameter pack expects a type template argument
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,20): error C3203: 'tuple': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
   ParserDefine.cpp
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(10,21): error C2871: 'HIR': a namespace with this name does not exist
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(30,11): error C3646: 'tag': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(30,14): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(36,11): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(36,14): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,47): error C2065: 'FunctionTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,58): error C3544: '_Types': parameter pack expects a type template argument
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(38,20): error C3203: 'tuple': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,7): error C2182: 'InserBaseTypeInfo': illegal use of type 'void'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,25): error C2065: 'Form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41,31): error C2065: 'form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(45,12): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(45,15): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(46,13): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(46,17): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(51,12): error C3646: 'reg': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(51,15): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(52,13): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(52,17): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(53,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(58,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(59,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,4): error C2653: 'HIR': is not a class or namespace name
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,19): error C3646: 'type': unknown override specifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(86,23): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(95,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(96,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(97,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,47): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,56): error C3544: '_Types': parameter pack expects a type template argument
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(98,20): error C3203: 'tuple': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(104,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(105,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(106,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(107,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,15): error C2065: 'SymbolTag': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,8): error C2923: 'std::vector': 'SymbolTag' is not a valid template type argument for parameter '_Ty'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108): message : see declaration of 'SymbolTag'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,8): error C2976: 'std::vector': too few template arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(108,26): error C2955: 'std::vector': use of class template requires template argument list
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30037\include\vector(443): message : see declaration of 'std::vector'
+D:\GitHub\Dumpling\Dumpling\Private\ParserDefine.cpp(7,7): error C2182: 'InserBaseTypeInfo': illegal use of type 'void'
+D:\GitHub\Dumpling\Dumpling\Private\ParserDefine.cpp(7,7): error C2374: 'Dumpling::Parser::InserBaseTypeInfo': redefinition; multiple initialization
+D:\GitHub\Dumpling\Dumpling\Public\ParserDefine.h(41): message : see declaration of 'Dumpling::Parser::InserBaseTypeInfo'
+D:\GitHub\Dumpling\Dumpling\Private\ParserDefine.cpp(7,25): error C2065: 'Form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Private\ParserDefine.cpp(7,31): error C2065: 'form': undeclared identifier
+D:\GitHub\Dumpling\Dumpling\Private\ParserDefine.cpp(8,2): error C2143: syntax error: missing ';' before '{'
+D:\GitHub\Dumpling\Dumpling\Private\ParserDefine.cpp(8,2): error C2447: '{': missing function header (old-style formal list?)
   Generating Code...
-  Dumpling.vcxproj -> D:\GitHub\Dumpling\Demo\Dx12Demo\x64\Debug\Dumpling.lib

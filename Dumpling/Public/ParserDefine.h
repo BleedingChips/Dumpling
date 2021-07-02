@@ -7,7 +7,6 @@
 namespace Dumpling::Parser
 {
 	using namespace Potato;
-	using namespace HIR;
 
 	struct ValueTypeSymbol
 	{
@@ -55,7 +54,7 @@ namespace Dumpling::Parser
 
 	struct PropertySymbol
 	{
-		std::vector<SymbolTag> values;
+		std::vector<SymbolMax> values;
 		std::vector<SymbolTag> mate_data;
 	};
 

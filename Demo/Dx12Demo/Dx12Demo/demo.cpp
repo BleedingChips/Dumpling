@@ -21,7 +21,7 @@ struct PathInit
 {
 	PathInit()
 	{
-		auto P = FileSystem::Current().FindParentDirectory([](FileSystem::Path const& P){
+		auto P = Path::Current().FindParentDirectory([](Path const& P){
 			return P.Last() == U"Demo";
 		}, 4);
 		if (P)
@@ -29,12 +29,12 @@ struct PathInit
 			auto Resource = P.Append(U"Dx12Demo/Content");
 			if (Resource)
 			{
-				FileSystem::GobalPathMapping().Regedit(U"Content", Resource);
+				PathMapping::GobalPathMapping().Regedit(U"Content", Resource);
 			}
 			auto Source = P.Append(U"../Dumpling");
 			if (Source)
 			{
-				FileSystem::GobalPathMapping().Regedit(U"Source", Source);
+				PathMapping::GobalPathMapping().Regedit(U"Source", Source);
 			}
 		}
 	}
@@ -43,10 +43,10 @@ struct PathInit
 
 int main()
 {
-	auto P2 = FileSystem::Path(U"$Source:/Content/Mscf.ebnf");
-	auto P = FileSystem::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");
-	auto Datas = FileSystem::LoadEntireFile(P);
-	auto Load = FileSystem::LoadEntireFile(FileSystem::GobalPathMapping()(U"$Source:/Content/test.mt"));
+	auto P2 = Path(U"$Source:/Content/Mscf.ebnf");
+	auto P = PathMapping::GobalPathMapping()(U"$Source:/Content/Mscf.ebnf");
+	auto Datas = Path::LoadEntireFile(P);
+	auto Load = Path::LoadEntireFile(PathMapping::GobalPathMapping()(U"$Source:/Content/test.mt"));
 	auto Str = StrEncode::DocumentWrapper(Load).ToString<char32_t>();
 	//Dumpling::Mscf::Translate(Str);
 
