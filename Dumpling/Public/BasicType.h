@@ -3,7 +3,7 @@
 #include "Potato/Public/Symbol.h"
 namespace Dumpling
 {
-	struct TypeMask
+	struct TypeIndex
 	{
 		enum class StorageType
 		{
@@ -26,7 +26,7 @@ namespace Dumpling
 
 	struct TypeSymbol
 	{
-		TypeMask mask;
+		TypeIndex mask;
 		std::vector<std::u32string_view> member;
 		std::vector<std::tuple<std::u32string_view, Potato::FunctionIndex>> functions;
 	};

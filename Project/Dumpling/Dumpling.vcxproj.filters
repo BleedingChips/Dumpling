@@ -38,6 +38,9 @@
     <ClCompile Include="..\..\Dumpling\Private\MtTable.cpp">
       <Filter>Private</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Dumpling\Private\BasicType.cpp">
+      <Filter>Private</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Dumpling\Content\mi.ebnf">

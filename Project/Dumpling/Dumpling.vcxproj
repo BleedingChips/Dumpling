@@ -154,6 +154,7 @@
     <ClInclude Include="..\..\Dumpling\Public\ShaderVariable.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Dumpling\Private\BasicType.cpp" />
     <ClCompile Include="..\..\Dumpling\Private\Mscf.cpp" />
     <ClCompile Include="..\..\Dumpling\Private\MtTable.cpp" />
     <ClCompile Include="..\..\Dumpling\Private\ParserDefine.cpp" />
