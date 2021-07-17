@@ -33,13 +33,13 @@ namespace Dumpling
 
 	struct MateDataSymbol
 	{
-		TypeMask mask;
+		TypeIndex mask;
 		Potato::RegisterIndex reg;
 	};
 
 	struct ValueSymbol
 	{
-		TypeMask mask;
+		TypeIndex mask;
 		Potato::RegisterIndex reg;
 		std::vector<MateDataSymbol> mate_datas;
 	};
