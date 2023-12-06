@@ -1,6 +1,6 @@
 module;
 
-module NoodleForm;
+module DumplingForm;
 
 namespace Dumpling
 {

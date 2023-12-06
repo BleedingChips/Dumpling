@@ -1,7 +1,7 @@
 module;
 
 
-export module NoodleForm;
+export module DumplingForm;
 
 import std;
 import PotatoMisc;
