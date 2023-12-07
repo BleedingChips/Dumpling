@@ -1,4 +1,5 @@
 import DumplingForm;
+import DumplingWin32Form;
 
 int main()
 {

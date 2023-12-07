@@ -2,7 +2,7 @@ module;
 
 module DumplingForm;
 
-namespace Dumpling
+namespace Dumpling::Win32
 {
-
+	
 }
