@@ -1,7 +1,10 @@
 add_rules("mode.debug", "mode.release")
 set_languages("cxxlatest")
 
-add_requires("imgui", {configs={win32=true, dx12=true}})
+
+if is_plat("windows") then
+    add_requires("imgui", {configs={win32=true, dx12=true}})
+end
 
 if os.scriptdir() == os.projectdir() then 
     includes("../Potato/")
@@ -11,8 +14,13 @@ target("Dumpling")
     set_kind("static")
     add_files("Dumpling/*.cpp")
     add_files("Dumpling/*.ixx")
-    add_files("Dumpling/Platform/Windows/*.cpp")
-    add_files("Dumpling/Platform/Windows/*.ixx")
+    if is_plat("windows") then
+        add_files("Dumpling/Platform/Windows/*.cpp")
+        add_files("Dumpling/Platform/Windows/*.ixx")
+        add_links("user32.lib")
+        --result.syslinks =  {"user32", "shell32", "gdi32"}
+    end
+    
     add_deps("Potato")
     add_packages("imgui")
 target_end()

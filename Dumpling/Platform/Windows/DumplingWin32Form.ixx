@@ -1,37 +1,63 @@
 module;
 
+#include <Windows.h>
+
 export module DumplingWin32Form;
 
 import std;
 import PotatoPointer;
-import DumplingForm;
 
 export namespace Dumpling::Win32
 {
-	struct FormManager : public Potato::Pointer::DefaultStrongWeakInterface, public FormManagerInterface
+
+	struct FormManager;
+
+	struct FormChannel : public Potato::Pointer::DefaultControllerViewerInterface
 	{
-		using Ptr = Potato::Pointer::StrongPtr<FormManager>;
+		virtual std::u8string_view GetFormName() const;
+
+		using Ptr = Potato::Pointer::ControllerPtr<FormChannel>;
+
+	protected:
+
+		virtual std::optional<LRESULT> WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return std::nullopt; }
+
+		void ControllerRelease() override;
+
+		using WPtr = Potato::Pointer::ViewerPtr<FormChannel>;
+
+		std::mutex mutex;
+		Potato::Pointer::ControllerPtr<FormManager> owner;
+		HWND window_handle = nullptr;
+		std::optional<DWORD> error_code;
+
+		friend struct FormManager;
+	};
+
+
+	struct FormManager : public Potato::Pointer::DefaultControllerViewerInterface
+	{
+		using Ptr = Potato::Pointer::ControllerPtr<FormManager>;
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 		bool CreateForm(FormChannel& channel);
 
+		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 	protected:
 
-		using WPtr = Potato::Pointer::WeakPtr<FormManager>;
+		using WPtr = Potato::Pointer::ViewerPtr<FormManager>;
 
 		FormManager(std::pmr::memory_resource* resource)
 			: resource(resource) {}
 
 		~FormManager();
 
-		void StrongRelease() override;
-		void WeakRelease() override;
+		virtual void ControllerRelease() override;
+		virtual void ViewerRelease() override;
 
-		virtual void AddRef() const override;
-		virtual void SubRef() const override;
-
-		void Execuet(FormManager::WPtr ptr);
+		void Execute();
 
 		std::pmr::memory_resource* resource;
 

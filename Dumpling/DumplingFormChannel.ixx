@@ -6,32 +6,27 @@ export module DumplingForm;
 import std;
 import PotatoMisc;
 import PotatoPointer;
+import DumplingWin32Form;
 
 export namespace Dumpling
 {
-	struct FormManagerInterface
+	using FormManager = Dumpling::Win32::FormManager;
+
+
+	struct FormChannel : public Dumpling::Win32::FormChannel
 	{
-		virtual void AddRef() const = 0;
-		virtual void SubRef() const = 0;
+		using Ptr = Potato::Pointer::ControllerPtr<FormChannel>;
 
-		friend struct FormChannel;
-	};
-
-
-	struct FormChannel : public Potato::Pointer::DefaultStrongWeakInterface
-	{
-		using Ptr = Potato::Pointer::StrongPtr<FormChannel>;
-		using WPtr = Potato::Pointer::WeakPtr<FormChannel>;
-
-		virtual std::u8string_view FormName() const;
+		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 	protected:
 
-		std::shared_mutex mutex;
-		Potato::Pointer::IntrusivePtr<FormManagerInterface> owner;
-		virtual void StrongRelease() override {}
-		virtual void WeakRelease() override {}
+		FormChannel(std::pmr::memory_resource* resource) : resource(resource) {}
 
-		friend struct FormManagerInterface;
+		virtual void ViewerRelease() override;
+
+		std::pmr::memory_resource* resource;
+
 	};
+
 }
