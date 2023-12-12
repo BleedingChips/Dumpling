@@ -12,6 +12,8 @@ int main()
 		auto form = FormChannel::Create();
 
 		Win32->CreateForm(*form);
+
+		form->WaitUntilWindowClosed();
 	}
 	
 

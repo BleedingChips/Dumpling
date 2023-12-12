@@ -13,7 +13,7 @@ export namespace Dumpling
 	using FormManager = Dumpling::Win32::FormManager;
 
 
-	struct FormChannel : public Dumpling::Win32::FormChannel
+	struct FormChannel : public Dumpling::Win32::FormInterface
 	{
 		using Ptr = Potato::Pointer::ControllerPtr<FormChannel>;
 

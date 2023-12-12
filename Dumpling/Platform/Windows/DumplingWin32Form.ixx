@@ -12,11 +12,13 @@ export namespace Dumpling::Win32
 
 	struct FormManager;
 
-	struct FormChannel : public Potato::Pointer::DefaultControllerViewerInterface
+	struct FormInterface : public Potato::Pointer::DefaultControllerViewerInterface
 	{
 		virtual std::u8string_view GetFormName() const;
 
-		using Ptr = Potato::Pointer::ControllerPtr<FormChannel>;
+		using Ptr = Potato::Pointer::ControllerPtr<FormInterface>;
+
+		void WaitUntilWindowClosed(std::chrono::microseconds check_duration_time = std::chrono::microseconds{1});
 
 	protected:
 
@@ -24,12 +26,23 @@ export namespace Dumpling::Win32
 
 		void ControllerRelease() override;
 
-		using WPtr = Potato::Pointer::ViewerPtr<FormChannel>;
+		using WPtr = Potato::Pointer::ViewerPtr<FormInterface>;
 
 		std::mutex mutex;
 		Potato::Pointer::ControllerPtr<FormManager> owner;
+		enum class Status
+		{
+			Empty,
+			Error,
+			Waiting,
+			Ready,
+			RequestExist,
+			Closed,
+		};
+
+		Status status = Status::Empty;
 		HWND window_handle = nullptr;
-		std::optional<DWORD> error_code;
+		DWORD error_code = 0;
 
 		friend struct FormManager;
 	};
@@ -41,7 +54,7 @@ export namespace Dumpling::Win32
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		bool CreateForm(FormChannel& channel);
+		bool CreateForm(FormInterface& channel);
 
 		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -68,7 +81,7 @@ export namespace Dumpling::Win32
 
 		struct FormRequest
 		{
-			FormChannel::WPtr form_channel_interface;
+			FormInterface::WPtr form;
 		};
 
 		std::pmr::vector<FormRequest> requests;
