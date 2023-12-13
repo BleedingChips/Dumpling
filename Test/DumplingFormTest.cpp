@@ -1,5 +1,5 @@
 import DumplingForm;
-import DumplingWin32Form;
+import std;
 
 using namespace Dumpling;
 
@@ -7,13 +7,16 @@ int main()
 {
 
 	{
-		auto Win32 = FormManager::Create();
+		auto form = Form::CreateDx12Form({});
 
-		auto form = FormChannel::Create();
-
-		Win32->CreateForm(*form);
-
-		form->WaitUntilWindowClosed();
+		while(true)
+		{
+			if(form->GetStatus() == Status::Closed)
+			{
+				break;
+			}else
+				std::this_thread::sleep_for(std::chrono::milliseconds{1});
+		}
 	}
 	
 

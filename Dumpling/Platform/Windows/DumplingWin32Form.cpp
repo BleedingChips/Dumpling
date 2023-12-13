@@ -9,7 +9,7 @@ import PotatoEncode;
 
 namespace Dumpling::Win32
 {
-	LRESULT CALLBACK FormManager::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Win32Form::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		assert(hWnd != nullptr);
 		switch (msg)
@@ -17,28 +17,27 @@ namespace Dumpling::Win32
 		case WM_DESTROY:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			FormInterface* ptr = reinterpret_cast<FormInterface*>(data);
+			Win32Form* ptr = reinterpret_cast<Win32Form*>(data);
 			if (ptr != nullptr)
 			{
 				{
 					std::lock_guard lg(ptr->mutex);
-					assert(
-						ptr->status == FormInterface::Status::Ready
-					);
-					ptr->status = FormInterface::Status::Closed;
+					assert( ptr->status == Status::Opened || ptr->status == Status::Hidden);
+					ptr->status = Status::Closed;
 				}
 				ptr->SubViewerRef();
 			}
 			SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+				PostQuitMessage(0);
 			break;
 		}
 		default:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			FormInterface* ptr = reinterpret_cast<FormInterface*>(data);
+			Win32Form* ptr = reinterpret_cast<Win32Form*>(data);
 			if (ptr != nullptr)
 			{
-				auto re = ptr->WndProc(hWnd, msg, wParam, lParam);
+				auto re = ptr->SelfHandleProc(hWnd, msg, wParam, lParam);
 				if (re.has_value())
 				{
 					return *re;
@@ -52,41 +51,132 @@ namespace Dumpling::Win32
 
 	//const FormStyle& DefaultStyle() noexcept { static FormStyle Default;  return Default; }
 	const wchar_t static_class_name[] = L"dumpling_default_win32_class";
-	const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , &FormManager::WndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, (const wchar_t*)static_class_name, NULL };
+	const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , &Win32Form::WndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, (const wchar_t*)static_class_name, NULL };
 
 	const struct StaticClassInitStruct
 	{
 		StaticClassInitStruct() { HRESULT res = RegisterClassExW(&static_class); assert(SUCCEEDED(res)); }
 		~StaticClassInitStruct() { UnregisterClassW((const wchar_t*)static_class_name, GetModuleHandleW(0)); }
-	};
+	}init_struct;
 
-	void FormInterface::ControllerRelease()
+	void Win32Form::ControllerRelease()
 	{
-		Potato::Pointer::ControllerPtr<FormManager> TemPtr;
-		{
-			std::lock_guard lg(mutex);
-			switch (status)
-			{
-			case Status::Empty:
-			case Status::Error:
-			case Status::Closed:
-				break;
-			case Status::Waiting:
-				status = Status::RequestExist;
-				break;
-			case Status::Ready:
-				assert(window_handle != nullptr);
-				DestroyWindow(window_handle);
-				break;
-			default:
-				assert(false);
-				break;
-			}
-			TemPtr = std::move(owner);
-		}
-		TemPtr.Reset();
+		CloseWindows();
 	}
 
+	void Win32Form::CloseWindows()
+	{
+		{
+			std::shared_lock lg(mutex);
+			if (status == Status::Opened || status == Status::Hidden)
+			{
+				assert(window_handle != nullptr);
+				PostMessage(window_handle, WM_DESTROY, 0, 0);
+			}
+		}
+		if(window_thread.joinable())
+		{
+			window_thread.join();
+		}
+	}
+
+	Win32Form::~Win32Form()
+	{
+		assert(!window_thread.joinable());
+	}
+
+	void Win32Form::ViewerRelease()
+	{
+		this->~Win32Form();
+		delete this;
+	}
+
+	Form::Ptr Win32Form::CreateWin32Form(FormSetting setting, std::pmr::memory_resource* resource)
+	{
+		Potato::Pointer::ControllerPtr<Win32Form> ptr = new Win32Form{};
+		auto lp = ptr.Isomer();
+
+		std::promise<std::variant<HWND, DWORD>> promise;
+
+		auto fur = promise.get_future();
+
+		ptr->window_thread = std::thread{[&]() mutable
+		{
+
+			std::wstring title {setting.form_name};
+
+			HWND handle = CreateWindowExW(
+				0,
+				(wchar_t*)(static_class_name),
+				title.c_str(),
+				WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+				100, 100, setting.size_x, setting.size_y,
+				NULL,
+				NULL,
+				GetModuleHandle(0),
+				NULL
+			);
+
+			if(handle != nullptr)
+			{
+				auto Pointer = lp.GetPointer();
+				Pointer->window_handle = handle;
+				Pointer->status = Status::Opened;
+				Pointer->AddViewerRef();
+				SetWindowLongPtr(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(Pointer));
+				promise.set_value(handle);
+			}else
+			{
+				DWORD error_code = GetLastError();
+				auto Pointer = lp.GetPointer();
+				//Pointer = error_code;
+				Pointer->status = Status::Error;
+				promise.set_value(error_code);
+				return;
+			}
+
+			
+			while(true)
+			{
+				MSG msg;
+				while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+				{
+					if (msg.message == WM_QUIT)
+					{
+						break;
+					}
+					TranslateMessage(&msg);
+					DispatchMessageW(&msg);
+				}
+				if (msg.message == WM_QUIT)
+				{
+					break;
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds{1});
+			}
+			
+
+			return;
+		}};
+
+		auto tem = fur.get();
+
+		if(std::holds_alternative<HWND>(tem))
+		{
+			return ptr;
+		}else
+		{
+			return {};
+		}
+	}
+
+	Status Win32Form::GetStatus() const
+	{
+		std::shared_lock sl(mutex);
+		return status;
+	}
+
+	/*
 	void FormInterface::WaitUntilWindowClosed(std::chrono::microseconds check_duration_time)
 	{
 		while(true)
@@ -148,7 +238,7 @@ namespace Dumpling::Win32
 
 	void FormManager::Execute()
 	{
-		static StaticClassInitStruct init_struct;
+		
 
 		while(true)
 		{
@@ -278,5 +368,6 @@ namespace Dumpling::Win32
 			
 		}
 	}
+	*/
 
 }

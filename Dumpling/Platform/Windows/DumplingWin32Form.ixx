@@ -6,84 +6,35 @@ export module DumplingWin32Form;
 
 import std;
 import PotatoPointer;
+import DumplingForm;
 
 export namespace Dumpling::Win32
 {
 
-	struct FormManager;
-
-	struct FormInterface : public Potato::Pointer::DefaultControllerViewerInterface
+	struct Win32Form : public Form
 	{
-		virtual std::u8string_view GetFormName() const;
+		virtual void CloseWindows() override;
 
-		using Ptr = Potato::Pointer::ControllerPtr<FormInterface>;
-
-		void WaitUntilWindowClosed(std::chrono::microseconds check_duration_time = std::chrono::microseconds{1});
-
-	protected:
-
-		virtual std::optional<LRESULT> WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return std::nullopt; }
-
-		void ControllerRelease() override;
-
-		using WPtr = Potato::Pointer::ViewerPtr<FormInterface>;
-
-		std::mutex mutex;
-		Potato::Pointer::ControllerPtr<FormManager> owner;
-		enum class Status
-		{
-			Empty,
-			Error,
-			Waiting,
-			Ready,
-			RequestExist,
-			Closed,
-		};
-
-		Status status = Status::Empty;
-		HWND window_handle = nullptr;
-		DWORD error_code = 0;
-
-		friend struct FormManager;
-	};
-
-
-	struct FormManager : public Potato::Pointer::DefaultControllerViewerInterface
-	{
-		using Ptr = Potato::Pointer::ControllerPtr<FormManager>;
-
-		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-
-		bool CreateForm(FormInterface& channel);
+		static Form::Ptr CreateWin32Form(FormSetting setting, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		virtual ~Win32Form();
+		virtual Status GetStatus() const override;
 
 		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	protected:
 
-		using WPtr = Potato::Pointer::ViewerPtr<FormManager>;
-
-		FormManager(std::pmr::memory_resource* resource)
-			: resource(resource) {}
-
-		~FormManager();
-
 		virtual void ControllerRelease() override;
 		virtual void ViewerRelease() override;
 
-		void Execute();
+		mutable std::shared_mutex mutex;
+		std::thread window_thread;
+		HWND window_handle = nullptr;
+		Status status = Status::Empty;
+		std::optional<LRESULT> SelfHandleProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return std::nullopt; }
 
-		std::pmr::memory_resource* resource;
+	private:
 
-		std::atomic_size_t exist_form_count;
-		std::thread threads;
-
-		std::mutex form_init_list;
-
-		struct FormRequest
-		{
-			FormInterface::WPtr form;
-		};
-
-		std::pmr::vector<FormRequest> requests;
+		
 	};
+
 }
