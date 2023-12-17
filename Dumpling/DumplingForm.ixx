@@ -10,6 +10,10 @@ import PotatoPointer;
 export namespace Dumpling
 {
 
+	
+
+
+	/*
 	struct FormSetting
 	{
 		std::size_t size_x = 1024;
@@ -28,9 +32,15 @@ export namespace Dumpling
 		Error,
 	};
 
+	struct FormEventChannel
+	{
+		virtual void HandleEvent();
+	};
+
 	struct Form : public Potato::Pointer::DefaultControllerViewerInterface
 	{
 		using Ptr = Potato::Pointer::ControllerPtr<Form>;
+
 		virtual void CloseWindows() = 0;
 		virtual Status GetStatus() const = 0;
 
@@ -42,6 +52,6 @@ export namespace Dumpling
 		virtual ~Form() = default;
 	};
 
-
+	*/
 
 }

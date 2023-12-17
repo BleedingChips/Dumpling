@@ -10,10 +10,12 @@ namespace Dumpling
 {
 
 #ifdef _WIN32
+	/*
 	Form::Ptr Form::CreateDx12Form(FormSetting setting)
 	{
 		return Win32::Win32Form::CreateWin32Form(setting);
 	}
+	*/
 #endif
 
 

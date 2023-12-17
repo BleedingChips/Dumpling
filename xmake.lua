@@ -4,6 +4,7 @@ set_languages("cxxlatest")
 
 if is_plat("windows") then
     add_requires("imgui", {configs={win32=true, dx12=true}})
+    includes("Dumpling/Platform/Windows/")
 end
 
 if os.scriptdir() == os.projectdir() then 
@@ -15,12 +16,8 @@ target("Dumpling")
     add_files("Dumpling/*.cpp")
     add_files("Dumpling/*.ixx")
     if is_plat("windows") then
-        add_files("Dumpling/Platform/Windows/*.cpp")
-        add_files("Dumpling/Platform/Windows/*.ixx")
-        add_links("user32.lib")
-        --result.syslinks =  {"user32", "shell32", "gdi32"}
+        add_deps("Dx12Renderer")
     end
-    
     add_deps("Potato")
     add_packages("imgui")
 target_end()
