@@ -1,6 +1,7 @@
 module;
 
 #include <Windows.h>
+#include <wrl.h>
 
 export module DumplingWin32Form;
 
@@ -12,7 +13,7 @@ import PotatoIR;
 export namespace Dumpling::Win32
 {
 
-	struct Win32FormPointerWrapperT
+	struct FormPointerWrapperT
 	{
 		template<typename PtrT>
 		void AddRef(PtrT* ptr) const { return ptr->FormAddRef(); }
@@ -20,10 +21,10 @@ export namespace Dumpling::Win32
 		void SubRef(PtrT* ptr) const { return ptr->FormSubRef(); }
 	};
 
-	struct Win32Style : public Potato::Pointer::DefaultIntrusiveInterface
+	struct Style : public Potato::Pointer::DefaultIntrusiveInterface
 	{
 
-		using Ptr = Potato::Pointer::IntrusivePtr<Win32Style>;
+		using Ptr = Potato::Pointer::IntrusivePtr<Style>;
 
 		static Ptr Create(wchar_t const* class_name, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
@@ -33,8 +34,8 @@ export namespace Dumpling::Win32
 
 		static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-		Win32Style(Potato::IR::MemoryResourceRecord record, std::byte* offset, std::wstring_view class_type);
-		~Win32Style();
+		Style(Potato::IR::MemoryResourceRecord record, std::byte* offset, std::wstring_view class_type);
+		~Style();
 		virtual void Release();
 
 		Potato::IR::MemoryResourceRecord resource_record;
@@ -42,9 +43,9 @@ export namespace Dumpling::Win32
 	};
 
 
-	struct Win32Renderer
+	struct Renderer
 	{
-		using Ptr = Potato::Pointer::IntrusivePtr<Win32Renderer, Win32FormPointerWrapperT>;
+		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, FormPointerWrapperT>;
 
 		virtual void FormAddRef() const = 0;
 		virtual void FormSubRef() const = 0;
@@ -53,7 +54,7 @@ export namespace Dumpling::Win32
 		virtual void OnUpdate() = 0;
 	};
 
-	struct Win32Setting
+	struct Setting
 	{
 		std::size_t size_x = 1024;
 		std::size_t size_y = 768;
@@ -63,14 +64,14 @@ export namespace Dumpling::Win32
 	};
 
 
-	struct Win32FormEventChannel
+	struct FormEventChannel
 	{
-		using Ptr = Potato::Pointer::IntrusivePtr<Win32FormEventChannel, Win32FormPointerWrapperT>;
+		using Ptr = Potato::Pointer::IntrusivePtr<FormEventChannel, FormPointerWrapperT>;
 		virtual void FormAddRef() const = 0;
 		virtual void FormSubRef() const = 0;
 	};
 
-	struct Win32Form : public Potato::Pointer::DefaultControllerViewerInterface
+	struct Form : public Potato::Pointer::DefaultControllerViewerInterface
 	{
 
 		enum class Status
@@ -82,29 +83,29 @@ export namespace Dumpling::Win32
 			Error,
 		};
 
-		using Ptr = Potato::Pointer::ControllerPtr<Win32Form>;
+		using Ptr = Potato::Pointer::ControllerPtr<Form>;
 
-		static auto CreateWin32Form(
-			Win32Style::Ptr style,
-			Win32Setting const& setting,
-			Win32Renderer::Ptr renderer,
-			Win32FormEventChannel::Ptr event_channel,
+		static auto Create(
+			Style::Ptr style,
+			Setting const& setting,
+			Renderer::Ptr renderer,
+			FormEventChannel::Ptr event_channel,
 			std::pmr::memory_resource* resource = std::pmr::get_default_resource()
 		) -> Ptr;
 
 		void CloseWindows();
 
-		virtual ~Win32Form();
+		virtual ~Form();
 		virtual Status GetStatus() const;
 		virtual HWND GetWindowHandle() const;
-		virtual Win32Style const& GetStyle() const { return *style; }
+		virtual Style const& GetStyle() const { return *style; }
 
 	protected:
 
-		Win32Form(
-			Win32Style::Ptr style,
-			Win32Renderer::Ptr renderer,
-			Win32FormEventChannel::Ptr event_channel,
+		Form(
+			Style::Ptr style,
+			Renderer::Ptr renderer,
+			FormEventChannel::Ptr event_channel,
 			Potato::IR::MemoryResourceRecord record
 			);
 
@@ -112,29 +113,21 @@ export namespace Dumpling::Win32
 		virtual void ViewerRelease() override;
 
 		Potato::IR::MemoryResourceRecord resource_record;
-		Win32Style::Ptr style;
+		Style::Ptr style;
 		
 		std::thread window_thread;
 		HWND window_handle = nullptr;
 
 		mutable std::shared_mutex mutex;
 		Status status = Status::Empty;
-		Win32Renderer::Ptr renderer;
-		Win32FormEventChannel::Ptr event_channel;
+		Renderer::Ptr renderer;
+		FormEventChannel::Ptr event_channel;
 
-		friend struct Win32Style;
+		friend struct Style;
 
-	};
-
-	struct ComPointerWrapper
-	{
-		template<typename PtrT>
-		void AddRef(PtrT* ptr) { ptr->AddRef(); }
-		template<typename PtrT>
-		void SubRef(PtrT* ptr) { ptr->Release(); }
 	};
 
 	template<typename PtrT>
-	using ComPtr = Potato::Pointer::IntrusivePtr<PtrT, ComPointerWrapper>;
+	using ComPtr = Microsoft::WRL::ComPtr<PtrT>;
 
 }

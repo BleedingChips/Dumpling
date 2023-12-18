@@ -14,8 +14,7 @@ import DumplingWin32Form;
 
 export namespace Dumpling::Dx12
 {
-	template<typename PtrT>
-	using ComPtr = Microsoft::WRL::ComPtr<PtrT>;
+	using Win32::ComPtr;
 
 	using AdapterPtr = ComPtr<IDXGIAdapter1>;
 
@@ -63,7 +62,7 @@ export namespace Dumpling::Dx12
 		friend struct Device;
 	};
 
-	export struct Renderer : public Win32::Win32Renderer, public Potato::Pointer::DefaultControllerViewerInterface
+	export struct Renderer : public Win32::Renderer, public Potato::Pointer::DefaultControllerViewerInterface
 	{
 		using Ptr = Potato::Pointer::ControllerPtr<Renderer>;
 

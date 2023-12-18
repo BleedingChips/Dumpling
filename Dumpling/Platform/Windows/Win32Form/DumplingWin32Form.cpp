@@ -11,28 +11,27 @@ import PotatoIR;
 namespace Dumpling::Win32
 {
 
-	auto Win32Style::Create(wchar_t const* class_name, std::pmr::memory_resource* resource)
+	auto Style::Create(wchar_t const* class_name, std::pmr::memory_resource* resource)
 		-> Ptr
 	{
 		if(resource != nullptr && class_name != nullptr)
 		{
-			const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , &Win32Style::WndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, class_name, NULL };
+			const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , &Style::WndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, class_name, NULL };
 			ATOM res = RegisterClassExW(&static_class);
 			if(res != 0)
 			{
 				std::wstring_view name{ class_name };
-				Potato::IR::Layout layout = Potato::IR::Layout::Get<Win32Style>();
+				Potato::IR::Layout layout = Potato::IR::Layout::Get<Style>();
 				Potato::IR::Layout str_layout = Potato::IR::Layout::GetArray<wchar_t>(name.size() + 1);
 				auto offset = Potato::IR::InsertLayoutCPP(layout, str_layout);
 				Potato::IR::FixLayoutCPP(layout);
-				assert(layout.Align == alignof(Win32Style));
 
 				auto record = Potato::IR::MemoryResourceRecord::Allocate(resource, layout);
 
 				if(record)
 				{
 					Ptr ptr =
-						new (record.Get()) Win32Style{
+						new (record.Get()) Style{
 							record,
 							record.Cast<std::byte>() + offset,
 							name
@@ -47,25 +46,25 @@ namespace Dumpling::Win32
 		return {};
 	}
 
-	Win32Style::Win32Style(Potato::IR::MemoryResourceRecord record, std::byte* offset, std::wstring_view class_type_view)
+	Style::Style(Potato::IR::MemoryResourceRecord record, std::byte* offset, std::wstring_view class_type_view)
 		: resource_record(record), class_type(reinterpret_cast<wchar_t*>(offset))
 	{
 		std::memcpy(offset, class_type_view.data(), sizeof(wchar_t) * (class_type_view.size() + 1));
 	}
 
-	Win32Style::~Win32Style()
+	Style::~Style()
 	{
 		UnregisterClassW(class_type, GetModuleHandle(0));
 	}
 
-	void Win32Style::Release()
+	void Style::Release()
 	{
 		auto record = resource_record;
-		this->~Win32Style();
+		this->~Style();
 		record.Deallocate();
 	}
 	
-	LRESULT CALLBACK Win32Style::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Style::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		assert(hWnd != nullptr);
 		switch (msg)
@@ -73,13 +72,13 @@ namespace Dumpling::Win32
 		case WM_DESTROY:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Win32Form* ptr = reinterpret_cast<Win32Form*>(data);
+			Form* ptr = reinterpret_cast<Form*>(data);
 			if (ptr != nullptr)
 			{
 				{
 					std::lock_guard lg(ptr->mutex);
-					assert( ptr->status == Win32Form::Status::Opened || ptr->status == Win32Form::Status::Hidden);
-					ptr->status = Win32Form::Status::Closed;
+					assert( ptr->status == Form::Status::Opened || ptr->status == Form::Status::Hidden);
+					ptr->status = Form::Status::Closed;
 				}
 				ptr->SubViewerRef();
 			}
@@ -90,7 +89,7 @@ namespace Dumpling::Win32
 		default:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Win32Form* ptr = reinterpret_cast<Win32Form*>(data);
+			Form* ptr = reinterpret_cast<Form*>(data);
 			if (ptr != nullptr)
 			{
 				std::shared_lock sl(ptr->mutex);
@@ -105,12 +104,12 @@ namespace Dumpling::Win32
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 
-	void Win32Form::ControllerRelease()
+	void Form::ControllerRelease()
 	{
 		CloseWindows();
 	}
 
-	void Win32Form::CloseWindows()
+	void Form::CloseWindows()
 	{
 		{
 			std::shared_lock lg(mutex);
@@ -126,15 +125,15 @@ namespace Dumpling::Win32
 		}
 	}
 
-	Win32Form::~Win32Form()
+	Form::~Form()
 	{
 		assert(!window_thread.joinable());
 	}
 
-	Win32Form::Win32Form(
-		Win32Style::Ptr style,
-		Win32Renderer::Ptr renderer,
-		Win32FormEventChannel::Ptr event_channel,
+	Form::Form(
+		Style::Ptr style,
+		Renderer::Ptr renderer,
+		FormEventChannel::Ptr event_channel,
 		Potato::IR::MemoryResourceRecord record
 	)
 		: resource_record(record), style(std::move(style)), renderer(std::move(renderer)), event_channel(std::move(event_channel))
@@ -142,35 +141,35 @@ namespace Dumpling::Win32
 		assert(this->style);
 	}
 
-	void Win32Form::ViewerRelease()
+	void Form::ViewerRelease()
 	{
 		auto res = resource_record;
 		assert(res);
-		this->~Win32Form();
+		this->~Form();
 		res.Deallocate();
 	}
 
-	HWND Win32Form::GetWindowHandle() const
+	HWND Form::GetWindowHandle() const
 	{
 		std::shared_lock sl(mutex);
 		return window_handle;
 	}
 
-	auto Win32Form::CreateWin32Form(
-		Win32Style::Ptr style,
-		Win32Setting const& setting,
-		Win32Renderer::Ptr renderer,
-		Win32FormEventChannel::Ptr event_channel,
+	auto Form::Create(
+		Style::Ptr style,
+		Setting const& setting,
+		Renderer::Ptr renderer,
+		FormEventChannel::Ptr event_channel,
 		std::pmr::memory_resource* resource
 		)
 		-> Ptr
 	{
 		if(style)
 		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<Win32Form>(resource);
+			auto record = Potato::IR::MemoryResourceRecord::Allocate<Form>(resource);
 			if(record)
 			{
-				Win32Form::Ptr ptr { new (record.Get()) Win32Form{
+				Form::Ptr ptr { new (record.Get()) Form{
 					std::move(style), std::move(renderer), std::move(event_channel), record
 				}};
 
@@ -243,7 +242,7 @@ namespace Dumpling::Win32
 		return {};
 	}
 
-	auto Win32Form::GetStatus() const
+	auto Form::GetStatus() const
 		-> Status
 	{
 		std::shared_lock sl(mutex);
