@@ -8,14 +8,14 @@ int main()
 {
 
 	{
-		auto form_style = Win32::Win32Style::Create(L"Fuck1");
+		auto form_style = Win32::Style::Create(L"Fuck1");
 
 
-		auto form = Win32::Win32Form::CreateWin32Form(form_style, {}, {}, {});
+		auto form = Win32::Form::Create(form_style, {}, {}, {});
 
 		while(true)
 		{
-			if(form->GetStatus() == Win32::Win32Form::Status::Closed)
+			if(form->GetStatus() == Win32::Form::Status::Closed)
 			{
 				break;
 			}else

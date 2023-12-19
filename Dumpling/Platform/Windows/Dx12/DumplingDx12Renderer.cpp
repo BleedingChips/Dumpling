@@ -100,15 +100,15 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
-	auto Renderer::Create(CommandQueue::Ptr queue, Context::Ptr context, std::pmr::memory_resource* resource) -> Ptr
+	auto RendererWrapper::Create(CommandQueue::Ptr queue, Context::Ptr context, std::pmr::memory_resource* resource) -> Ptr
 	{
 		if(queue && context)
 		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<Renderer>(resource);
+			auto record = Potato::IR::MemoryResourceRecord::Allocate<RendererWrapper>(resource);
 			if(record)
 			{
 				Ptr ptr {
-					new (record.Get()) Renderer{}
+					new (record.Get()) RendererWrapper{}
 				};
 				ptr->record = record;
 				ptr->context = std::move(context);
@@ -119,31 +119,31 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	void Renderer::OnInit(HWND hwnd)
+	void RendererWrapper::OnInit(HWND hwnd)
 	{
 		DXGI_SWAP_CHAIN_DESC desc{
 		};
 	}
 
-	void Renderer::OnRelease(HWND)
+	void RendererWrapper::OnRelease(HWND)
 	{
 		
 	}
 
-	void Renderer::OnUpdate()
+	void RendererWrapper::OnUpdate()
 	{
 		
 	}
 
-	void Renderer::ControllerRelease()
+	void RendererWrapper::ControllerRelease()
 	{
 		
 	}
 
-	void Renderer::ViewerRelease()
+	void RendererWrapper::ViewerRelease()
 	{
 		auto re = record;
-		this->~Renderer();
+		this->~RendererWrapper();
 		re.Deallocate();
 	}
 

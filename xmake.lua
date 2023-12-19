@@ -1,14 +1,15 @@
 add_rules("mode.debug", "mode.release")
 set_languages("cxxlatest")
 
+if os.scriptdir() == os.projectdir() then 
+    includes("../Potato/")
+end
+
+includes("Dumpling/Interface/")
 
 if is_plat("windows") then
     add_requires("imgui", {configs={win32=true, dx12=true}})
     includes("Dumpling/Platform/Windows/")
-end
-
-if os.scriptdir() == os.projectdir() then 
-    includes("../Potato/")
 end
 
 target("Dumpling")
@@ -16,9 +17,10 @@ target("Dumpling")
     add_files("Dumpling/*.cpp")
     add_files("Dumpling/*.ixx")
     if is_plat("windows") then
-        add_deps("Dx12Renderer")
+        add_deps("DumplingDx12")
     end
     add_deps("Potato")
+    add_deps("DumplingInterface")
     add_packages("imgui")
 target_end()
 

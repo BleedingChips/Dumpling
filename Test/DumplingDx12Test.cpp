@@ -15,9 +15,6 @@ int main()
 	{
 		auto form_style = Win32::Style::Create(L"Fuck1");
 
-
-		
-
 		auto con = Dx12::Context::Create();
 
 		auto ada = con->EnumAdapter(0);
@@ -26,7 +23,7 @@ int main()
 
 		auto queue = decive->CreateCommandQueue();
 
-		auto render = Dx12::Renderer::Create(queue, con);
+		auto render = Dx12::RendererWrapper::Create(queue, con);
 
 		auto form = Win32::Form::Create(form_style, {}, render.GetPointer(), {});
 

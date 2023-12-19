@@ -18,7 +18,7 @@ export namespace Dumpling::Dx12
 
 	using AdapterPtr = ComPtr<IDXGIAdapter1>;
 
-	export struct Renderer;
+	export struct RendererWrapper;
 
 	struct Context : public Potato::Pointer::DefaultIntrusiveInterface
 	{
@@ -38,7 +38,7 @@ export namespace Dumpling::Dx12
 
 		virtual void Release() override;
 
-		friend struct Renderer;
+		friend struct RendererWrapper;
 	};
 
 	export struct Device;
@@ -62,9 +62,9 @@ export namespace Dumpling::Dx12
 		friend struct Device;
 	};
 
-	export struct Renderer : public Win32::Renderer, public Potato::Pointer::DefaultControllerViewerInterface
+	export struct RendererWrapper : public Win32::RendererWrapper, public Potato::Pointer::DefaultControllerViewerInterface
 	{
-		using Ptr = Potato::Pointer::ControllerPtr<Renderer>;
+		using Ptr = Potato::Pointer::ControllerPtr<RendererWrapper>;
 
 		static auto Create(CommandQueue::Ptr queue, Context::Ptr context, std::pmr::memory_resource* = std::pmr::get_default_resource()) -> Ptr;
 
