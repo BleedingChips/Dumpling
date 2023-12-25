@@ -18,12 +18,12 @@ export namespace Dumpling::Dx12
 
 	using AdapterPtr = ComPtr<IDXGIAdapter1>;
 
-	export struct RendererWrapper;
+	export struct SwapChain;
 
-	struct Context : public Potato::Pointer::DefaultIntrusiveInterface
+	struct Factory : public Potato::Pointer::DefaultIntrusiveInterface
 	{
 
-		using Ptr = Potato::Pointer::IntrusivePtr<Context>;
+		using Ptr = Potato::Pointer::IntrusivePtr<Factory>;
 
 		AdapterPtr EnumAdapter(std::size_t index);
 
@@ -31,14 +31,14 @@ export namespace Dumpling::Dx12
 
 	protected:
 
-		Context(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory7> factory);
+		Factory(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory7> factory);
 
 		Potato::IR::MemoryResourceRecord record;
 		ComPtr<IDXGIFactory7> dxgi_factory;
 
 		virtual void Release() override;
 
-		friend struct RendererWrapper;
+		friend struct SwapChain;
 	};
 
 	export struct Device;
@@ -60,11 +60,12 @@ export namespace Dumpling::Dx12
 		ComPtr<ID3D12CommandQueue> command_queue;
 
 		friend struct Device;
+		friend struct SwapChain;
 	};
 
-	export struct RendererWrapper : public Win32::RendererWrapper, public Potato::Pointer::DefaultControllerViewerInterface
+	export struct SwapChain : public Win32::SwapChain, public Potato::Pointer::DefaultControllerViewerInterface
 	{
-		using Ptr = Potato::Pointer::ControllerPtr<RendererWrapper>;
+		using Ptr = Potato::Pointer::ControllerPtr<SwapChain>;
 
 		static auto Create(CommandQueue::Ptr queue, Context::Ptr context, std::pmr::memory_resource* = std::pmr::get_default_resource()) -> Ptr;
 
@@ -81,6 +82,7 @@ export namespace Dumpling::Dx12
 		Potato::IR::MemoryResourceRecord record;
 		CommandQueue::Ptr queue;
 		Context::Ptr context;
+		ComPtr<IDXGISwapChain1> swap_chain;
 	};
 
 	export struct Device : public Potato::Pointer::DefaultIntrusiveInterface

@@ -11,7 +11,7 @@ namespace Dumpling::Dx12
 {
 
 
-	auto Context::Create(std::pmr::memory_resource* resource)
+	auto Factory::Create(std::pmr::memory_resource* resource)
 		-> Ptr
 	{
 		if(resource != nullptr)
@@ -37,11 +37,11 @@ namespace Dumpling::Dx12
 					}
 				}
 #endif
-				auto record = Potato::IR::MemoryResourceRecord::Allocate<Context>(resource);
+				auto record = Potato::IR::MemoryResourceRecord::Allocate<Factory>(resource);
 				if(record)
 				{
-					Context::Ptr cptr {
-						new (record.Get()) Context {record, std::move(rptr)}
+					Factory::Ptr cptr {
+						new (record.Get()) Factory {record, std::move(rptr)}
 					};
 					return cptr;
 				}
@@ -51,20 +51,20 @@ namespace Dumpling::Dx12
 	}
 
 
-	Context::Context(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory7> factory)
+	Factory::Factory(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory7> factory)
 		: record(record), dxgi_factory(std::move(factory))
 	{
 		assert(record && dxgi_factory);
 	}
 
-	void Context::Release()
+	void Factory::Release()
 	{
 		auto res = record;
-		this->~Context();
+		this->~Factory();
 		res.Deallocate();
 	}
 
-	AdapterPtr Context::EnumAdapter(std::size_t index)
+	AdapterPtr Factory::EnumAdapter(std::size_t index)
 	{
 		assert(dxgi_factory);
 		AdapterPtr p_adapter = nullptr;
@@ -100,15 +100,15 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
-	auto RendererWrapper::Create(CommandQueue::Ptr queue, Context::Ptr context, std::pmr::memory_resource* resource) -> Ptr
+	auto SwapChain::Create(CommandQueue::Ptr queue, Factory::Ptr context, std::pmr::memory_resource* resource) -> Ptr
 	{
 		if(queue && context)
 		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<RendererWrapper>(resource);
+			auto record = Potato::IR::MemoryResourceRecord::Allocate<SwapChain>(resource);
 			if(record)
 			{
 				Ptr ptr {
-					new (record.Get()) RendererWrapper{}
+					new (record.Get()) SwapChain{}
 				};
 				ptr->record = record;
 				ptr->context = std::move(context);
@@ -119,31 +119,44 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	void RendererWrapper::OnInit(HWND hwnd)
+	void SwapChain::OnInit(HWND hwnd)
 	{
-		DXGI_SWAP_CHAIN_DESC desc{
-		};
+
+		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+		swapChainDesc.BufferCount = 2;
+		swapChainDesc.Width = 1024;
+		swapChainDesc.Height = 768;
+		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.SampleDesc.Count = 1;
+
+		ComPtr<IDXGISwapChain1> swapChain;
+		auto re = context->dxgi_factory->CreateSwapChainForHwnd(
+			queue->command_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
+			swapChain.GetAddressOf()
+		);
 	}
 
-	void RendererWrapper::OnRelease(HWND)
+	void SwapChain::OnRelease(HWND)
 	{
 		
 	}
 
-	void RendererWrapper::OnUpdate()
+	void SwapChain::OnUpdate()
 	{
 		
 	}
 
-	void RendererWrapper::ControllerRelease()
+	void SwapChain::ControllerRelease()
 	{
 		
 	}
 
-	void RendererWrapper::ViewerRelease()
+	void SwapChain::ViewerRelease()
 	{
 		auto re = record;
-		this->~RendererWrapper();
+		this->~SwapChain();
 		re.Deallocate();
 	}
 
