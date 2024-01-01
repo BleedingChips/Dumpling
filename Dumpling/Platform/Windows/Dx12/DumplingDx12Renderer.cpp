@@ -11,71 +11,154 @@ namespace Dumpling::Dx12
 {
 
 
-	auto Factory::Create(std::pmr::memory_resource* resource)
-		-> Ptr
+	void InitDebugLayer()
 	{
-		if(resource != nullptr)
 		{
-			ComPtr<IDXGIFactory7> rptr;
-
-			UINT Flags = 0;
-
-#ifndef NDEBUG
-			Flags |= DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-			HRESULT re = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
-			if(SUCCEEDED(re))
+			ComPtr<ID3D12Debug> Debug;
+			D3D12GetDebugInterface(__uuidof(decltype(Debug)::InterfaceType), reinterpret_cast<void**>(Debug.GetAddressOf()));
+			if (Debug)
 			{
-#ifndef NDEBUG
+				Debug->EnableDebugLayer();
+			}
+		}
+	}
+
+	void SwapChain::OnReInit(HWND hwnd, std::size_t size_x, std::size_t size_y)
+	{
+		if(factory && command_queue)
+		{
+			swap_chain.Reset();
+			ComPtr<IDXGIFactory2> new_factor;
+			factory->QueryInterface(__uuidof(decltype(new_factor)::InterfaceType), reinterpret_cast<void**>(new_factor.GetAddressOf()));
+			if(new_factor)
+			{
+
+				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+				swapChainDesc.BufferCount = Setting.buffer_count;
+				swapChainDesc.Width = size_x;
+				swapChainDesc.Height = size_y;
+				swapChainDesc.Format = Setting.format;
+				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+				swapChainDesc.SampleDesc.Count = 1;
+
+				ComPtr<IDXGISwapChain1> ptr;
+				auto re = new_factor->CreateSwapChainForHwnd(command_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr, ptr.GetAddressOf());
+				if(SUCCEEDED(re))
 				{
-					ComPtr<ID3D12Debug> Debug;
-					D3D12GetDebugInterface(__uuidof(decltype(Debug)::InterfaceType), reinterpret_cast<void**>(Debug.GetAddressOf()));
-					if (Debug)
-					{
-						Debug->EnableDebugLayer();
-					}
+					swap_chain = ptr;
 				}
-#endif
-				auto record = Potato::IR::MemoryResourceRecord::Allocate<Factory>(resource);
-				if(record)
+			}
+		}
+	}
+
+	auto HardwareDevice::Create(bool EnableDebug)
+		-> HardwareDevice
+	{
+		ComPtr<IDXGIFactory2> rptr;
+		UINT Flags = 0;
+		if(EnableDebug)
+		{
+			Flags |= DXGI_CREATE_FACTORY_DEBUG;
+		}
+
+		HRESULT re = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
+		if(SUCCEEDED(re))
+		{
+			return HardwareDevice{std::move(rptr)};
+		}
+		return {};
+	}
+
+	Adapter HardwareDevice::EnumAdapter(std::size_t index)
+	{
+		if(ptr)
+		{
+			ComPtr<IDXGIFactory1> fptr;
+			auto re = ptr->QueryInterface(__uuidof(decltype(fptr)::InterfaceType), reinterpret_cast<void**>(fptr.GetAddressOf()));
+			if(SUCCEEDED(re) && fptr)
+			{
+				ComPtr<IDXGIAdapter1> r_ptr;
+				auto re = fptr->EnumAdapters1(index, r_ptr.GetAddressOf());
+				if(SUCCEEDED(re))
 				{
-					Factory::Ptr cptr {
-						new (record.Get()) Factory {record, std::move(rptr)}
-					};
-					return cptr;
+					return std::move(r_ptr);
 				}
 			}
 		}
 		return {};
 	}
 
-
-	Factory::Factory(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory7> factory)
-		: record(record), dxgi_factory(std::move(factory))
+	SwapChain::Ptr HardwareDevice::CreateSwapChain(SwapChinSetting setting, Renderer renderer, std::pmr::memory_resource* resource)
 	{
-		assert(record && dxgi_factory);
-	}
-
-	void Factory::Release()
-	{
-		auto res = record;
-		this->~Factory();
-		res.Deallocate();
-	}
-
-	AdapterPtr Factory::EnumAdapter(std::size_t index)
-	{
-		assert(dxgi_factory);
-		AdapterPtr p_adapter = nullptr;
-		auto re = dxgi_factory->EnumAdapters1(index, p_adapter.GetAddressOf());
-		if(SUCCEEDED(re))
+		if (resource != nullptr && ptr && renderer)
 		{
-			return p_adapter;
+			auto record = Potato::IR::MemoryResourceRecord::Allocate<SwapChain>(resource);
+			if (record)
+			{
+				return new (record.Get()) SwapChain{ record, setting, ptr, renderer.ptr };
+			}
 		}
 		return {};
 	}
 
+	Renderer SoftwareDevice::CreateRenderer()
+	{
+		if(ptr)
+		{
+			D3D12_COMMAND_QUEUE_DESC desc{
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+				0
+			};
+
+			ComPtr<ID3D12CommandQueue> que_ptr;
+
+			auto re = ptr->CreateCommandQueue(
+				&desc, __uuidof(decltype(que_ptr)::InterfaceType), reinterpret_cast<void**>(que_ptr.GetAddressOf())
+			);
+			if(SUCCEEDED(re))
+			{
+				return {std::move(que_ptr)};
+			}
+		}
+		return {};
+	}
+
+	SoftwareDevice SoftwareDevice::Create(Adapter adapter)
+	{
+		if(adapter)
+		{
+
+			auto feature_level = std::array{
+				D3D_FEATURE_LEVEL_12_2,
+				D3D_FEATURE_LEVEL_12_1,
+				D3D_FEATURE_LEVEL_12_0
+			};
+
+			ComPtr<ID3D12Device> dev_ptr;
+
+			for(auto ite : feature_level)
+			{
+				auto re = D3D12CreateDevice(adapter.Get(), ite, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
+				if(SUCCEEDED(re))
+				{
+					return {std::move(dev_ptr)};
+				}
+			}
+		}
+		return {};
+	}
+
+	void SwapChain::Release()
+	{
+		auto re = record;
+		this->~SwapChain();
+		re.Deallocate();
+	}
+
+	/*
 	auto CommandQueue::Create(Potato::Pointer::IntrusivePtr<Device> dev, ComPtr<ID3D12CommandQueue> command_queue, std::pmr::memory_resource* resource) -> Ptr
 	{
 		if (dev && command_queue)
@@ -199,6 +282,7 @@ namespace Dumpling::Dx12
 					return p;
 				}
 			}
+			//dev_ptr->
 		}
 		return {};
 	}
@@ -209,4 +293,5 @@ namespace Dumpling::Dx12
 		this->~Device();
 		re.Deallocate();
 	}
+	*/
 }

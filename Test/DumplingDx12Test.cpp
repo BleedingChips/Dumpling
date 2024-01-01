@@ -12,11 +12,38 @@ using namespace Dumpling;
 int main()
 {
 
+	Dx12::InitDebugLayer();
+
 	{
+		
+
+		auto con = Dx12::HardwareDevice::Create();
+
+		auto ada = con.EnumAdapter(0);
+
+		auto sd = Dx12::SoftwareDevice::Create(ada);
+
+		auto render = sd.CreateRenderer();
+
+		auto swap = con.CreateSwapChain({}, render);
+
 		auto form_style = Win32::Style::Create(L"Fuck1");
 
-		auto con = Dx12::Context::Create();
+		auto form = Win32::Form::Create(form_style, {}, swap, {});
 
+		while (true)
+		{
+			if (form->GetStatus() == Win32::Form::Status::Closed)
+			{
+				break;
+			}
+			else
+				std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+		}
+
+		volatile int i = 0;
+
+		/*
 		auto ada = con->EnumAdapter(0);
 
 		auto decive = Dx12::Device::Create(ada);
@@ -26,16 +53,11 @@ int main()
 		auto render = Dx12::RendererWrapper::Create(queue, con);
 
 		auto form = Win32::Form::Create(form_style, {}, render.GetPointer(), {});
+		*/
 
-
-		while(true)
-		{
-			if(form->GetStatus() == Win32::Form::Status::Closed)
-			{
-				break;
-			}else
-				std::this_thread::sleep_for(std::chrono::milliseconds{1});
-		}
+		/*
+		
+		*/
 	}
 	
 
