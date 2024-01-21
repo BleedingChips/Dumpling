@@ -12,7 +12,7 @@ import DumplingFormInterface;
 import DumplingWin32Form;
 
 
-
+/*
 export namespace Dumpling::Dx12
 {
 	using Win32::ComPtr;
@@ -248,4 +248,4 @@ export namespace Dumpling::Dx12
 
 	
 
-}
+//}

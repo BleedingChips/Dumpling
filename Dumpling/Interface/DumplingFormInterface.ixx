@@ -19,11 +19,19 @@ export namespace Dumpling
 		void SubRef(PtrT* ptr) const { return ptr->FormSubRef(); }
 	};
 
-	struct FormEventChannel
+
+	/*
+	struct FormInterface
 	{
-		using Ptr = Potato::Pointer::IntrusivePtr<FormEventChannel, FormPointerWrapperT>;
+		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, FormPointerWrapperT>;
+
+
 		virtual void FormAddRef() const = 0;
 		virtual void FormSubRef() const = 0;
 	};
+	*/
+
+
+
 
 }

@@ -1,3 +1,6 @@
+import std;
+import PotatoTaskSystem;
+
 import DumplingForm;
 import DumplingWin32Form;
 import std;
@@ -7,23 +10,13 @@ using namespace Dumpling;
 int main()
 {
 
-	{
-		auto form_style = Win32::Style::Create(L"Fuck1");
+	auto style = Dumpling::Win32::FormStyle::CreateDefaultGameplayStyle();
+	auto form = Win32::Form::Create();
 
+	Potato::Task::TaskContext context;
+	form->Commit(context, std::this_thread::get_id(), style, {});
 
-		auto form = Win32::Form::Create(form_style, {}, {}, {});
-
-		while(true)
-		{
-			if(form->GetStatus() == Win32::Form::Status::Closed)
-			{
-				break;
-			}else
-				std::this_thread::sleep_for(std::chrono::milliseconds{1});
-		}
-	}
-	
-
+	context.ProcessTask({});
 
 	return 0;
 }

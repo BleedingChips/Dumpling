@@ -7,6 +7,10 @@ import std;
 import PotatoMisc;
 import PotatoPointer;
 
+#ifdef _WIN32
+import DumplingWin32;
+#endif
+
 export namespace Dumpling
 {
 

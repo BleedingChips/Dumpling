@@ -31,6 +31,8 @@ int main()
 
 		auto form = Win32::Form::Create(form_style, {}, swap, {});
 
+		form->ShowWindow();
+
 		while (true)
 		{
 			if (form->GetStatus() == Win32::Form::Status::Closed)

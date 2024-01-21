@@ -5,8 +5,10 @@ module;
 
 #include <dxgi1_6.h>
 
+
 module DumplingDx12Renderer;
 
+/*
 namespace Dumpling::Dx12
 {
 
@@ -294,4 +296,4 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 	*/
-}
+//}
