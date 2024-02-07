@@ -2,10 +2,6 @@ module;
 
 module DumplingForm;
 
-#ifdef _WIN32
-import DumplingWin32Form;
-#endif
-
 namespace Dumpling
 {
 

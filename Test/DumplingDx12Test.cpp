@@ -1,7 +1,7 @@
 #include "d3d12.h"
 #include "dxgi1_6.h"
 import DumplingForm;
-import DumplingWin32Form;
+import DumplingWindowsForm;
 import DumplingDx12Renderer;
 import std;
 
@@ -12,6 +12,7 @@ using namespace Dumpling;
 int main()
 {
 
+	/*
 	Dx12::InitDebugLayer();
 
 	{
@@ -60,7 +61,7 @@ int main()
 		/*
 		
 		*/
-	}
+	//}
 	
 
 

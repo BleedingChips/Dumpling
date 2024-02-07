@@ -9,7 +9,7 @@ import std;
 import PotatoPointer;
 import PotatoIR;
 import DumplingFormInterface;
-import DumplingWin32Form;
+import DumplingWindowsForm;
 
 
 /*

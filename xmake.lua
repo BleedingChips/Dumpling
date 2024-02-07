@@ -17,6 +17,7 @@ target("Dumpling")
     add_files("Dumpling/*.cpp")
     add_files("Dumpling/*.ixx")
     if is_plat("windows") then
+        add_deps("DumplingWindows")
         add_deps("DumplingDx12")
     end
     add_deps("Potato")
