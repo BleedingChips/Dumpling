@@ -2,6 +2,7 @@ import std;
 import PotatoTaskSystem;
 
 import DumplingForm;
+import DumplingFormInterface;
 import DumplingWindowsForm;
 import std;
 
@@ -12,7 +13,10 @@ int main()
 
 	{
 		auto style = Dumpling::Windows::FormStyle::CreateDefaultGameplayStyle();
-		auto form = Windows::Form::Create();
+
+		Dumpling::FormEventResponder resp;
+
+		auto form = Windows::EventResponderForm::Create(&resp);
 
 		Potato::Task::TaskContext context;
 		form->Commit(context, std::this_thread::get_id(), style, {});

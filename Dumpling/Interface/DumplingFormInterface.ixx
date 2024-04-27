@@ -10,14 +10,50 @@ import PotatoPointer;
 export namespace Dumpling
 {
 
-	
-	struct FormPointerWrapperT
+	struct FormEvent
 	{
-		template<typename PtrT>
-		void AddRef(PtrT* ptr) const { return ptr->FormAddRef(); }
-		template<typename PtrT>
-		void SubRef(PtrT* ptr) const { return ptr->FormSubRef(); }
+		
 	};
+
+	struct FormEventRespond
+	{
+		
+	};
+
+	struct FormInterface
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormInterfaceRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormInterfaceRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
+		virtual void AddFormInterfaceRef() const = 0;
+		virtual void SubFormInterfaceRef() const = 0;
+	};
+
+	struct FormEventResponder
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormEventResponderRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormEventResponderRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<FormEventResponder, Wrapper>;
+		virtual std::optional<FormEventRespond> Respond(FormInterface const& interface, FormEvent event) { return std::nullopt; }
+
+	protected:
+
+		virtual void AddFormEventResponderRef() const {};
+		virtual void SubFormEventResponderRef() const {};
+
+	};
+
+	
+
+
 
 
 	/*

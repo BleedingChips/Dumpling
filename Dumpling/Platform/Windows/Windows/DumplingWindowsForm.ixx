@@ -52,8 +52,9 @@ export namespace Dumpling::Windows
 		std::u8string_view task_name = u8"Form Task";
 	};
 
-	struct FormInterface : protected Potato::Task::Task
+	struct Form : protected Potato::Task::Task, protected FormInterface
 	{
+
 		enum class Status
 		{
 			INVALID,
@@ -78,12 +79,14 @@ export namespace Dumpling::Windows
 			return status;
 		}
 
+		using Ptr = Potato::Pointer::IntrusivePtr<Form, FormInterface::Wrapper>;
+
 	protected:
 
-		FormInterface() {}
-		virtual ~FormInterface() = default;
+		Form() {}
+		virtual ~Form() = default;
 
-		virtual void operator()(Potato::Task::ExecuteStatus& status) override;
+		virtual void TaskExecute(Potato::Task::ExecuteStatus& status) override;
 
 		mutable std::shared_mutex mutex;
 		HWND hwnd = nullptr;
@@ -91,37 +94,39 @@ export namespace Dumpling::Windows
 		FormSetting setting;
 		FormStyle::Ptr style;
 
-		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface>;
-
-		virtual void AddRef() const = 0;
-		virtual void SubRef() const = 0;
+		virtual void AddTaskRef() const override { AddFormInterfaceRef(); }
+		virtual void SubTaskRef() const override { SubFormInterfaceRef(); }
 
 		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return DefWindowProcW(hWnd, msg, wParam, lParam); }
 
 		static LRESULT CALLBACK DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 		friend struct FormStyle;
+		friend struct FormInterface::Wrapper;
 	};
 
 	
-	struct Form : public FormInterface, public Potato::Pointer::DefaultIntrusiveInterface
+	struct EventResponderForm : public Form, public Potato::Pointer::DefaultIntrusiveInterface
 	{
-		using Ptr = Potato::Pointer::IntrusivePtr<Form>;
+		using Ptr = Form::Ptr;
 
-		static Ptr Create(std::pmr::memory_resource* res = std::pmr::get_default_resource());
+		static Ptr Create(FormEventResponder::Ptr ref, std::pmr::memory_resource* res = std::pmr::get_default_resource());
 
 	protected:
 
-		Form(Potato::IR::MemoryResourceRecord record)
-			: record(record)
+		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+		EventResponderForm(FormEventResponder::Ptr res, Potato::IR::MemoryResourceRecord record)
+			: res(std::move(res)), record(record)
 		{
 			
 		}
 
 		Potato::IR::MemoryResourceRecord record;
+		FormEventResponder::Ptr res;
 
-		virtual void AddRef() const override{ DefaultIntrusiveInterface::AddRef(); }
-		virtual void SubRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		virtual void AddFormInterfaceRef() const override{ DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubFormInterfaceRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		virtual void Release() override;
 
 		friend struct Potato::Pointer::DefaultIntrusiveWrapper;

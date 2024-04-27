@@ -3,6 +3,7 @@ set_languages("cxxlatest")
 
 if os.scriptdir() == os.projectdir() then 
     includes("../Potato/")
+    includes("../Noodles/")
 end
 
 includes("Dumpling/Interface/")

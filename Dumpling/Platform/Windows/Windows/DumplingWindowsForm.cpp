@@ -51,7 +51,7 @@ namespace Dumpling::Windows
 		else
 		{
 			ptr.Reset();
-			const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , &FormInterface::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, GameplayStyle::class_name, NULL };
+			const WNDCLASSEXW static_class = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW , &Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, GameplayStyle::class_name, NULL };
 
 			ATOM res = RegisterClassExW(&static_class);
 
@@ -72,7 +72,7 @@ namespace Dumpling::Windows
 	}
 
 
-	LRESULT CALLBACK FormInterface::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Form::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		assert(hWnd != nullptr);
 		switch (msg)
@@ -81,7 +81,7 @@ namespace Dumpling::Windows
 			{
 				CREATESTRUCTA* Struct = reinterpret_cast<CREATESTRUCTA*>(lParam);
 				assert(Struct != nullptr);
-				FormInterface* inter = static_cast<FormInterface*>(Struct->lpCreateParams);
+				Form* inter = static_cast<Form*>(Struct->lpCreateParams);
 				assert(inter != nullptr);
 				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
 				{
@@ -94,14 +94,14 @@ namespace Dumpling::Windows
 		case WM_NCDESTROY:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			FormInterface* ptr = reinterpret_cast<FormInterface*>(data);
+			Form* ptr = reinterpret_cast<Form*>(data);
 			if (ptr != nullptr)
 			{
 				auto re = ptr->HandleEvent(hWnd, msg, wParam, lParam);
 				{
 					std::lock_guard lg(ptr->mutex);
-					assert(ptr->status == FormInterface::Status::NORMAL);
-					ptr->status = FormInterface::Status::CLOSED;
+					assert(ptr->status == Form::Status::NORMAL);
+					ptr->status = Form::Status::CLOSED;
 					ptr->hwnd = nullptr;
 				}
 				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
@@ -112,7 +112,7 @@ namespace Dumpling::Windows
 		default:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			FormInterface* ptr = reinterpret_cast<FormInterface*>(data);
+			Form* ptr = reinterpret_cast<Form*>(data);
 			if (ptr != nullptr)
 			{
 				return ptr->HandleEvent(hWnd, msg, wParam, lParam);
@@ -123,7 +123,7 @@ namespace Dumpling::Windows
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 
-	bool FormInterface::Commit(
+	bool Form::Commit(
 		Potato::Task::TaskContext& context,
 		std::thread::id thread_id,
 		FormStyle::Ptr init_style,
@@ -146,12 +146,14 @@ namespace Dumpling::Windows
 					real_count = std::numeric_limits<std::size_t>::max();
 				Potato::Task::TaskProperty task_property
 				{
-					property.priority,
 					property.task_name,
 					{0, real_count},
-					Potato::Task::Category::THREAD_TASK,
-					0,
-					thread_id
+					{
+						property.priority,
+						Potato::Task::Category::THREAD_TASK,
+						0,
+						thread_id
+					}
 				};
 				if(context.CommitTask(this, task_property))
 				{
@@ -164,7 +166,7 @@ namespace Dumpling::Windows
 		return false;
 	}
 
-	void FormInterface::operator()(Potato::Task::ExecuteStatus& task_status)
+	void Form::TaskExecute(Potato::Task::ExecuteStatus& task_status)
 	{
 		auto handle = reinterpret_cast<HWND>(task_status.task_property.user_data[0]);
 		if(handle == nullptr)
@@ -232,20 +234,37 @@ namespace Dumpling::Windows
 		}
 	}
 
-	Form::Ptr Form::Create(std::pmr::memory_resource* res)
+	Form::Ptr EventResponderForm::Create(FormEventResponder::Ptr ref, std::pmr::memory_resource* res)
 	{
-		auto re = Potato::IR::MemoryResourceRecord::Allocate<Form>(res);
-		if (re)
+		if(ref)
 		{
-			return Form::Ptr{ new (re.Get()) Form{re} };
+			auto re = Potato::IR::MemoryResourceRecord::Allocate<EventResponderForm>(res);
+			if (re)
+			{
+				return Form::Ptr{ new (re.Get()) EventResponderForm{std::move(ref), re} };
+			}
 		}
+		
 		return {};
 	}
 
-	void Form::Release()
+	void EventResponderForm::Release()
 	{
 		auto re = record;
-		this->~Form();
+		this->~EventResponderForm();
 		re.Deallocate();
+	}
+
+	HRESULT EventResponderForm::HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		if(res)
+		{
+			auto p = res->Respond(*this, {});
+			if(p)
+			{
+				
+			}
+		}
+		return Form::HandleEvent(hWnd, msg, wParam, lParam);
 	}
 }
