@@ -12,14 +12,10 @@ int main()
 {
 
 	{
-		auto style = Dumpling::Windows::FormStyle::CreateDefaultGameplayStyle();
-
-		Dumpling::FormEventResponder resp;
-
-		auto form = Dumpling::Windows::EventResponderForm::Create(&resp);
+		auto form = Dumpling::CreateGameWindows();
 
 		Potato::Task::TaskContext context;
-		form->Commit(context, std::this_thread::get_id(), style, {});
+		form->CommitedMessageLoop(context, std::this_thread::get_id());
 
 		context.ProcessTaskUntillNoExitsTask({});
 	}

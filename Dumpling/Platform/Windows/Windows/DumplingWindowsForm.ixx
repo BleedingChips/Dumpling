@@ -15,24 +15,7 @@ import DumplingFormInterface;
 
 export namespace Dumpling::Windows
 {
-
-	enum class Window
-	{
-		WINDOW,
-		WINDOW_FULL_SCREEN,
-		FULL_SCREEN
-	};
-
-	struct FormSetting
-	{
-		std::size_t size_x = 1024;
-		std::size_t size_y = 768;
-		std::optional<std::size_t> offset_x;
-		std::optional<std::size_t> offset_y;
-		Window windows = Window::WINDOW;
-		wchar_t const* form_title = L"DumplingDefaultForm";
-	};
-
+	/*
 	struct FormStyle : public Potato::Pointer::DefaultStrongWeakInterface
 	{
 		using Ptr = Potato::Pointer::StrongPtr<FormStyle>;
@@ -42,11 +25,19 @@ export namespace Dumpling::Windows
 
 		virtual ~FormStyle() = default;
 		virtual wchar_t const* GetStyleName() const = 0;
-		virtual DWORD GetWSStyle(FormSetting const& setting) const = 0;
+		virtual DWORD GetWSStyle(Dumpling::FormStyle style) const = 0;
+	};
+	*/
+
+	struct FormClassStyle
+	{
+		FormClassStyle();
+		~FormClassStyle();
 	};
 
-	struct Form : protected Potato::Task::Task, protected FormInterface
+	struct Form : protected Potato::Task::Task, protected FormInterface, protected Potato::Pointer::DefaultIntrusiveInterface
 	{
+		static FormInterface::Ptr CreateGameWindows(FormProperty property, std::pmr::memory_resource* memory_resource);
 
 		enum class Status
 		{
@@ -58,13 +49,7 @@ export namespace Dumpling::Windows
 			CRASH,
 		};
 
-		bool Commit(
-			Potato::Task::TaskContext& context, 
-			std::thread::id thread_id,
-			FormStyle::Ptr style,
-			FormSetting setting,
-			FormTaskProperty property = {}
-			);
+		virtual bool CommitedMessageLoop(Potato::Task::TaskContext& context, std::thread::id require_thread_id, FormTaskProperty property) override;
 
 		Status GetStatus() const
 		{
@@ -76,53 +61,32 @@ export namespace Dumpling::Windows
 
 	protected:
 
-		Form() {}
+		Form(Potato::IR::MemoryResourceRecord record, FormProperty property)
+			: record(record), property(std::move(property)) {}
+
 		virtual ~Form() = default;
 
 		virtual void TaskExecute(Potato::Task::ExecuteStatus& status) override;
 
+		Potato::IR::MemoryResourceRecord record;
+
 		mutable std::shared_mutex mutex;
 		HWND hwnd = nullptr;
 		Status status = Status::INVALID;
-		FormSetting setting;
-		FormStyle::Ptr style;
+		FormProperty property;
 
-		virtual void AddTaskRef() const override { AddFormInterfaceRef(); }
-		virtual void SubTaskRef() const override { SubFormInterfaceRef(); }
-
-		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return DefWindowProcW(hWnd, msg, wParam, lParam); }
-
-		static LRESULT CALLBACK DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-		friend struct FormStyle;
-		friend struct FormInterface::Wrapper;
-	};
-
-	
-	struct EventResponderForm : public Form, public Potato::Pointer::DefaultIntrusiveInterface
-	{
-		using Ptr = Form::Ptr;
-
-		static Ptr Create(FormEventResponder::Ptr ref, std::pmr::memory_resource* res = std::pmr::get_default_resource());
-
-	protected:
-
-		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-		EventResponderForm(FormEventResponder::Ptr res, Potato::IR::MemoryResourceRecord record)
-			: res(std::move(res)), record(record)
-		{
-			
-		}
-
-		Potato::IR::MemoryResourceRecord record;
-		FormEventResponder::Ptr res;
-
-		virtual void AddFormInterfaceRef() const override{ DefaultIntrusiveInterface::AddRef(); }
+		virtual void AddTaskRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubTaskRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		virtual void AddFormInterfaceRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		virtual void SubFormInterfaceRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		virtual void Release() override;
 
-		friend struct Potato::Pointer::DefaultIntrusiveWrapper;
+		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+		static LRESULT CALLBACK DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+		friend struct FormClassStyle;
+		friend struct FormInterface::Wrapper;
 	};
 
 	/*

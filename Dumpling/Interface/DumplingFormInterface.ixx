@@ -25,7 +25,6 @@ export namespace Dumpling
 	{
 		Potato::Task::Priority priority = Potato::Task::Priority::Normal;
 		std::chrono::microseconds sleep_duration = std::chrono::microseconds{ 100 };
-		std::u8string_view display_name = u8"Dumpling Form Task";
 	};
 
 	struct FormInterface
@@ -39,6 +38,7 @@ export namespace Dumpling
 		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
 
 		virtual bool CommitedMessageLoop(Potato::Task::TaskContext& context, std::thread::id require_thread_id, FormTaskProperty property = {}) = 0;
+		virtual ~FormInterface() = default;
 
 	protected:
 
@@ -88,17 +88,27 @@ export namespace Dumpling
 		FixedSizeWindow,
 	};
 
-	struct FormProperty
-	{
-		FormEventResponder::Ptr responder;
-		FormRenderer::Ptr renderer;
-	};
-
 	struct FormSize
 	{
-		std::size_t x = 1024;
-		std::size_t y = 768;
+		std::size_t width = 1024;
+		std::size_t height = 768;
 	};
+
+	struct FormProperty
+	{
+		FormStyle style = FormStyle::FixedSizeWindow;
+		FormEventResponder::Ptr responder;
+		FormRenderer::Ptr renderer;
+		FormSize form_size;
+		std::u8string_view title = u8"Default Dumping Form";
+	};
+
+	struct FormInitializer : protected Potato::Task::
+	{
+		
+	};
+
+	
 	
 
 

@@ -8,10 +8,10 @@ import DumplingWindows;
 
 namespace Dumpling
 {
-	FormInterface::Ptr CreateGameWindows(FormStyle style, FormProperty property, FormSize size)
+	FormInterface::Ptr CreateGameWindows(FormProperty property, std::pmr::memory_resource* resource)
 	{
 #ifdef _WIN32
-		return Windows::EventResponderForm::Create()
+		return Windows::Form::CreateGameWindows(property, resource);
 #endif
 	}
 #ifdef _WIN32

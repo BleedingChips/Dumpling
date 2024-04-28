@@ -12,7 +12,7 @@ import DumplingFormInterface;
 export namespace Dumpling
 {
 
-	static FormInterface::Ptr CreateGameWindows(FormStyle style = FormStyle::FixedSizeWindow, FormProperty property = {}, FormSize size = {});
+	FormInterface::Ptr CreateGameWindows(FormProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 	/*
 	struct FormSetting
