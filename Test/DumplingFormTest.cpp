@@ -16,7 +16,7 @@ int main()
 
 		Dumpling::FormEventResponder resp;
 
-		auto form = Windows::EventResponderForm::Create(&resp);
+		auto form = Dumpling::Windows::EventResponderForm::Create(&resp);
 
 		Potato::Task::TaskContext context;
 		form->Commit(context, std::this_thread::get_id(), style, {});

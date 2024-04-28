@@ -7,15 +7,12 @@ import std;
 import PotatoMisc;
 import PotatoPointer;
 
-#ifdef _WIN32
-import DumplingWindows;
-#endif
+import DumplingFormInterface;
 
 export namespace Dumpling
 {
 
-	
-
+	static FormInterface::Ptr CreateGameWindows(FormStyle style = FormStyle::FixedSizeWindow, FormProperty property = {}, FormSize size = {});
 
 	/*
 	struct FormSetting

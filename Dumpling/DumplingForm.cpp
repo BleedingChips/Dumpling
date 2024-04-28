@@ -2,9 +2,18 @@ module;
 
 module DumplingForm;
 
+#ifdef _WIN32
+import DumplingWindows;
+#endif
+
 namespace Dumpling
 {
-
+	FormInterface::Ptr CreateGameWindows(FormStyle style, FormProperty property, FormSize size)
+	{
+#ifdef _WIN32
+		return Windows::EventResponderForm::Create()
+#endif
+	}
 #ifdef _WIN32
 	/*
 	Form::Ptr Form::CreateDx12Form(FormSetting setting)

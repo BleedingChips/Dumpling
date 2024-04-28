@@ -45,13 +45,6 @@ export namespace Dumpling::Windows
 		virtual DWORD GetWSStyle(FormSetting const& setting) const = 0;
 	};
 
-	struct FormTaskProperty
-	{
-		Potato::Task::Priority priority = Potato::Task::Priority::Normal;
-		std::chrono::microseconds sleep_duration = std::chrono::microseconds{ 100 };
-		std::u8string_view task_name = u8"Form Task";
-	};
-
 	struct Form : protected Potato::Task::Task, protected FormInterface
 	{
 
