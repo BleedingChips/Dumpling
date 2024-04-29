@@ -12,10 +12,11 @@ int main()
 {
 
 	{
-		auto form = Dumpling::CreateGameWindows();
+		
 
 		Potato::Task::TaskContext context;
-		form->CommitedMessageLoop(context, std::this_thread::get_id());
+
+		auto form = Dumpling::CreateFormAndCommitedMessageLoop(context, std::this_thread::get_id());
 
 		context.ProcessTaskUntillNoExitsTask({});
 	}

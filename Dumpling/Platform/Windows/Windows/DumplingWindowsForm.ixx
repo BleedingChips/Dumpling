@@ -35,9 +35,41 @@ export namespace Dumpling::Windows
 		~FormClassStyle();
 	};
 
-	struct Form : protected Potato::Task::Task, protected FormInterface, protected Potato::Pointer::DefaultIntrusiveInterface
+	struct FormInit : public Potato::Task::Task, public Potato::Pointer::DefaultIntrusiveInterface
 	{
-		static FormInterface::Ptr CreateGameWindows(FormProperty property, std::pmr::memory_resource* memory_resource);
+		using Ptr = Potato::Pointer::IntrusivePtr<FormInit>;
+
+		static Ptr Create(FormStyle style, FormSize size, std::u8string_view title, std::pmr::memory_resource* resource);
+
+		bool Commited(Potato::Task::TaskContext& context, Potato::Task::TaskProperty property);
+
+	protected:
+
+		FormInit(FormStyle style, FormSize size, Potato::IR::MemoryResourceRecord record, std::span<wchar_t const> str)
+			: record(record), style(style), size(size), title(str) {}
+
+		virtual void Release() override;
+
+		Potato::IR::MemoryResourceRecord record;
+		std::span<wchar_t const> title;
+		FormStyle style;
+		FormSize size;
+
+		virtual void TaskExecute(Potato::Task::ExecuteStatus& status) override;
+		//virtual void TaskTerminal(Potato::Task::TaskProperty property) noexcept override;
+		virtual void AddTaskRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubTaskRef() const override { DefaultIntrusiveInterface::SubRef(); }
+	};
+
+	struct Form : protected FormInterface, protected Potato::Task::Task, protected Potato::Pointer::DefaultIntrusiveInterface
+	{
+		static FormInterface::Ptr CreateFormAndCommitedMessageLoop(
+			Potato::Task::TaskContext& context,
+			std::thread::id thread_id,
+			FormProperty property,
+			FormTaskProperty task_property,
+			std::pmr::memory_resource* resource
+		);
 
 		enum class Status
 		{
@@ -51,18 +83,20 @@ export namespace Dumpling::Windows
 
 		virtual bool CommitedMessageLoop(Potato::Task::TaskContext& context, std::thread::id require_thread_id, FormTaskProperty property) override;
 
+		/*
 		Status GetStatus() const
 		{
 			std::shared_lock sl(mutex);
 			return status;
 		}
+		*/
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Form, FormInterface::Wrapper>;
 
 	protected:
 
 		Form(Potato::IR::MemoryResourceRecord record, FormProperty property)
-			: record(record), property(std::move(property)) {}
+			: record(record) {}
 
 		virtual ~Form() = default;
 
@@ -72,8 +106,8 @@ export namespace Dumpling::Windows
 
 		mutable std::shared_mutex mutex;
 		HWND hwnd = nullptr;
-		Status status = Status::INVALID;
-		FormProperty property;
+		FormEventResponder::Ptr event_responder;
+		FormRenderer::Ptr form_renderer;
 
 		virtual void AddTaskRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		virtual void SubTaskRef() const override { DefaultIntrusiveInterface::SubRef(); }
@@ -87,6 +121,7 @@ export namespace Dumpling::Windows
 
 		friend struct FormClassStyle;
 		friend struct FormInterface::Wrapper;
+		friend struct FormInit;
 	};
 
 	/*

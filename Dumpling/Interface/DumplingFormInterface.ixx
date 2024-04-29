@@ -61,7 +61,6 @@ export namespace Dumpling
 
 		virtual void AddFormEventResponderRef() const {};
 		virtual void SubFormEventResponderRef() const {};
-
 	};
 
 	struct FormRenderer
@@ -101,11 +100,6 @@ export namespace Dumpling
 		FormRenderer::Ptr renderer;
 		FormSize form_size;
 		std::u8string_view title = u8"Default Dumping Form";
-	};
-
-	struct FormInitializer : protected Potato::Task::
-	{
-		
 	};
 
 	

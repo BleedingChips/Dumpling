@@ -8,20 +8,25 @@ import DumplingWindows;
 
 namespace Dumpling
 {
-	FormInterface::Ptr CreateGameWindows(FormProperty property, std::pmr::memory_resource* resource)
+
+	FormInterface::Ptr CreateFormAndCommitedMessageLoop(
+		Potato::Task::TaskContext& context,
+		std::thread::id thread_id,
+		FormProperty property ,
+		FormTaskProperty task_property,
+		std::pmr::memory_resource* resource
+	)
 	{
 #ifdef _WIN32
-		return Windows::Form::CreateGameWindows(property, resource);
+		return Windows::Form::CreateFormAndCommitedMessageLoop(
+			context,
+			thread_id,
+			property,
+			task_property,
+			resource
+		);
 #endif
 	}
-#ifdef _WIN32
-	/*
-	Form::Ptr Form::CreateDx12Form(FormSetting setting)
-	{
-		return Win32::Win32Form::CreateWin32Form(setting);
-	}
-	*/
-#endif
 
 
 	/*

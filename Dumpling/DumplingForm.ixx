@@ -6,14 +6,25 @@ export module DumplingForm;
 import std;
 import PotatoMisc;
 import PotatoPointer;
+import PotatoTaskSystem;
 
 import DumplingFormInterface;
 
 export namespace Dumpling
 {
 
-	FormInterface::Ptr CreateGameWindows(FormProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+	FormInterface::Ptr CreateFormAndCommitedMessageLoop(
+		Potato::Task::TaskContext& context,
+		std::thread::id thread_id,
+		FormProperty property = {},
+		FormTaskProperty task_property = {},
+		std::pmr::memory_resource* resource = std::pmr::get_default_resource()
+	);
 
+
+	/*
+	FormInterface::Ptr CreateGameWindows(FormProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+	*/
 	/*
 	struct FormSetting
 	{
