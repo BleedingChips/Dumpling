@@ -1,6 +1,6 @@
 module;
 
-module DumplingFormInterface;
+module DumplingForm;
 
 
 namespace Dumpling

@@ -4,15 +4,173 @@ module;
 #include <d3d12.h>
 
 #include <dxgi1_6.h>
+#include <intsafe.h>
+#include <OCIdl.h>
 
+#undef interface
 
 module DumplingDx12Renderer;
 
-/*
+
 namespace Dumpling::Dx12
 {
 
+	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Dumpling::HardDevice::Ptr
+	{
+		auto re = Potato::IR::MemoryResourceRecord::Allocate<HardDevice>(resource);
+		if(re)
+		{
+			ComPtr<IDXGIFactory> rptr;
+			UINT Flags = 0;
+			Flags |= DXGI_CREATE_FACTORY_DEBUG;
+			HRESULT result = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
+			if(SUCCEEDED(result))
+			{
+				return new(re.Get()) HardDevice{re, std::move(rptr)};
+			}else
+			{
+				re.Deallocate();
+			}
+		}
+		return {};
+	}
 
+	void HardDevice::Release()
+	{
+		auto re = record;
+		this->~HardDevice();
+		re.Deallocate();
+	}
+
+	std::optional<AdapterDescription> HardDevice::EnumAdapter(std::size_t ite) const
+	{
+		return {};
+	}
+
+	Renderer::Ptr HardDevice::CreateRenderer(std::size_t adapter_count, std::pmr::memory_resource* resource)
+	{
+		if(factory)
+		{
+			auto record = Potato::IR::MemoryResourceRecord::Allocate<Renderer>(resource);
+			if(record)
+			{
+				ComPtr<IDXGIAdapter> adapter;
+				auto re = factory->EnumAdapters(adapter_count, adapter.GetAddressOf());
+				if(SUCCEEDED(re))
+				{
+					ComPtr<ID3D12Device> dev_ptr;
+					re = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
+					if(SUCCEEDED(re))
+					{
+						return new (record.Get()) Renderer{record, this, std::move(dev_ptr)};
+					}
+				}
+				record.Deallocate();
+			}
+		}
+		return {};
+	}
+
+	void CommandQueue::Release() override
+	{
+		auto re = record;
+		this->~CommandQueue();
+		re.Deallocate();
+	}
+
+	void Renderer::Release()
+	{
+		auto re = record;
+		this->~Renderer();
+		re.Deallocate();
+	}
+
+	CommandQueue::Ptr Renderer::GetCommandQueue(std::thread::id thread_id)
+	{
+		std::lock_guard lg(mutex);
+		for (auto& ite : commands)
+		{
+			if (ite.thread_id == thread_id)
+			{
+				return ite.CurrentQueue;
+			}
+		}
+		{
+			D3D12_COMMAND_QUEUE_DESC desc{
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+				0
+			};
+
+			ComPtr<ID3D12CommandQueue> que_ptr;
+
+			auto re = device->CreateCommandQueue(
+				&desc, __uuidof(decltype(que_ptr)::InterfaceType), reinterpret_cast<void**>(que_ptr.GetAddressOf())
+			);
+
+			//que_ptr->ExecuteCommandLists();
+
+			if (SUCCEEDED(re))
+			{
+				//return { std::move(que_ptr) };
+			}
+		}
+		return {};
+	}
+
+	Dumpling::CommandQueue::Ptr Renderer::GetThreadSafeCommandQueue(std::thread::id thread_id)
+	{
+		return GetCommandQueue(thread_id);
+	}
+
+	FormRenderTarget::Ptr Renderer::CreateFormRenderTarget(FormRenderTargetProperty property, std::pmr::memory_resource* resource)
+	{
+		auto re = Potato::IR::MemoryResourceRecord::Allocate<FormRenderTarget>(resource);
+		if(re)
+		{
+			return new(re.Get()) FormRenderTarget{re, this, hard_device, property };
+		}
+		return {};
+	}
+
+	void FormRenderTarget::Release() override
+	{
+		auto re = record;
+		this->~FormRenderTarget();
+		re.Deallocate();
+	}
+
+	void FormRenderTarget::OnFormCreated(FormInterface& interface)
+	{
+		Windows::Form* real_form = dynamic_cast<Windows::Form*>(&interface);
+		if(real_form != nullptr)
+		{
+			//real_form->
+		}
+	}
+
+	/*
+	ComPtr<IDXGIFactory2> rptr;
+	UINT Flags = 0;
+	if (EnableDebug)
+	{
+		Flags |= DXGI_CREATE_FACTORY_DEBUG;
+	}
+
+	HRESULT re = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
+	if (SUCCEEDED(re))
+	{
+		return HardwareDevice{ std::move(rptr) };
+	}
+	return {};
+	*/
+
+
+
+
+
+	/*
 	void InitDebugLayer()
 	{
 		{
@@ -296,4 +454,4 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 	*/
-//}
+}

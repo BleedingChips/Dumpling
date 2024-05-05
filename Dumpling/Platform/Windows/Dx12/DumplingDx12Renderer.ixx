@@ -3,19 +3,127 @@ module;
 #include "d3d12.h"
 #include "dxgi1_6.h"
 #include "wrl.h"
+
+#undef interface
+
 export module DumplingDx12Renderer;
 
 import std;
 import PotatoPointer;
 import PotatoIR;
-import DumplingFormInterface;
+import DumplingForm;
 import DumplingWindowsForm;
+import DumplingRenderer;
 
 
-/*
+
+
 export namespace Dumpling::Dx12
 {
-	using Win32::ComPtr;
+
+	using Dumpling::Windows::ComPtr;
+
+	struct HardDevice : public Dumpling::HardDevice, public Potato::Pointer::DefaultIntrusiveInterface
+	{
+
+		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Dumpling::HardDevice::Wrapper>;
+
+		static Dumpling::HardDevice::Ptr Create(std::pmr::memory_resource* resource);
+
+	protected:
+
+		HardDevice(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory> factory)
+			: record(record), factory(std::move(factory)) {}
+
+		void AddHardDeviceRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		void SubHardDeviceRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		void Release() override;
+		std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const override;
+		virtual Renderer::Ptr CreateRenderer(std::size_t adapter_count = 0, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+
+		Potato::IR::MemoryResourceRecord record;
+		ComPtr<IDXGIFactory> factory;
+	};
+
+	struct CommandQueue : public Dumpling::CommandQueue, public Potato::Pointer::DefaultIntrusiveInterface
+	{
+		using Ptr = Potato::Pointer::DefaultIntrusiveInterface<CommandQueue, Dumpling::CommandQueue::Wrapper>;
+	protected:
+		CommandQueue(Potato::IR::MemoryResourceRecord record, ComPtr<ID3D12CommandQueue> queue)
+			: record(record), queue(std::move(queue)) {}
+		Potato::IR::MemoryResourceRecord record;
+		ComPtr<ID3D12CommandQueue> queue;
+		void AddCommandQueueRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		void SubCommandQueueRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		void Release() override;
+	};
+
+	struct Renderer : public Dumpling::Renderer, public Potato::Pointer::DefaultIntrusiveInterface
+	{
+
+		FormRenderTarget::Ptr CreateFormRenderTarget(FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+
+	protected:
+
+		Renderer(Potato::IR::MemoryResourceRecord record, HardDevice::Ptr hard_device, ComPtr<ID3D12Device> device)
+			: record(record), hard_device(std::move(hard_device)), device(std::move(device)) {}
+
+		virtual Dumpling::CommandQueue::Ptr GetThreadSafeCommandQueue(std::thread::id thread_id) override;
+
+		virtual CommandQueue::Ptr GetCommandQueue(std::thread::id thread_id);
+
+		void AddRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		void SubRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		void Release() override;
+
+		HardDevice::Ptr hard_device;
+		Potato::IR::MemoryResourceRecord record;
+		ComPtr<ID3D12Device> device;
+
+		struct ThreadCommandRef
+		{
+			std::thread::id thread_id;
+			ComPtr<ID3D12CommandQueue> CurrentQueue;
+		};
+
+		std::shared_mutex mutex;
+		std::pmr::vector<ThreadCommandRef> commands;
+
+		friend struct HardDevice;
+	};
+
+	struct FormRenderTarget : public Dumpling::FormRenderTarget, public Potato::Pointer::DefaultIntrusiveInterface
+	{
+		
+	protected:
+		FormRenderTarget(Potato::IR::MemoryResourceRecord record, Renderer::Ptr renderer, HardDevice::Ptr device, FormRenderTargetProperty property)
+			: record(record), renderer(std::move(renderer)), device(std::move(device)), property(property) {}
+
+		virtual void AddFormRenderTargetRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubFormRenderTargetRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		void Release() override;
+		virtual void OnFormCreated(FormInterface& interface) override;
+
+		Potato::IR::MemoryResourceRecord record;
+		Renderer::Ptr renderer;
+		HardDevice::Ptr device;
+		FormRenderTargetProperty property;
+		ComPtr<IDXGISwapChain> swap_chain;
+
+		friend struct Renderer;
+	};
+
+
+
+
+
+
+
+
+
+
+	/*
+	
 
 	using Adapter = ComPtr<IDXGIAdapter>;
 
@@ -26,6 +134,13 @@ export namespace Dumpling::Dx12
 	};
 
 	export struct HardwareDevice;
+
+	struct RendererOutput : public Dumpling::FormRendererOutput
+	{
+		using Ptr = Potato::Pointer::IntrusivePtr<RendererOutput, Dumpling::FormRendererOutput::Wrapper>;
+
+
+	};
 
 	export struct SwapChain : public Win32::SwapChain, public Potato::Pointer::DefaultIntrusiveInterface
 	{
@@ -132,6 +247,7 @@ export namespace Dumpling::Dx12
 		friend struct SoftwareDevice;
 		friend struct HardwareDevice;
 	};
+	*/
 
 	
 
@@ -248,4 +364,4 @@ export namespace Dumpling::Dx12
 
 	
 
-//}
+}

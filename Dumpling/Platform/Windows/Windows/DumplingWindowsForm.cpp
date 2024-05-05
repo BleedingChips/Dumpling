@@ -21,6 +21,7 @@ namespace Dumpling::Windows
 
 	wchar_t const* form_class_style_name = L"Dumpling_Default_GameStyle";
 
+	std::optional<FormEvent> TranslateDumplingFormMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
 	FormClassStyle::FormClassStyle()
 	{
@@ -55,9 +56,10 @@ namespace Dumpling::Windows
 					wstr
 				);
 				*wstr.rbegin() = L'\0';
-				return new (record.Get()) FormInit(
+				FormInit::Ptr form_init = new (record.Get()) FormInit(
 					style, size, record, wstr
 				);
+				return std::move(form_init);
 			}
 		}
 		return {};
@@ -70,64 +72,148 @@ namespace Dumpling::Windows
 		re.Deallocate();
 	}
 
-	
-
-	void FormInit::TaskExecute(Potato::Task::ExecuteStatus& status)
+	auto FormManager::CreateForm(
+		FormProperty property,
+		FormEventResponder::Ptr responder,
+		FormRenderTarget::Ptr renderer,
+		std::pmr::memory_resource* resource
+	) -> FormInterface::Ptr
 	{
-		static FormClassStyle class_style;
-
-		Form* ptr = reinterpret_cast<Form*>(status.task_property.user_data[0]);
-		assert(ptr != nullptr);
-		HWND new_hwnd = CreateWindowExW(
-			0,
-			form_class_style_name,
-			title.data(),
-			GetWSStyle(style),
-			100, 100, size.width, size.height,
-			NULL,
-			NULL,
-			GetModuleHandle(0),
-			ptr
-		);
-		status.task_property.user_data[0] = reinterpret_cast<std::size_t>(new_hwnd);
-		status.context.CommitTask(ptr, status.task_property);
-		ptr->SubFormInterfaceRef();
-	}
-
-	FormInterface::Ptr Form::CreateFormAndCommitedMessageLoop(
-			Potato::Task::TaskContext& context,
-			std::thread::id thread_id,
-			FormProperty property,
-			FormTaskProperty task_property,
-			std::pmr::memory_resource* resource
-		)
-	{
-		auto form_record = Potato::IR::MemoryResourceRecord::Allocate<Form>(resource);
-		if(form_record)
+		if(resource != nullptr)
 		{
-			Form::Ptr form = new(form_record.Get()) Form(form_record, property);
 			auto init = FormInit::Create(property.style, property.form_size, property.title, resource);
 			if(init)
 			{
-				Potato::Task::TaskProperty new_task_property
+				auto form_re = Potato::IR::MemoryResourceRecord::Allocate<Form>(resource);
+				if (form_re)
 				{
-					property.title,
-					{reinterpret_cast<std::size_t>(form.GetPointer()), 0},
-					{
-						task_property.priority,
-						Potato::Task::Category::THREAD_TASK,
-						0,
-						thread_id
-					}
-				};
-				if(context.CommitTask(init.GetPointer(), new_task_property))
+					Form::Ptr ptr = new (form_re.Get())  Form{form_re, std::move(responder), std::move(renderer)};
+					std::lock_guard lg(mutex);
+					init_requires.emplace_back(
+						std::move(ptr),
+						std::move(init)
+					);
+				}else
 				{
-					return form.GetPointer();
+					init->Release();
 				}
 			}
 		}
-
 		return {};
+	}
+
+	auto FormManager::CreateManager(std::pmr::memory_resource* resource) -> Ptr
+	{
+		auto re = Potato::IR::MemoryResourceRecord::Allocate<FormManager>(resource);
+		if (re)
+		{
+			Ptr ptr = new (re.Get()) FormManager{ re };
+			return ptr;
+		}
+		return {};
+	}
+
+	bool FormManager::Commite(
+		Potato::Task::TaskContext& context,
+		std::thread::id thread_id,
+		FormTaskProperty property
+	) {
+
+		if (thread_id != std::thread::id{})
+		{
+			Potato::Task::TaskProperty new_property
+			{
+				property.display_name,
+				{},
+				property.priority,
+				Potato::Task::Category::THREAD_TASK,
+				0,
+				thread_id
+			};
+			std::lock_guard lg(mutex);
+			if(!current_thread_id.has_value() && context.CommitTask(this, new_property))
+			{
+				current_thread_id = thread_id;
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	void FormManager::Release()
+	{
+		auto re = record;
+		this->~FormManager();
+		re.Deallocate();
+	}
+
+	void FormManager::TaskTerminal(Potato::Task::TaskProperty property) noexcept
+	{
+		MSG msg;
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			//TranslateMessage(&msg);
+			DispatchMessageW(&msg);
+		}
+		std::lock_guard lg(mutex);
+		current_thread_id.reset();
+		init_requires.clear();
+	}
+
+
+	void FormManager::TaskExecute(Potato::Task::ExecuteStatus& status)
+	{
+		while(true)
+		{
+			Form::Ptr ptr;
+			FormInit::Ptr iptr;
+			if (mutex.try_lock())
+			{
+				std::lock_guard lg(mutex, std::adopt_lock);
+				if(!init_requires.empty())
+				{
+					std::tie(ptr, iptr) = std::move(*init_requires.rbegin());
+					init_requires.pop_back();
+				}
+			}
+			if(ptr)
+			{
+				static FormClassStyle class_style;
+
+				HWND new_hwnd = CreateWindowExW(
+					0,
+					form_class_style_name,
+					iptr->title.data(),
+					GetWSStyle(iptr->style),
+					100, 100, iptr->size.width, iptr->size.height,
+					NULL,
+					NULL,
+					GetModuleHandle(0),
+					ptr.GetPointer()
+				);
+				auto P = GetLastError();
+				ptr.Reset();
+				iptr.Reset();
+			}else
+			{
+				break;
+			}
+		}
+		MSG msg;
+		bool need_quit = false;
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if(msg.message == WM_QUIT)
+			{
+				need_quit = true;
+			}
+			DispatchMessageW(&msg);
+		}
+		if (!need_quit)
+		{
+			status.context.CommitTask(this, status.task_property);
+		}
 	}
 
 	LRESULT CALLBACK Form::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -141,15 +227,12 @@ namespace Dumpling::Windows
 				assert(Struct != nullptr);
 				Form* inter = static_cast<Form*>(Struct->lpCreateParams);
 				assert(inter != nullptr);
-				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
-				break;
 				{
-					/*
-					std::lock_guard lg(inter->mutex);
-					inter->status = Status::NORMAL;
+					std::lock_guard sl(inter->mutex);
 					inter->hwnd = hWnd;
-					*/
 				}
+				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
+				inter->AddFormInterfaceRef();
 				return inter->HandleEvent(hWnd, msg, wParam, lParam);
 			}
 		case WM_NCDESTROY:
@@ -159,13 +242,8 @@ namespace Dumpling::Windows
 			if (ptr != nullptr)
 			{
 				auto re = ptr->HandleEvent(hWnd, msg, wParam, lParam);
-				{
-					std::lock_guard lg(ptr->mutex);
-					//assert(ptr->status == Form::Status::NORMAL);
-					//ptr->status = Form::Status::CLOSED;
-					ptr->hwnd = nullptr;
-				}
 				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+				ptr->SubFormInterfaceRef();
 				return re;
 			}
 			break;
@@ -184,57 +262,6 @@ namespace Dumpling::Windows
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 
-	/*
-	bool Form::CommitedMessageLoop(Potato::Task::TaskContext& context, std::thread::id require_thread_id, FormTaskProperty task_property)
-	{
-		if(require_thread_id != std::thread::id{})
-		{
-			std::lock_guard lg(mutex);
-			if(status == Status::INVALID)
-			{
-				Potato::Task::TaskProperty new_task_property
-				{
-					property.title,
-					{0, 0},
-					{
-						task_property.priority,
-						Potato::Task::Category::THREAD_TASK,
-						0,
-						require_thread_id
-					}
-				};
-				if(context.CommitTask(this, new_task_property))
-				{
-					status = Status::WAITING_CREATED;
-				}
-			}
-		}
-		return false;
-	}
-	*/
-
-	void Form::TaskExecute(Potato::Task::ExecuteStatus& task_status)
-	{
-		
-		auto handle = reinterpret_cast<HWND>(task_status.task_property.user_data[0]);
-		assert(handle != nullptr);
-
-		MSG msg;
-		while (PeekMessage(&msg, handle, 0, 0, PM_REMOVE))
-		{
-			//TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
-		/*
-		std::shared_lock sl(mutex);
-		if(status == Status::CLOSED)
-		{
-			return;
-		}
-		*/
-		task_status.context.CommitTask(this, task_status.task_property);
-	}
-
 	void Form::Release()
 	{
 		auto re = record;
@@ -244,14 +271,40 @@ namespace Dumpling::Windows
 
 	HRESULT Form::HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+		std::shared_lock sl(mutex);
+
+		switch(msg)
+		{
+		case WM_CREATE:
+			if(form_renderer)
+			{
+				form_renderer->OnFormCreated(*this);
+			}
+			break;
+		}
+
 		if(event_responder)
 		{
-			auto re = event_responder->Respond(*this, {});
-			if(re)
+			auto event = TranslateDumplingFormMessage(msg, wParam, lParam);
+			if(event)
 			{
-				
+				auto re = event_responder->Respond(*this, *event);
+				if(re)
+				{
+					
+				}
 			}
 		}
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
+	}
+
+	std::optional<FormEvent> TranslateDumplingFormMessage(UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		switch(msg)
+		{
+		case WM_NCDESTROY:
+			return FormEvent{FormEventEnum::DESTORYED};
+		}
+		return std::nullopt;
 	}
 }
