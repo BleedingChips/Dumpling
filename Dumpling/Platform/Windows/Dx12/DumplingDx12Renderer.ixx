@@ -43,11 +43,13 @@ export namespace Dumpling::Dx12
 
 		Potato::IR::MemoryResourceRecord record;
 		ComPtr<IDXGIFactory> factory;
+
+		friend struct Dumpling::HardDevice::Wrapper;
 	};
 
 	struct CommandQueue : public Dumpling::CommandQueue, public Potato::Pointer::DefaultIntrusiveInterface
 	{
-		using Ptr = Potato::Pointer::DefaultIntrusiveInterface<CommandQueue, Dumpling::CommandQueue::Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<CommandQueue, Dumpling::CommandQueue::Wrapper>;
 	protected:
 		CommandQueue(Potato::IR::MemoryResourceRecord record, ComPtr<ID3D12CommandQueue> queue)
 			: record(record), queue(std::move(queue)) {}
@@ -56,6 +58,8 @@ export namespace Dumpling::Dx12
 		void AddCommandQueueRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		void SubCommandQueueRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
+
+		friend struct Dumpling::CommandQueue::Wrapper;
 	};
 
 	struct Renderer : public Dumpling::Renderer, public Potato::Pointer::DefaultIntrusiveInterface
@@ -83,7 +87,8 @@ export namespace Dumpling::Dx12
 		struct ThreadCommandRef
 		{
 			std::thread::id thread_id;
-			ComPtr<ID3D12CommandQueue> CurrentQueue;
+			CommandQueue::Ptr queue;
+			//ComPtr<ID3D12CommandQueue> CurrentQueue;
 		};
 
 		std::shared_mutex mutex;

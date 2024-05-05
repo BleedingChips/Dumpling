@@ -71,7 +71,7 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	void CommandQueue::Release() override
+	void CommandQueue::Release()
 	{
 		auto re = record;
 		this->~CommandQueue();
@@ -92,7 +92,7 @@ namespace Dumpling::Dx12
 		{
 			if (ite.thread_id == thread_id)
 			{
-				return ite.CurrentQueue;
+				return ite.queue;
 			}
 		}
 		{
@@ -134,7 +134,7 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	void FormRenderTarget::Release() override
+	void FormRenderTarget::Release()
 	{
 		auto re = record;
 		this->~FormRenderTarget();
