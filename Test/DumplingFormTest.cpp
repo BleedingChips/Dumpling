@@ -41,7 +41,7 @@ int main()
 
 		S1.manager = man;
 
-		auto form_rt = render->CreateFormRenderTarget();
+		auto form_rt = render->CreateFormRenderTarget(std::nullopt);
 
 		man->Commite(context, std::this_thread::get_id(), {});
 

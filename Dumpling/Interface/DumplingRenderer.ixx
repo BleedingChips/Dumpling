@@ -16,28 +16,23 @@ export namespace Dumpling
 		RGBA8
 	};
 
+	struct RenderTargetSize
+	{
+		std::size_t width = 1;
+		std::size_t height = 1;
+		std::size_t length = 1;
+	};
 
 	struct FormRenderTargetProperty
 	{
 		std::size_t swap_chin_count = 2;
-		TexFormat format = TexFormat::RGBA8;
+		std::optional<float> present;
 	};
 
-	struct CommandQueue
+	struct RendererSocket
 	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddCommandQueueRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubCommandQueueRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<CommandQueue, Wrapper>;
-
-	protected:
-
-		virtual void AddCommandQueueRef() const = 0;
-		virtual void SubCommandQueueRef() const = 0;
-
+		std::size_t uuid = 0;
+		std::size_t uuid2 = 0;
 	};
 
 	struct Renderer
@@ -50,9 +45,8 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
-		virtual FormRenderTarget::Ptr CreateFormRenderTarget(FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
-		virtual CommandQueue::Ptr GetThreadSafeCommandQueue(std::thread::id thread_id = std::this_thread::get_id()) = 0;
-
+		virtual FormRenderTarget::Ptr CreateFormRenderTarget(std::optional<RendererSocket> socket = std::nullopt, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
+		
 	protected:
 
 		virtual void AddRendererRef() const = 0;
