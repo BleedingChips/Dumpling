@@ -43,7 +43,7 @@ export namespace Dumpling::Windows
 		FormSize size;
 	};
 
-	struct Form : protected FormInterface, protected Potato::Pointer::DefaultIntrusiveInterface
+	struct Form : public FormInterface, protected Potato::Pointer::DefaultIntrusiveInterface
 	{
 
 		enum class Status

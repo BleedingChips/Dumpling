@@ -17,11 +17,13 @@ import DumplingRenderer;
 
 
 
-
 export namespace Dumpling::Dx12
 {
 
 	using Dumpling::Windows::ComPtr;
+	using Dx12FactoryPtr = ComPtr<IDXGIFactory2>;
+	using Dx12DevicePtr = ComPtr<ID3D12Device>;
+	using Dx12SwapChainPtr = ComPtr<IDXGISwapChain1>;
 
 	struct HardDevice : public Dumpling::HardDevice, public Potato::Pointer::DefaultIntrusiveInterface
 	{
@@ -29,11 +31,11 @@ export namespace Dumpling::Dx12
 		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Dumpling::HardDevice::Wrapper>;
 
 		static Dumpling::HardDevice::Ptr Create(std::pmr::memory_resource* resource);
-		ComPtr<IDXGIFactory> GetDx12Factory() const { return factory; }
+		Dx12FactoryPtr GetDx12Factory() const { return factory; }
 
 	protected:
 
-		HardDevice(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGIFactory> factory)
+		HardDevice(Potato::IR::MemoryResourceRecord record, Dx12FactoryPtr factory)
 			: record(record), factory(std::move(factory)) {}
 
 		void AddHardDeviceRef() const override { DefaultIntrusiveInterface::AddRef(); }
@@ -44,7 +46,7 @@ export namespace Dumpling::Dx12
 		virtual Dumpling::Renderer::Ptr CreateRenderer(std::size_t adapter_count = 0, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 		Potato::IR::MemoryResourceRecord record;
-		ComPtr<IDXGIFactory> factory;
+		Dx12FactoryPtr factory;
 
 		friend struct Dumpling::HardDevice::Wrapper;
 	};
@@ -57,12 +59,12 @@ export namespace Dumpling::Dx12
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Dumpling::Renderer::Wrapper>;
 
 		Dumpling::FormRenderTarget::Ptr CreateFormRenderTarget(std::optional<RendererSocket> socket = std::nullopt, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		ComPtr<ID3D12Device> GetDx12Device() const { return device; }
+		Dx12DevicePtr GetDx12Device() const { return device; }
 
 	protected:
 
 
-		Renderer(Potato::IR::MemoryResourceRecord record, HardDevice::Ptr hard_device, ComPtr<ID3D12Device> device)
+		Renderer(Potato::IR::MemoryResourceRecord record, HardDevice::Ptr hard_device, Dx12DevicePtr device)
 			: record(record), hard_device(std::move(hard_device)), device(std::move(device)) {}
 
 		void AddRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
@@ -71,7 +73,7 @@ export namespace Dumpling::Dx12
 
 		HardDevice::Ptr hard_device;
 		Potato::IR::MemoryResourceRecord record;
-		ComPtr<ID3D12Device> device;
+		Dx12DevicePtr device;
 
 		friend struct HardDevice;
 		friend struct Dumpling::Renderer::Wrapper;
@@ -98,7 +100,7 @@ export namespace Dumpling::Dx12
 		HardDevice::Ptr device;
 		FormRenderTargetProperty property;
 		ComPtr<ID3D12CommandQueue> command_queue;
-		ComPtr<IDXGISwapChain> swap_chain;
+		Dx12SwapChainPtr swap_chain;
 
 		friend struct Renderer;
 	};

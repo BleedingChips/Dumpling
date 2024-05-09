@@ -7,6 +7,7 @@ module;
 #include <intsafe.h>
 #include <OCIdl.h>
 #include <OCIdl.h>
+#include <OCIdl.h>
 
 #undef interface
 
@@ -21,7 +22,7 @@ namespace Dumpling::Dx12
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<HardDevice>(resource);
 		if(re)
 		{
-			ComPtr<IDXGIFactory> rptr;
+			Dx12FactoryPtr rptr;
 			UINT Flags = 0;
 			Flags |= DXGI_CREATE_FACTORY_DEBUG;
 			HRESULT result = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
@@ -59,7 +60,7 @@ namespace Dumpling::Dx12
 				auto re = factory->EnumAdapters(adapter_count, adapter.GetAddressOf());
 				if(SUCCEEDED(re))
 				{
-					ComPtr<ID3D12Device> dev_ptr;
+					Dx12DevicePtr dev_ptr;
 					re = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
 					if(SUCCEEDED(re))
 					{
@@ -172,11 +173,19 @@ namespace Dumpling::Dx12
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.SampleDesc.Count = 1;
 
-			ComPtr<IDXGISwapChain1> swapChain;
-			auto re = device->GetDx12Factory()->CreateSwapChainForHwnd(
+			auto re2 = device->GetDx12Factory()->CreateSwapChainForHwnd(
 				command_queue.Get(), real_form->GetWnd(), &swapChainDesc, nullptr, nullptr,
-				swapChain.GetAddressOf()
+				swap_chain.GetAddressOf()
 			);
+
+			if(SUCCEEDED(re2))
+			{
+				volatile int i = 0;
+			}
+
+			//renderer->CreateRenderTarget();
+
+			//renderer->CreateFormRenderTarget()
 		}
 	}
 
