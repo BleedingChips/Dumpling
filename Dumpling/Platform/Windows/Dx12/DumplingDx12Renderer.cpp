@@ -8,6 +8,8 @@ module;
 #include <OCIdl.h>
 #include <OCIdl.h>
 #include <OCIdl.h>
+#include <OCIdl.h>
+#include <OCIdl.h>
 
 #undef interface
 
@@ -49,7 +51,7 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	Dumpling::Renderer::Ptr HardDevice::CreateRenderer(std::size_t adapter_count, std::pmr::memory_resource* resource)
+	Dumpling::Renderer::Ptr HardDevice::CreateRenderer(std::optional<std::size_t> adapter_count, std::pmr::memory_resource* resource)
 	{
 		if(factory)
 		{
@@ -57,20 +59,59 @@ namespace Dumpling::Dx12
 			if(record)
 			{
 				ComPtr<IDXGIAdapter> adapter;
-				auto re = factory->EnumAdapters(adapter_count, adapter.GetAddressOf());
+				if(adapter_count.has_value())
+				{
+					auto re = factory->EnumAdapters(*adapter_count, adapter.GetAddressOf());
+					if(!SUCCEEDED(re))
+					{
+						record.Deallocate();
+						return {};
+					}
+				}
+				Dx12DevicePtr dev_ptr;
+				auto  re = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
 				if(SUCCEEDED(re))
 				{
-					Dx12DevicePtr dev_ptr;
-					re = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
+					Dx12CommandQueuePtr command_queue;
+					D3D12_COMMAND_QUEUE_DESC desc{
+						D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+						D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+						D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+					0
+					};
+
+					auto re = dev_ptr->CreateCommandQueue(
+						&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
+					);
+
 					if(SUCCEEDED(re))
 					{
-						return new (record.Get()) Renderer{record, this, std::move(dev_ptr)};
+						return new (record.Get()) Renderer{record, factory, std::move(dev_ptr), std::move(command_queue)};
 					}
 				}
 				record.Deallocate();
 			}
 		}
 		return {};
+	}
+
+	Dx12SwapChainPtr Renderer::CreateSwapChain(FormRenderTargetProperty property, HWND hwnd)
+	{
+		Dx12SwapChainPtr result;
+		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+		swapChainDesc.BufferCount = 2;
+		swapChainDesc.Width = 1024;
+		swapChainDesc.Height = 768;
+		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.SampleDesc.Count = 1;
+
+		auto re2 = factory->CreateSwapChainForHwnd(
+			direct_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
+			result.GetAddressOf()
+		);
+		return result;
 	}
 
 	void Renderer::Release()
@@ -115,7 +156,6 @@ namespace Dumpling::Dx12
 	{
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<FormRenderTarget>(resource);
 
-
 		if(re)
 		{
 			RendererSocket cur_socket;
@@ -123,7 +163,7 @@ namespace Dumpling::Dx12
 			{
 				cur_socket = *socket;
 			}
-			return new(re.Get()) FormRenderTarget{re, cur_socket, this, hard_device, property };
+			return new(re.Get()) FormRenderTarget{re, cur_socket, this, property };
 		}
 		return {};
 	}
@@ -140,52 +180,8 @@ namespace Dumpling::Dx12
 		Windows::Form* real_form = dynamic_cast<Windows::Form*>(&interface);
 		if(real_form != nullptr)
 		{
-			assert(!command_queue && !swap_chain && device);
-			auto dev = renderer->GetDx12Device();
-
-			
-			D3D12_COMMAND_QUEUE_DESC desc{
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-				0
-			};
-
-			command_queue.Reset();
-
-			auto re = dev->CreateCommandQueue(
-				&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
-			);
-
-			if(!SUCCEEDED(re))
-			{
-				return;
-			}
-
-			swap_chain.Reset();
-
-			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-			swapChainDesc.BufferCount = 2;
-			swapChainDesc.Width = 1024;
-			swapChainDesc.Height = 768;
-			swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-			swapChainDesc.SampleDesc.Count = 1;
-
-			auto re2 = device->GetDx12Factory()->CreateSwapChainForHwnd(
-				command_queue.Get(), real_form->GetWnd(), &swapChainDesc, nullptr, nullptr,
-				swap_chain.GetAddressOf()
-			);
-
-			if(SUCCEEDED(re2))
-			{
-				volatile int i = 0;
-			}
-
-			//renderer->CreateRenderTarget();
-
-			//renderer->CreateFormRenderTarget()
+			assert(!swap_chain && renderer);
+			swap_chain = renderer->CreateSwapChain(property, real_form->GetWnd());
 		}
 	}
 

@@ -2,6 +2,7 @@ import std;
 import PotatoTaskSystem;
 
 import Dumpling;
+import Noodles;
 import std;
 
 using namespace Dumpling;
@@ -32,6 +33,7 @@ int main()
 	{
 		Sub S1;
 		Potato::Task::TaskContext context;
+		Noodles::Context noodles_context;
 
 		auto man = Dumpling::CreateManager();
 

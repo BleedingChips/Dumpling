@@ -72,7 +72,7 @@ export namespace Dumpling
 
 		virtual std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const = 0;
 
-		virtual Renderer::Ptr CreateRenderer(std::size_t adapter_count = 0, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
+		virtual Renderer::Ptr CreateRenderer(std::optional<std::size_t> adapter_count = std::nullopt, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
 
 	protected:
 
