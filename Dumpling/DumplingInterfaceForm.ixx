@@ -1,17 +1,32 @@
 module;
 
 
-export module DumplingForm;
+export module DumplingInterfaceForm;
 
 import std;
 import PotatoMisc;
 import PotatoPointer;
 import PotatoTaskSystem;
 
-export import DumplingFormEvent;
-
 export namespace Dumpling
 {
+
+	enum class FormEventEnum
+	{
+		DESTORYED,
+	};
+
+
+
+	struct FormEvent
+	{
+		FormEventEnum message;
+	};
+
+	struct FormEventRespond
+	{
+		
+	};
 
 	struct FormTaskProperty
 	{
@@ -38,6 +53,26 @@ export namespace Dumpling
 		std::u8string_view title = u8"Default Dumping Form";
 	};
 
+	struct FormInterface
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormInterfaceRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormInterfaceRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
+
+		
+		virtual ~FormInterface() = default;
+
+	protected:
+
+		virtual void AddFormInterfaceRef() const = 0;
+		virtual void SubFormInterfaceRef() const = 0;
+	};
+
 	struct FormEventResponder
 	{
 		struct Wrapper
@@ -47,7 +82,7 @@ export namespace Dumpling
 		};
 
 		using Ptr = Potato::Pointer::IntrusivePtr<FormEventResponder, Wrapper>;
-		virtual std::optional<FormEventRespond> Respond(struct FormInterface const& interface, FormEvent event) { return std::nullopt; }
+		virtual std::optional<FormEventRespond> Respond(FormInterface& interface, FormEvent event) { return std::nullopt; }
 
 	protected:
 
@@ -73,24 +108,7 @@ export namespace Dumpling
 		virtual void SubFormRenderTargetRef() const = 0;
 	};
 
-	struct FormInterface
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormInterfaceRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormInterfaceRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
-
-		
-		virtual ~FormInterface() = default;
-
-	protected:
-
-		virtual void AddFormInterfaceRef() const = 0;
-		virtual void SubFormInterfaceRef() const = 0;
-	};
+	
 
 
 

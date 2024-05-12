@@ -1,12 +1,12 @@
 module;
 
 
-export module DumplingRenderer;
+export module DumplingInterfaceRenderer;
 
 import std;
 import PotatoMisc;
 import PotatoPointer;
-import DumplingForm;
+import DumplingInterfaceForm;
 
 export namespace Dumpling
 {

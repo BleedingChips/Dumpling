@@ -11,9 +11,9 @@ export module DumplingDx12Renderer;
 import std;
 import PotatoPointer;
 import PotatoIR;
-import DumplingForm;
+import DumplingInterfaceForm;
 import DumplingWindowsForm;
-import DumplingRenderer;
+import DumplingInterfaceRenderer;
 
 
 

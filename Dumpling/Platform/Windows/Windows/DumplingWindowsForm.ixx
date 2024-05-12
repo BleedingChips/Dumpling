@@ -11,7 +11,7 @@ import std;
 import PotatoPointer;
 import PotatoIR;
 import PotatoTaskSystem;
-import DumplingForm;
+import DumplingInterfaceForm;
 
 export namespace Dumpling::Windows
 {
