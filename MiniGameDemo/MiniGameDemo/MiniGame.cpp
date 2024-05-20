@@ -9,25 +9,6 @@ import DumplingImGui;
 
 using namespace Dumpling;
 
-
-struct Sub : public FormEventResponder
-{
-	virtual void AddFormEventResponderRef() const override {}
-	virtual void SubFormEventResponderRef() const override {}
-	FormManager::Ptr manager;
-	std::optional<FormEventRespond> Respond(FormInterface& interface, FormEvent event) override
-	{
-		if(event.message == FormEventEnum::DESTORYED)
-		{
-			if(manager)
-			{
-				manager->CloseMessageLoop();
-			}
-		}
-		return {};
-	}
-};
-
 int main()
 {
 

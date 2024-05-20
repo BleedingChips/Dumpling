@@ -175,9 +175,9 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
-	void FormRenderTarget::OnFormCreated(FormInterface& interface)
+	void FormRenderTarget::OnFormCreated(Form& interface)
 	{
-		Windows::Form* real_form = dynamic_cast<Windows::Form*>(&interface);
+		Windows::Win32Form* real_form = dynamic_cast<Windows::Win32Form*>(&interface);
 		if(real_form != nullptr)
 		{
 			assert(!swap_chain && renderer);

@@ -28,7 +28,7 @@ namespace Dumpling::Windows
 		const WNDCLASSEXW static_class = {
 			sizeof(WNDCLASSEXW),
 			CS_HREDRAW | CS_VREDRAW ,
-			&Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, form_class_style_name, NULL };
+			&Win32Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, form_class_style_name, NULL };
 
 		ATOM res = RegisterClassExW(&static_class);
 		assert(res != 0);
@@ -77,17 +77,17 @@ namespace Dumpling::Windows
 		FormEventResponder::Ptr responder,
 		FormRenderTarget::Ptr renderer,
 		std::pmr::memory_resource* resource
-	) -> FormInterface::Ptr
+	) -> Form::Ptr
 	{
 		if(resource != nullptr)
 		{
 			auto init = FormInit::Create(property.style, property.form_size, property.title, resource);
 			if(init)
 			{
-				auto form_re = Potato::IR::MemoryResourceRecord::Allocate<Form>(resource);
+				auto form_re = Potato::IR::MemoryResourceRecord::Allocate<Win32Form>(resource);
 				if (form_re)
 				{
-					Form::Ptr ptr = new (form_re.Get())  Form{form_re, std::move(responder), std::move(renderer)};
+					Form::Ptr ptr = new (form_re.Get())  Win32Form{form_re, std::move(responder), std::move(renderer)};
 					std::lock_guard lg(mutex);
 					init_requires.emplace_back(
 						std::move(ptr),
@@ -216,7 +216,7 @@ namespace Dumpling::Windows
 		}
 	}
 
-	LRESULT CALLBACK Form::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	LRESULT CALLBACK Win32Form::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		assert(hWnd != nullptr);
 		switch (msg)
@@ -225,25 +225,25 @@ namespace Dumpling::Windows
 			{
 				CREATESTRUCTA* Struct = reinterpret_cast<CREATESTRUCTA*>(lParam);
 				assert(Struct != nullptr);
-				Form* inter = static_cast<Form*>(Struct->lpCreateParams);
+				Win32Form* inter = static_cast<Win32Form*>(Struct->lpCreateParams);
 				assert(inter != nullptr);
 				{
 					std::lock_guard sl(inter->mutex);
 					inter->hwnd = hWnd;
 				}
 				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
-				inter->AddFormInterfaceRef();
+				inter->AddFormRef();
 				return inter->HandleEvent(hWnd, msg, wParam, lParam);
 			}
 		case WM_NCDESTROY:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Form* ptr = reinterpret_cast<Form*>(data);
+			Win32Form* ptr = reinterpret_cast<Win32Form*>(data);
 			if (ptr != nullptr)
 			{
 				auto re = ptr->HandleEvent(hWnd, msg, wParam, lParam);
 				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
-				ptr->SubFormInterfaceRef();
+				ptr->SubFormRef();
 				return re;
 			}
 			break;
@@ -251,7 +251,7 @@ namespace Dumpling::Windows
 		default:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Form* ptr = reinterpret_cast<Form*>(data);
+			Win32Form* ptr = reinterpret_cast<Win32Form*>(data);
 			if (ptr != nullptr)
 			{
 				return ptr->HandleEvent(hWnd, msg, wParam, lParam);
@@ -262,14 +262,14 @@ namespace Dumpling::Windows
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 
-	void Form::Release()
+	void Win32Form::Release()
 	{
 		auto re = record;
-		this->~Form();
+		this->~Win32Form();
 		re.Deallocate();
 	}
 
-	HRESULT Form::HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	HRESULT Win32Form::HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		std::shared_lock sl(mutex);
 

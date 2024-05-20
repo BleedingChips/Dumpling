@@ -33,6 +33,7 @@ namespace Dumpling
 #endif
 	}
 
+	/*
 	std::optional<FormEventRespond> FormEventCollector::Respond(FormInterface& interface, FormEvent event)
 	{
 		if(event.message == FormEventEnum::DESTORYED)
@@ -45,5 +46,6 @@ namespace Dumpling
 		}
 		return std::nullopt;
 	}
+	*/
 	
 }

@@ -13,7 +13,7 @@ struct Sub : public FormEventResponder
 	virtual void AddFormEventResponderRef() const override {}
 	virtual void SubFormEventResponderRef() const override {}
 	FormManager::Ptr manager;
-	std::optional<FormEventRespond> Respond(FormInterface& interface, FormEvent event) override
+	std::optional<FormEventRespond> Respond(Form& interface, FormEvent event) override
 	{
 		if(event.message == FormEventEnum::DESTORYED)
 		{
@@ -33,8 +33,6 @@ int main()
 		Sub S1;
 		Potato::Task::TaskContext context;
 		Noodles::Context noodles_context;
-
-		auto collector = noodles_context.CreateSingleton<FormEventCollector>();
 
 		auto man = Dumpling::CreateManager();
 		S1.manager = man;

@@ -43,7 +43,7 @@ export namespace Dumpling::Windows
 		FormSize size;
 	};
 
-	struct Form : public FormInterface, protected Potato::Pointer::DefaultIntrusiveInterface
+	struct Win32Form : public Form, protected Potato::Pointer::DefaultIntrusiveInterface
 	{
 
 		enum class Status
@@ -56,16 +56,16 @@ export namespace Dumpling::Windows
 			CRASH,
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<Form, FormInterface::Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<Form, Form::Wrapper>;
 
 		HWND GetWnd() const { std::shared_lock sl(mutex); return hwnd; }
 
 	protected:
 
-		Form(Potato::IR::MemoryResourceRecord record, FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer)
+		Win32Form(Potato::IR::MemoryResourceRecord record, FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer)
 			: record(record), event_responder(std::move(respond)), form_renderer(std::move(form_renderer)){}
 
-		virtual ~Form() = default;
+		virtual ~Win32Form() = default;
 
 		Potato::IR::MemoryResourceRecord record;
 
@@ -74,8 +74,8 @@ export namespace Dumpling::Windows
 		FormEventResponder::Ptr event_responder;
 		FormRenderTarget::Ptr form_renderer;
 
-		virtual void AddFormInterfaceRef() const override { DefaultIntrusiveInterface::AddRef(); }
-		virtual void SubFormInterfaceRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		virtual void AddFormRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubFormRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		virtual void Release() override;
 
 		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -83,7 +83,7 @@ export namespace Dumpling::Windows
 		static LRESULT CALLBACK DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 		friend struct FormClassStyle;
-		friend struct FormInterface::Wrapper;
+		friend struct Form::Wrapper;
 		friend struct FormInit;
 		friend struct FormManager;
 	};
@@ -97,7 +97,7 @@ export namespace Dumpling::Windows
 			std::pmr::memory_resource* resource
 			) -> Ptr;
 
-		virtual FormInterface::Ptr CreateForm(
+		virtual Form::Ptr CreateForm(
 			FormProperty property,
 			FormEventResponder::Ptr responder,
 			FormRenderTarget::Ptr renderer,

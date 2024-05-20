@@ -98,7 +98,7 @@ export namespace Dumpling::Dx12
 		virtual void AddFormRenderTargetRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		virtual void SubFormRenderTargetRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
-		virtual void OnFormCreated(FormInterface& interface) override;
+		virtual void OnFormCreated(Form& interface) override;
 
 		Potato::IR::MemoryResourceRecord record;
 		RendererSocket socket;

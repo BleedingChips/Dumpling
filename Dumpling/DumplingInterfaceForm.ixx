@@ -53,25 +53,7 @@ export namespace Dumpling
 		std::u8string_view title = u8"Default Dumping Form";
 	};
 
-	struct FormInterface
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormInterfaceRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormInterfaceRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
-		using Ptr = Potato::Pointer::IntrusivePtr<FormInterface, Wrapper>;
-
-		
-		virtual ~FormInterface() = default;
-
-	protected:
-
-		virtual void AddFormInterfaceRef() const = 0;
-		virtual void SubFormInterfaceRef() const = 0;
-	};
+	struct Form;
 
 	struct FormEventResponder
 	{
@@ -82,7 +64,7 @@ export namespace Dumpling
 		};
 
 		using Ptr = Potato::Pointer::IntrusivePtr<FormEventResponder, Wrapper>;
-		virtual std::optional<FormEventRespond> Respond(FormInterface& interface, FormEvent event) { return std::nullopt; }
+		virtual std::optional<FormEventRespond> Respond(Form& interface, FormEvent event) { return std::nullopt; }
 
 	protected:
 
@@ -100,7 +82,7 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<FormRenderTarget, Wrapper>;
 
-		virtual void OnFormCreated(FormInterface& interface) = 0;
+		virtual void OnFormCreated(Form& interface) = 0;
 
 	protected:
 
@@ -109,7 +91,25 @@ export namespace Dumpling
 	};
 
 	
+	struct Form
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormRef(); }
+		};
 
+		using Ptr = Potato::Pointer::IntrusivePtr<Form, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<Form, Wrapper>;
+
+		
+		virtual ~Form() = default;
+
+	protected:
+
+		virtual void AddFormRef() const = 0;
+		virtual void SubFormRef() const = 0;
+	};
 
 
 	struct FormManager
@@ -127,14 +127,14 @@ export namespace Dumpling
 			FormTaskProperty property = {}
 		) { return false; }
 
-		virtual FormInterface::Ptr CreateForm(
+		virtual Form::Ptr CreateForm(
 			FormProperty property = {},
 			FormEventResponder::Ptr responder = {},
 			FormRenderTarget::Ptr renderer = {},
 			std::pmr::memory_resource* resource = std::pmr::get_default_resource()
-			) { return {}; };
+			) = 0;
 
-		virtual void CloseMessageLoop() {};
+		virtual void CloseMessageLoop() = 0;
 
 		using Ptr = Potato::Pointer::IntrusivePtr<FormManager, Wrapper>;
 
