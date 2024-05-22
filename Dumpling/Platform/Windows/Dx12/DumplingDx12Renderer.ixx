@@ -11,7 +11,7 @@ export module DumplingDx12Renderer;
 import std;
 import PotatoPointer;
 import PotatoIR;
-import DumplingInterfaceForm;
+import DumplingForm;
 import DumplingWindowsForm;
 import DumplingInterfaceRenderer;
 
@@ -19,7 +19,7 @@ import DumplingInterfaceRenderer;
 
 export namespace Dumpling::Dx12
 {
-
+	/*
 	using Dumpling::Windows::ComPtr;
 	using Dx12FactoryPtr = ComPtr<IDXGIFactory2>;
 	using Dx12DevicePtr = ComPtr<ID3D12Device>;
@@ -111,7 +111,7 @@ export namespace Dumpling::Dx12
 
 
 
-
+	*/
 
 
 

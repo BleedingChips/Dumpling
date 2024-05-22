@@ -21,7 +21,7 @@ namespace Dumpling::Windows
 
 	wchar_t const* form_class_style_name = L"Dumpling_Default_GameStyle";
 
-	std::optional<FormEvent> TranslateDumplingFormMessage(UINT msg, WPARAM wParam, LPARAM lParam);
+	std::optional<FormEvent> TranslateDumplingFormEvent(UINT msg, WPARAM wParam, LPARAM lParam);
 
 	FormClassStyle::FormClassStyle()
 	{
@@ -39,181 +39,78 @@ namespace Dumpling::Windows
 		UnregisterClassW(form_class_style_name, GetModuleHandle(0));
 	}
 
-	FormInit::Ptr FormInit::Create(FormStyle style, FormSize size, std::u8string_view title, std::pmr::memory_resource* resource)
+	bool Win32Form::Init(FormProperty property, std::pmr::memory_resource* temp)
 	{
-		auto layout = Potato::IR::Layout::Get<FormInit>();
-		auto re = Potato::Encode::StrEncoder<char8_t, wchar_t>::RequireSpace(title);
+		std::pmr::wstring str(temp);
+		auto re = Potato::Encode::StrEncoder<char8_t, wchar_t>::RequireSpace(property.title);
+		str.resize(re.TargetSpace + 1);
+		std::span<wchar_t> wstr{str.data(), str.size()};
+		Potato::Encode::StrEncoder<char8_t, wchar_t>::EncodeUnSafe(property.title, 
+			wstr
+		);
+		static FormClassStyle class_style;
+
+		HWND new_hwnd = CreateWindowExW(
+			0,
+			form_class_style_name,
+			str.data(),
+			GetWSStyle(property.style),
+			100, 100, property.form_size.width, property.form_size.height,
+			NULL,
+			NULL,
+			GetModuleHandle(0),
+			static_cast<void*>(this)
+		);
+		if(new_hwnd != nullptr)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	Form::Ptr Win32Form::Create(FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer, std::pmr::memory_resource* resource)
+	{
+		auto re = Potato::IR::MemoryResourceRecord::Allocate<Win32Form>(resource);
 		if(re)
 		{
-			auto layout_str = Potato::IR::Layout::GetArray<wchar_t>(re.TargetSpace + 1);
-			auto offset = Potato::IR::InsertLayoutCPP(layout, layout_str);
-			Potato::IR::FixLayoutCPP(layout);
-			auto record = Potato::IR::MemoryResourceRecord::Allocate(resource, layout);
-			if(record)
-			{
-				std::span<wchar_t> wstr{reinterpret_cast<wchar_t*>(record.GetByte() + offset), re.TargetSpace + 1};
-				Potato::Encode::StrEncoder<char8_t, wchar_t>::EncodeUnSafe(title, 
-					wstr
-				);
-				*wstr.rbegin() = L'\0';
-				FormInit::Ptr form_init = new (record.Get()) FormInit(
-					style, size, record, wstr
-				);
-				return std::move(form_init);
-			}
-		}
-		return {};
-	}
-
-	void FormInit::Release()
-	{
-		auto re = record;
-		this->~FormInit();
-		re.Deallocate();
-	}
-
-	auto FormManager::CreateForm(
-		FormProperty property,
-		FormEventResponder::Ptr responder,
-		FormRenderTarget::Ptr renderer,
-		std::pmr::memory_resource* resource
-	) -> Form::Ptr
-	{
-		if(resource != nullptr)
-		{
-			auto init = FormInit::Create(property.style, property.form_size, property.title, resource);
-			if(init)
-			{
-				auto form_re = Potato::IR::MemoryResourceRecord::Allocate<Win32Form>(resource);
-				if (form_re)
-				{
-					Form::Ptr ptr = new (form_re.Get())  Win32Form{form_re, std::move(responder), std::move(renderer)};
-					std::lock_guard lg(mutex);
-					init_requires.emplace_back(
-						std::move(ptr),
-						std::move(init)
-					);
-				}else
-				{
-					init->Release();
-				}
-			}
-		}
-		return {};
-	}
-
-	auto FormManager::CreateManager(std::pmr::memory_resource* resource) -> Ptr
-	{
-		auto re = Potato::IR::MemoryResourceRecord::Allocate<FormManager>(resource);
-		if (re)
-		{
-			Ptr ptr = new (re.Get()) FormManager{ re };
+			auto ptr = new(re.Get()) Win32Form{ re, std::move(respond), std::move(form_renderer) };
 			return ptr;
 		}
 		return {};
 	}
 
-	bool FormManager::Commite(
-		Potato::Task::TaskContext& context,
-		std::thread::id thread_id,
-		FormTaskProperty property
-	) {
-
-		if (thread_id != std::thread::id{})
-		{
-			Potato::Task::TaskProperty new_property
-			{
-				property.display_name,
-				{},
-				property.priority,
-				Potato::Task::Category::THREAD_TASK,
-				0,
-				thread_id
-			};
-			std::lock_guard lg(mutex);
-			if(!current_thread_id.has_value() && context.CommitTask(this, new_property))
-			{
-				current_thread_id = thread_id;
-				return true;
-			}
-		}
-		return false;
-	}
-
-
-	void FormManager::Release()
-	{
-		auto re = record;
-		this->~FormManager();
-		re.Deallocate();
-	}
-
-	void FormManager::TaskTerminal(Potato::Task::TaskProperty property) noexcept
+	bool Win32Form::PeekMessageEvent(FormEventRespond(*func)(void*, Form*, FormEvent), void* data)
 	{
 		MSG msg;
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		auto re = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+		if(re)
 		{
-			//TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
-		std::lock_guard lg(mutex);
-		current_thread_id.reset();
-		init_requires.clear();
-	}
-
-
-	void FormManager::TaskExecute(Potato::Task::ExecuteStatus& status)
-	{
-		while(true)
-		{
-			Form::Ptr ptr;
-			FormInit::Ptr iptr;
-			if (mutex.try_lock())
+			if(msg.hwnd != nullptr)
 			{
-				std::lock_guard lg(mutex, std::adopt_lock);
-				if(!init_requires.empty())
+				Win32Form::Ptr ptr = reinterpret_cast<Win32Form*>(GetWindowLongPtrW(msg.hwnd, GWLP_USERDATA));
+				if(ptr)
 				{
-					std::tie(ptr, iptr) = std::move(*init_requires.rbegin());
-					init_requires.pop_back();
+					ptr->OverrideTemporaryOutputFunction(func, data, true);
 				}
-			}
-			if(ptr)
-			{
-				static FormClassStyle class_style;
-
-				HWND new_hwnd = CreateWindowExW(
-					0,
-					form_class_style_name,
-					iptr->title.data(),
-					GetWSStyle(iptr->style),
-					100, 100, iptr->size.width, iptr->size.height,
-					NULL,
-					NULL,
-					GetModuleHandle(0),
-					ptr.GetPointer()
-				);
-				auto P = GetLastError();
-				ptr.Reset();
-				iptr.Reset();
+				DispatchMessageW(&msg);
+				if(ptr)
+				{
+					ptr->OverrideTemporaryOutputFunction(func, data, false);
+				}
 			}else
 			{
-				break;
+				if(func != nullptr)
+				{
+					auto event = TranslateDumplingFormEvent(msg.message, msg.lParam, msg.wParam);
+					if(event)
+					{
+						auto re = func(data, nullptr, *event);
+					}
+				}
+				DispatchMessageW(&msg);
 			}
 		}
-		MSG msg;
-		bool need_quit = false;
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			if(msg.message == WM_QUIT)
-			{
-				need_quit = true;
-			}
-			DispatchMessageW(&msg);
-		}
-		if (!need_quit)
-		{
-			status.context.CommitTask(this, status.task_property);
-		}
+		return re;
 	}
 
 	LRESULT CALLBACK Win32Form::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -231,7 +128,7 @@ namespace Dumpling::Windows
 					std::lock_guard sl(inter->mutex);
 					inter->hwnd = hWnd;
 				}
-				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
+				SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
 				inter->AddFormRef();
 				return inter->HandleEvent(hWnd, msg, wParam, lParam);
 			}
@@ -242,7 +139,7 @@ namespace Dumpling::Windows
 			if (ptr != nullptr)
 			{
 				auto re = ptr->HandleEvent(hWnd, msg, wParam, lParam);
-				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+				SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
 				ptr->SubFormRef();
 				return re;
 			}
@@ -276,29 +173,22 @@ namespace Dumpling::Windows
 		switch(msg)
 		{
 		case WM_CREATE:
-			if(form_renderer)
+			if(renderer_target)
 			{
-				form_renderer->OnFormCreated(*this);
+				renderer_target->OnFormCreated(*this);
 			}
 			break;
 		}
 
-		if(event_responder)
+		auto event = TranslateDumplingFormEvent(msg, wParam, lParam);
+		if(event)
 		{
-			auto event = TranslateDumplingFormMessage(msg, wParam, lParam);
-			if(event)
-			{
-				auto re = event_responder->Respond(*this, *event);
-				if(re)
-				{
-					
-				}
-			}
+			auto re = HandleResponder(*event);
 		}
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 
-	std::optional<FormEvent> TranslateDumplingFormMessage(UINT msg, WPARAM wParam, LPARAM lParam)
+	std::optional<FormEvent> TranslateDumplingFormEvent(UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		switch(msg)
 		{

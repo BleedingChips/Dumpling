@@ -6,7 +6,7 @@ export module DumplingInterfaceRenderer;
 import std;
 import PotatoMisc;
 import PotatoPointer;
-import DumplingInterfaceForm;
+import DumplingForm;
 
 export namespace Dumpling
 {

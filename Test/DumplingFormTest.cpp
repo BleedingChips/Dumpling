@@ -8,45 +8,31 @@ import std;
 using namespace Dumpling;
 
 
-struct Sub : public FormEventResponder
-{
-	virtual void AddFormEventResponderRef() const override {}
-	virtual void SubFormEventResponderRef() const override {}
-	FormManager::Ptr manager;
-	std::optional<FormEventRespond> Respond(Form& interface, FormEvent event) override
-	{
-		if(event.message == FormEventEnum::DESTORYED)
-		{
-			if(manager)
-			{
-				manager->CloseMessageLoop();
-			}
-		}
-		return {};
-	}
-};
 
 int main()
 {
+	auto form = Form::Create();
 
+	form->Init();
+
+	while(true)
 	{
-		Sub S1;
-		Potato::Task::TaskContext context;
-		Noodles::Context noodles_context;
-
-		auto man = Dumpling::CreateManager();
-		S1.manager = man;
-
-		auto dv = Dumpling::CreateRendererHardDevice();
-
-		auto render = dv->CreateRenderer();
-
-		auto form_rt = render->CreateFormRenderTarget(std::nullopt);
-
-		man->Commite(context, std::this_thread::get_id(), {});
-
-		auto form = man->CreateForm({}, &S1, form_rt);
-		context.ProcessTaskUntillNoExitsTask({});
+		bool need_quit = false;
+		while(
+			Form::PeekMessageEventOnce([&](Form*, FormEvent event)->FormEventRespond
+		{
+			if(event.message == FormEventEnum::DESTORYED)
+			{
+				need_quit = true;
+			}
+				return FormEventRespond::ignore;
+		})
+			)
+		{
+			
+		}
+		if(need_quit)
+			break;
 	}
 	
 

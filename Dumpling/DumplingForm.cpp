@@ -5,47 +5,81 @@ module DumplingForm;
 
 
 #ifdef _WIN32
-import DumplingWindows;
-import DumplingDx12;
+import DumplingWindowsForm;
 #endif
 
 namespace Dumpling
 {
-	FormManager::Ptr CreateManager(
-		std::pmr::memory_resource* resource
-	)
-	{
-#ifdef _WIN32
-		return Windows::FormManager::CreateManager(
-			resource
-		);
-#endif
-	}
+	FormEventRespond FormEventRespond::ignore{
+			FormEventRespond::Style::Ignore
+	};
 
-	HardDevice::Ptr CreateRendererHardDevice(
-		std::pmr::memory_resource* resource
-	)
+	bool Form::OverrideTemporaryOutputFunction(
+			FormEventRespond(*output_func)(void*, Form*, FormEvent),
+			void* output_func_data,
+			bool set
+		)
 	{
-#ifdef _WIN32
-		return Dx12::HardDevice::Create(
-			resource
-		);
-#endif
-	}
-
-	/*
-	std::optional<FormEventRespond> FormEventCollector::Respond(FormInterface& interface, FormEvent event)
-	{
-		if(event.message == FormEventEnum::DESTORYED)
+		std::lock_guard lg(mutex);
+		if(set)
 		{
-			std::lock_guard lg(mutex);
-			events.emplace_back(
-				FormInterface::Ptr{&interface},
-				event
-			);
+			if(output_event_responder == nullptr)
+			{
+				output_event_responder = output_func;
+				output_event_responder_data = output_func_data;
+				return true;
+			}
+		}else
+		{
+			if(output_event_responder == output_func && output_event_responder_data == output_func_data)
+			{
+				output_event_responder = nullptr;
+				output_event_responder_data = nullptr;
+				return true;
+			}
 		}
-		return std::nullopt;
+		
+		return false;
 	}
-	*/
-	
+
+	FormEventRespond Form::HandleResponder(FormEvent event)
+	{
+		if(responder)
+		{
+			auto re = responder->Respond(*this, event);
+			if(re.style != FormEventRespond::Style::Ignore)
+				return re;
+		}
+		std::shared_lock sl(mutex);
+		if(output_event_responder != nullptr)
+		{
+			return (*output_event_responder)(output_event_responder_data, this, event);
+		}
+		return FormEventRespond::ignore;
+	}
+
+	Form::Ptr Form::Create(
+			FormEventResponder::Ptr respond,
+			FormRenderTarget::Ptr render_target,
+			std::pmr::memory_resource* resource
+		)
+	{
+#ifdef _WIN32
+		return Windows::Win32Form::Create(
+			std::move(respond),
+			std::move(render_target),
+			resource
+		);
+#endif
+	}
+
+	bool Form::PeekMessageEventOnce(FormEventRespond(*func)(void*, Form*, FormEvent), void* data)
+	{
+#ifdef _WIN32
+		return Windows::Win32Form::PeekMessageEvent(
+			func,
+			data
+		);
+#endif
+	}
 }
