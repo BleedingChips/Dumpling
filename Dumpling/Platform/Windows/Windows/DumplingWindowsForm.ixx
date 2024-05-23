@@ -40,13 +40,13 @@ export namespace Dumpling::Windows
 		HWND GetWnd() const { std::shared_lock sl(mutex); return hwnd; }
 
 		static bool PeekMessageEvent(FormEventRespond(*func)(void*, Form*, FormEvent), void*);
-		static Form::Ptr Create(FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer, std::pmr::memory_resource* resource);
+		static Form::Ptr Create(FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer, std::size_t identity_id, std::pmr::memory_resource* resource);
 		virtual bool Init(FormProperty property, std::pmr::memory_resource* temp) override;
 
 	protected:
 
-		Win32Form(Potato::IR::MemoryResourceRecord record, FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer)
-			: record(record), Form(std::move(respond), std::move(form_renderer)) {}
+		Win32Form(Potato::IR::MemoryResourceRecord record, FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer, std::size_t identity_id)
+			: record(record), Form(std::move(respond), std::move(form_renderer), identity_id) {}
 
 		virtual ~Win32Form() = default;
 

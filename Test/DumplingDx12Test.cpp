@@ -1,68 +1,47 @@
 #include "d3d12.h"
 #include "dxgi1_6.h"
+
+
 import DumplingForm;
-import DumplingWindowsForm;
-import DumplingDx12Renderer;
+import DumplingRenderer;
 import std;
-
-
 
 using namespace Dumpling;
 
 int main()
 {
+	auto device = HardDevice::Create();
+	auto renderer = device->CreateRenderer();
+	auto output = renderer->CreateFormRenderTarget();
+	auto form = Form::Create({}, output);
 
-	/*
-	Dx12::InitDebugLayer();
+	FormProperty pro;
+	pro.title = u8"DumplingDx12Test";
 
+	form->Init(pro);
+
+	while(true)
 	{
-		
-
-		auto con = Dx12::HardwareDevice::Create();
-
-		auto ada = con.EnumAdapter(0);
-
-		auto sd = Dx12::SoftwareDevice::Create(ada);
-
-		auto render = sd.CreateRenderer();
-
-		auto swap = con.CreateSwapChain({}, render);
-
-		auto form_style = Win32::Style::Create(L"Fuck1");
-
-		auto form = Win32::Form::Create(form_style, {}, swap, {});
-
-		form->ShowWindow();
-
-		while (true)
+		bool need_quit = false;
+		while(
+			Form::PeekMessageEventOnce([&](Form*, FormEvent event)->FormEventRespond
 		{
-			if (form->GetStatus() == Win32::Form::Status::Closed)
+			if(event.message == FormEventEnum::DESTORYED)
 			{
-				break;
+				need_quit = true;
 			}
-			else
-				std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+				return FormEventRespond::Default;
+		})
+			)
+		{
+			
 		}
-
-		volatile int i = 0;
-
-		/*
-		auto ada = con->EnumAdapter(0);
-
-		auto decive = Dx12::Device::Create(ada);
-
-		auto queue = decive->CreateCommandQueue();
-
-		auto render = Dx12::RendererWrapper::Create(queue, con);
-
-		auto form = Win32::Form::Create(form_style, {}, render.GetPointer(), {});
-		*/
-
-		/*
-		
-		*/
-	//}
+		if(need_quit)
+			break;
+	}
 	
+
+	return 0;
 
 
 	return 0;

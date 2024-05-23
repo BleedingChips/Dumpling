@@ -2,7 +2,6 @@ import std;
 import PotatoTaskSystem;
 
 import Dumpling;
-import Noodles;
 import std;
 
 using namespace Dumpling;
@@ -13,7 +12,10 @@ int main()
 {
 	auto form = Form::Create();
 
-	form->Init();
+	FormProperty pro;
+	pro.title = u8"DumplingFormTest";
+
+	form->Init(pro);
 
 	while(true)
 	{
@@ -25,7 +27,7 @@ int main()
 			{
 				need_quit = true;
 			}
-				return FormEventRespond::ignore;
+				return FormEventRespond::Default;
 		})
 			)
 		{

@@ -68,12 +68,12 @@ namespace Dumpling::Windows
 		return false;
 	}
 
-	Form::Ptr Win32Form::Create(FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer, std::pmr::memory_resource* resource)
+	Form::Ptr Win32Form::Create(FormEventResponder::Ptr respond, FormRenderTarget::Ptr form_renderer, std::size_t identity_id, std::pmr::memory_resource* resource)
 	{
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<Win32Form>(resource);
 		if(re)
 		{
-			auto ptr = new(re.Get()) Win32Form{ re, std::move(respond), std::move(form_renderer) };
+			auto ptr = new(re.Get()) Win32Form{ re, std::move(respond), std::move(form_renderer), identity_id };
 			return ptr;
 		}
 		return {};

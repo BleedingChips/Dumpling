@@ -22,14 +22,9 @@ export namespace Dumpling
 		FormEventEnum message;
 	};
 
-	struct FormEventRespond
+	enum class FormEventRespond
 	{
-		enum class Style
-		{
-			Ignore,
-			Output
-		}style = Style::Ignore;
-		static FormEventRespond ignore;
+		Default,
 	};
 
 	enum class FormStyle
@@ -61,7 +56,7 @@ export namespace Dumpling
 		};
 
 		using Ptr = Potato::Pointer::IntrusivePtr<FormEventResponder, Wrapper>;
-		virtual FormEventRespond Respond(Form& interface, FormEvent event) { return FormEventRespond::ignore; }
+		virtual FormEventRespond Respond(Form& interface, FormEvent event) { return FormEventRespond::Default; }
 
 	protected:
 
@@ -103,6 +98,7 @@ export namespace Dumpling
 		static Ptr Create(
 			FormEventResponder::Ptr respond = {},
 			FormRenderTarget::Ptr render_target = {},
+			std::size_t identity_id = 0,
 			std::pmr::memory_resource* resource = std::pmr::get_default_resource()
 		);
 
@@ -118,11 +114,25 @@ export namespace Dumpling
 				&func
 			);
 		}
+
+		template<typename Func>
+		static std::size_t PeekMessageEvent(Func&& func)
+			requires(std::is_invocable_r_v<FormEventRespond, Func, Form*, FormEvent>)
+		{
+			std::size_t count = 0;
+			while(PeekMessageEventOnce(std::forward<Func>(func)))
+			{
+				count += 1;
+			}
+			return count;
+		}
 		
 		virtual ~Form() = default;
 
-		Form(FormEventResponder::Ptr responder, FormRenderTarget::Ptr renderer_target)
-			: responder(std::move(responder)), renderer_target(std::move(renderer_target)) {}
+		std::size_t GetIdentityID() const { return identity_id; }
+
+		Form(FormEventResponder::Ptr responder, FormRenderTarget::Ptr renderer_target, std::size_t identity_id)
+			: responder(std::move(responder)), renderer_target(std::move(renderer_target)), identity_id(identity_id) {}
 
 	protected:
 
@@ -138,6 +148,7 @@ export namespace Dumpling
 
 		FormRenderTarget::Ptr renderer_target;
 		FormEventResponder::Ptr responder;
+		std::size_t identity_id = 0;
 
 		std::shared_mutex mutex;
 		FormEventRespond(*output_event_responder)(void*, Form*, FormEvent) = nullptr;

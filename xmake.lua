@@ -30,10 +30,7 @@ if os.scriptdir() == os.projectdir() then
         target(name)
             set_kind("binary")
             add_files(file)
-            add_deps("Noodles")
             add_deps("Dumpling")
         target_end()
     end
-
-    includes("MiniGameDemo/")
 end 

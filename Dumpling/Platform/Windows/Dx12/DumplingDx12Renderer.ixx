@@ -13,13 +13,13 @@ import PotatoPointer;
 import PotatoIR;
 import DumplingForm;
 import DumplingWindowsForm;
-import DumplingInterfaceRenderer;
+import DumplingRenderer;
 
 
 
 export namespace Dumpling::Dx12
 {
-	/*
+
 	using Dumpling::Windows::ComPtr;
 	using Dx12FactoryPtr = ComPtr<IDXGIFactory2>;
 	using Dx12DevicePtr = ComPtr<ID3D12Device>;
@@ -108,10 +108,6 @@ export namespace Dumpling::Dx12
 
 		friend struct Renderer;
 	};
-
-
-
-	*/
 
 
 

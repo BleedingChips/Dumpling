@@ -10,9 +10,6 @@ import DumplingWindowsForm;
 
 namespace Dumpling
 {
-	FormEventRespond FormEventRespond::ignore{
-			FormEventRespond::Style::Ignore
-	};
 
 	bool Form::OverrideTemporaryOutputFunction(
 			FormEventRespond(*output_func)(void*, Form*, FormEvent),
@@ -47,7 +44,7 @@ namespace Dumpling
 		if(responder)
 		{
 			auto re = responder->Respond(*this, event);
-			if(re.style != FormEventRespond::Style::Ignore)
+			if(re != FormEventRespond::Default)
 				return re;
 		}
 		std::shared_lock sl(mutex);
@@ -55,19 +52,21 @@ namespace Dumpling
 		{
 			return (*output_event_responder)(output_event_responder_data, this, event);
 		}
-		return FormEventRespond::ignore;
+		return FormEventRespond::Default;
 	}
 
 	Form::Ptr Form::Create(
-			FormEventResponder::Ptr respond,
-			FormRenderTarget::Ptr render_target,
-			std::pmr::memory_resource* resource
-		)
+		FormEventResponder::Ptr respond,
+		FormRenderTarget::Ptr render_target,
+		std::size_t identity_id,
+		std::pmr::memory_resource* resource
+	)
 	{
 #ifdef _WIN32
 		return Windows::Win32Form::Create(
 			std::move(respond),
 			std::move(render_target),
+			identity_id,
 			resource
 		);
 #endif

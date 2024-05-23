@@ -1,7 +1,7 @@
 module;
 
 
-export module DumplingInterfaceRenderer;
+export module DumplingRenderer;
 
 import std;
 import PotatoMisc;
@@ -69,6 +69,8 @@ export namespace Dumpling
 		};
 
 		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Wrapper>;
+
+		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 		virtual std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const = 0;
 

@@ -2,14 +2,7 @@ module;
 
 #include <cassert>
 #include <d3d12.h>
-
 #include <dxgi1_6.h>
-#include <intsafe.h>
-#include <OCIdl.h>
-#include <OCIdl.h>
-#include <OCIdl.h>
-#include <OCIdl.h>
-#include <OCIdl.h>
 
 #undef interface
 
@@ -18,7 +11,6 @@ module DumplingDx12Renderer;
 
 namespace Dumpling::Dx12
 {
-	/*
 	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Dumpling::HardDevice::Ptr
 	{
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<HardDevice>(resource);
@@ -120,7 +112,7 @@ namespace Dumpling::Dx12
 		this->~Renderer();
 		re.Deallocate();
 	}
-	*/
+
 	/*
 	CommandQueue::Ptr Renderer::GetCommandQueue(std::thread::id thread_id)
 	{
@@ -152,7 +144,6 @@ namespace Dumpling::Dx12
 	}
 	*/
 
-	/*
 	Dumpling::FormRenderTarget::Ptr Renderer::CreateFormRenderTarget(std::optional<RendererSocket> socket, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
 	{
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<FormRenderTarget>(resource);
@@ -185,7 +176,6 @@ namespace Dumpling::Dx12
 			swap_chain = renderer->CreateSwapChain(property, real_form->GetWnd());
 		}
 	}
-	*/
 
 	/*
 	ComPtr<IDXGIFactory2> rptr;
