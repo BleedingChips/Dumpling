@@ -64,22 +64,22 @@ export namespace Dumpling
 		virtual void SubFormEventResponderRef() const = 0;
 	};
 
-	struct FormRenderTarget
+	struct FormRenderer
 	{
 		struct Wrapper
 		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormRenderTargetRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormRenderTargetRef(); }
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormRendererRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormRendererRef(); }
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<FormRenderTarget, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<FormRenderer, Wrapper>;
 
 		virtual void OnFormCreated(Form& interface) = 0;
 
 	protected:
 
-		virtual void AddFormRenderTargetRef() const = 0;
-		virtual void SubFormRenderTargetRef() const = 0;
+		virtual void AddFormRendererRef() const = 0;
+		virtual void SubFormRendererRef() const = 0;
 	};
 
 	
@@ -97,7 +97,7 @@ export namespace Dumpling
 
 		static Ptr Create(
 			FormEventResponder::Ptr respond = {},
-			FormRenderTarget::Ptr render_target = {},
+			FormRenderer::Ptr render_target = {},
 			std::size_t identity_id = 0,
 			std::pmr::memory_resource* resource = std::pmr::get_default_resource()
 		);
@@ -131,7 +131,7 @@ export namespace Dumpling
 
 		std::size_t GetIdentityID() const { return identity_id; }
 
-		Form(FormEventResponder::Ptr responder, FormRenderTarget::Ptr renderer_target, std::size_t identity_id)
+		Form(FormEventResponder::Ptr responder, FormRenderer::Ptr renderer_target, std::size_t identity_id)
 			: responder(std::move(responder)), renderer_target(std::move(renderer_target)), identity_id(identity_id) {}
 
 	protected:
@@ -146,7 +146,7 @@ export namespace Dumpling
 			bool set
 		);
 
-		FormRenderTarget::Ptr renderer_target;
+		FormRenderer::Ptr renderer_target;
 		FormEventResponder::Ptr responder;
 		std::size_t identity_id = 0;
 

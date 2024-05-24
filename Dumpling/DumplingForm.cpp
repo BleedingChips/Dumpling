@@ -57,7 +57,7 @@ namespace Dumpling
 
 	Form::Ptr Form::Create(
 		FormEventResponder::Ptr respond,
-		FormRenderTarget::Ptr render_target,
+		FormRenderer::Ptr render_target,
 		std::size_t identity_id,
 		std::pmr::memory_resource* resource
 	)

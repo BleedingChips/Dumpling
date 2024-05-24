@@ -12,7 +12,7 @@ int main()
 {
 	auto device = HardDevice::Create();
 	auto renderer = device->CreateRenderer();
-	auto output = renderer->CreateFormRenderTarget();
+	auto output = renderer->CreateFormRenderer();
 	auto form = Form::Create({}, output);
 
 	FormProperty pro;
