@@ -20,6 +20,10 @@ int main()
 
 	form->Init(pro);
 
+	auto pipeline = Pipeline::Create();
+
+	renderer->Execute({}, pipeline);
+
 	while(true)
 	{
 		bool need_quit = false;

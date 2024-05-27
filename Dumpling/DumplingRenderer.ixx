@@ -35,6 +35,20 @@ export namespace Dumpling
 		std::size_t uuid2 = 0;
 	};
 
+	enum class RendererResourceType
+	{
+		FLOAT32,
+		UNSIGNED_INT64,
+		TEXTURE_RT,
+		TEXTURE_DS,
+		TEXTURE1D,
+		TEXTURE1D_ARRAY,
+		TEXTURE2D,
+		TEXTURE2D_ARRAY,
+		TEXTURE3D,
+		TEXTURE_CUBE
+	};
+
 	struct RendererResource
 	{
 		struct Wrapper
@@ -51,6 +65,33 @@ export namespace Dumpling
 		virtual void SubRendererResourceRef() const = 0;
 	};
 
+	struct ParameterLayout
+	{
+		enum class InoutType
+		{
+			INPUT,
+			OUTOUT,
+			TEMP
+		};
+
+		struct Element
+		{
+			InoutType inout_type;
+			std::u8string_view name;
+			RendererResourceType type;
+		};
+
+		std::pmr::vector<Element> layouts;
+	};
+
+	struct PipelineParameter
+	{
+		struct Element
+		{
+			
+		};
+	};
+
 	struct Pipeline
 	{
 		struct Wrapper
@@ -61,10 +102,28 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Pipeline, Wrapper>;
 
+		static Ptr Create() { return {}; }
+
 	protected:
 
 		virtual void AddPipelineRef() const = 0;
 		virtual void SubPipelineRef() const = 0;
+	};
+
+	struct RendererRequester
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddRendererRequesterRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererRequesterRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<RendererRequester, Wrapper>;
+
+	protected:
+
+		virtual void AddRendererRequesterRef() const = 0;
+		virtual void SubRendererRequesterRef() const = 0;
 	};
 
 	struct SubRenderer
@@ -79,26 +138,28 @@ export namespace Dumpling
 
 	protected:
 
+		RendererRequester::Ptr requester;
+		//PipelineParameter::Ptr parameter;
+
 		virtual void AddSubRendererRef() const = 0;
 		virtual void SubSubRendererRef() const = 0;
 	};
 
-	struct Pass
+	struct PassProperty
 	{
-		struct Wrapper
+		std::u8string_view name;
+		struct Element
 		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddPassRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubPassRef(); }
+			std::u8string_view name;
+			RendererResourceType resource_type;
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<Pass, Wrapper>;
+		std::pmr::vector<Element> layout;
+	};
 
-		void Execute(SubRenderer const&);
-
-	protected:
-
-		virtual void AddPassRef() const = 0;
-		virtual void SubPassRef() const = 0;
+	struct PassIdentity
+	{
+		std::size_t id;
 	};
 
 	struct Renderer
@@ -112,8 +173,10 @@ export namespace Dumpling
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
 		virtual FormRenderer::Ptr CreateFormRenderer(std::optional<RendererSocket> socket = std::nullopt, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
-		SubRenderer::Ptr GetSubRenderer();
-		virtual void Execute(Pipeline const& pipeline);
+		virtual bool Execute(RendererRequester::Ptr requester, Pipeline::Ptr pipeline);
+		virtual std::optional<PassIdentity> RegisterPass(PassProperty pass_property);
+		virtual bool UnregisterPass(PassIdentity id);
+		virtual SubRenderer::Ptr EnumPass(PassIdentity id, std::size_t ite);
 
 	protected:
 

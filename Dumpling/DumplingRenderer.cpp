@@ -21,4 +21,24 @@ namespace Dumpling
 		return Dx12::HardDevice::Create(resource);
 #endif
 	}
+
+	bool Renderer::Execute(RendererRequester::Ptr requester, Pipeline::Ptr pipeline)
+	{
+		return true;
+	}
+
+	std::optional<PassIdentity> Renderer::RegisterPass(PassProperty pass_property)
+	{
+		return std::nullopt;
+	}
+
+	bool Renderer::UnregisterPass(PassIdentity id)
+	{
+		return true;
+	}
+
+	SubRenderer::Ptr Renderer::EnumPass(PassIdentity id, std::size_t ite)
+	{
+		return {};
+	}
 }
