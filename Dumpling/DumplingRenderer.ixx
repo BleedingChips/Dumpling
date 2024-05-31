@@ -7,6 +7,7 @@ import std;
 import PotatoMisc;
 import PotatoPointer;
 import DumplingForm;
+import PotatoIR;
 
 export namespace Dumpling
 {
@@ -84,14 +85,6 @@ export namespace Dumpling
 		std::pmr::vector<Element> layouts;
 	};
 
-	struct PipelineParameter
-	{
-		struct Element
-		{
-			
-		};
-	};
-
 	struct Pipeline
 	{
 		struct Wrapper
@@ -104,13 +97,15 @@ export namespace Dumpling
 
 		static Ptr Create() { return {}; }
 
+		virtual Potato::IR::StructLayout::Ptr GetStructLayout() const = 0;
+
 	protected:
 
 		virtual void AddPipelineRef() const = 0;
 		virtual void SubPipelineRef() const = 0;
 	};
 
-	struct RendererRequester
+	struct PipelineRequester
 	{
 		struct Wrapper
 		{
@@ -118,7 +113,7 @@ export namespace Dumpling
 			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererRequesterRef(); }
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<RendererRequester, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<PipelineRequester, Wrapper>;
 
 	protected:
 
@@ -136,10 +131,10 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<SubRenderer, Wrapper>;
 
-	protected:
+		virtual PipelineRequester::Ptr GetPipelineRequester() const = 0;
+		virtual Potato::IR::StructLayoutObject::Ptr GetParameters() const = 0;
 
-		RendererRequester::Ptr requester;
-		//PipelineParameter::Ptr parameter;
+	protected:
 
 		virtual void AddSubRendererRef() const = 0;
 		virtual void SubSubRendererRef() const = 0;
@@ -148,13 +143,7 @@ export namespace Dumpling
 	struct PassProperty
 	{
 		std::u8string_view name;
-		struct Element
-		{
-			std::u8string_view name;
-			RendererResourceType resource_type;
-		};
-
-		std::pmr::vector<Element> layout;
+		Potato::IR::StructLayout::Ptr struct_layout;
 	};
 
 	struct PassIdentity
@@ -173,7 +162,7 @@ export namespace Dumpling
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
 		virtual FormRenderer::Ptr CreateFormRenderer(std::optional<RendererSocket> socket = std::nullopt, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
-		virtual bool Execute(RendererRequester::Ptr requester, Pipeline::Ptr pipeline);
+		virtual bool Execute(PipelineRequester::Ptr requester, Pipeline::Ptr pipeline, Potato::IR::StructLayoutObject::Ptr parameter = {});
 		virtual std::optional<PassIdentity> RegisterPass(PassProperty pass_property);
 		virtual bool UnregisterPass(PassIdentity id);
 		virtual SubRenderer::Ptr EnumPass(PassIdentity id, std::size_t ite);

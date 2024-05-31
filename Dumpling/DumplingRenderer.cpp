@@ -22,7 +22,7 @@ namespace Dumpling
 #endif
 	}
 
-	bool Renderer::Execute(RendererRequester::Ptr requester, Pipeline::Ptr pipeline)
+	bool Renderer::Execute(PipelineRequester::Ptr requester, Pipeline::Ptr pipeline, Potato::IR::StructLayoutObject::Ptr parameter)
 	{
 		return true;
 	}
