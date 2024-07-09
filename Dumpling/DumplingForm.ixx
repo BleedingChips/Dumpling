@@ -10,12 +10,14 @@ import PotatoTaskSystem;
 
 export namespace Dumpling
 {
+
 	enum class FormEventEnum
 	{
-		DESTORYED,
+		DESTROY,
+		QUIT,
+
+		MAX_UNDEFINED,
 	};
-
-
 
 	struct FormEvent
 	{
@@ -63,25 +65,6 @@ export namespace Dumpling
 		virtual void AddFormEventResponderRef() const = 0;
 		virtual void SubFormEventResponderRef() const = 0;
 	};
-
-	struct FormRenderer
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormRendererRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormRendererRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<FormRenderer, Wrapper>;
-
-		virtual void OnFormCreated(Form& interface) = 0;
-
-	protected:
-
-		virtual void AddFormRendererRef() const = 0;
-		virtual void SubFormRendererRef() const = 0;
-	};
-
 	
 	struct Form
 	{
@@ -97,19 +80,18 @@ export namespace Dumpling
 
 		static Ptr Create(
 			FormEventResponder::Ptr respond = {},
-			FormRenderer::Ptr render_target = {},
 			std::size_t identity_id = 0,
 			std::pmr::memory_resource* resource = std::pmr::get_default_resource()
 		);
 
 		template<typename Func>
 		static bool PeekMessageEventOnce(Func&& func)
-			requires(std::is_invocable_r_v<FormEventRespond, Func, Form*, FormEvent>)
+			requires(std::is_invocable_r_v<void, Func, Form*, FormEvent, FormEventRespond>)
 		{
 			return Form::PeekMessageEventOnce(
-				[](void* data, Form* form, FormEvent event)
+				[](void* data, Form* form, FormEvent event, FormEventRespond respond)
 				{
-					return (*static_cast<Func*>(data))(form, event);
+					(*static_cast<Func*>(data))(form, event, respond);
 				},
 				&func
 			);
@@ -117,7 +99,7 @@ export namespace Dumpling
 
 		template<typename Func>
 		static std::size_t PeekMessageEvent(Func&& func)
-			requires(std::is_invocable_r_v<FormEventRespond, Func, Form*, FormEvent>)
+			requires(std::is_invocable_r_v<void, Func, Form*, FormEvent, FormEventRespond>)
 		{
 			std::size_t count = 0;
 			while(PeekMessageEventOnce(std::forward<Func>(func)))
@@ -131,28 +113,21 @@ export namespace Dumpling
 
 		std::size_t GetIdentityID() const { return identity_id; }
 
-		Form(FormEventResponder::Ptr responder, FormRenderer::Ptr renderer_target, std::size_t identity_id)
-			: responder(std::move(responder)), renderer_target(std::move(renderer_target)), identity_id(identity_id) {}
+		Form(FormEventResponder::Ptr responder, std::size_t identity_id)
+			: responder(std::move(responder)), identity_id(identity_id) {}
+
+		static void PostFormQuitEvent();
 
 	protected:
 
 		virtual FormEventRespond HandleResponder(FormEvent event);
 
-		static bool PeekMessageEventOnce(FormEventRespond(*func)(void*, Form*, FormEvent), void*);
+		static bool PeekMessageEventOnce(void(*func)(void*, Form*, FormEvent, FormEventRespond), void*);
 
-		bool OverrideTemporaryOutputFunction(
-			FormEventRespond(*output_func)(void*, Form*, FormEvent),
-			void* output_func_data,
-			bool set
-		);
+		
 
-		FormRenderer::Ptr renderer_target;
 		FormEventResponder::Ptr responder;
 		std::size_t identity_id = 0;
-
-		std::shared_mutex mutex;
-		FormEventRespond(*output_event_responder)(void*, Form*, FormEvent) = nullptr;
-		void* output_event_responder_data = nullptr;
 
 		virtual void AddFormRef() const = 0;
 		virtual void SubFormRef() const = 0;

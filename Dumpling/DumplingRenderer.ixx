@@ -30,12 +30,6 @@ export namespace Dumpling
 		std::optional<float> present;
 	};
 
-	struct RendererSocket
-	{
-		std::size_t uuid = 0;
-		std::size_t uuid2 = 0;
-	};
-
 	enum class RendererResourceType
 	{
 		FLOAT32,
@@ -121,6 +115,22 @@ export namespace Dumpling
 		virtual void SubRendererRequesterRef() const = 0;
 	};
 
+	struct FormRenderer
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormRendererRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormRendererRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<FormRenderer, Wrapper>;
+
+	protected:
+
+		virtual void AddFormRendererRef() const = 0;
+		virtual void SubFormRendererRef() const = 0;
+	};
+
 	struct SubRenderer
 	{
 		struct Wrapper
@@ -161,7 +171,7 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
-		virtual FormRenderer::Ptr CreateFormRenderer(std::optional<RendererSocket> socket = std::nullopt, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
+		virtual FormRenderer::Ptr CreateFormRenderer(Form& form, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
 		virtual bool Execute(PipelineRequester::Ptr requester, Pipeline::Ptr pipeline, Potato::IR::StructLayoutObject::Ptr parameter = {});
 		virtual std::optional<PassIdentity> RegisterPass(PassProperty pass_property);
 		virtual bool UnregisterPass(PassIdentity id);

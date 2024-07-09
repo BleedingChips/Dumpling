@@ -7,10 +7,25 @@ import std;
 using namespace Dumpling;
 
 
+struct TopEventResponder : public Dumpling::FormEventResponder
+{
+	void AddFormEventResponderRef() const override {}
+	void SubFormEventResponderRef() const override {}
+	FormEventRespond Respond(Form& interface, FormEvent event) override
+	{
+		if(event.message == FormEventEnum::DESTROY)
+		{
+			Form::PostFormQuitEvent();
+		}
+		return FormEventRespond::Default;
+	}
+};
+
 
 int main()
 {
-	auto form = Form::Create();
+	TopEventResponder responder;
+	auto form = Form::Create(&responder);
 
 	FormProperty pro;
 	pro.title = u8"DumplingFormTest";
@@ -21,13 +36,12 @@ int main()
 	{
 		bool need_quit = false;
 		while(
-			Form::PeekMessageEventOnce([&](Form*, FormEvent event)->FormEventRespond
+			Form::PeekMessageEventOnce([&](Form* form, FormEvent event, FormEventRespond respond)
 		{
-			if(event.message == FormEventEnum::DESTORYED)
+			if(event.message == FormEventEnum::QUIT)
 			{
 				need_quit = true;
 			}
-				return FormEventRespond::Default;
 		})
 			)
 		{

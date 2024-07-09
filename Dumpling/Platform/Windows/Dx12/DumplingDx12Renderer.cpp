@@ -144,22 +144,6 @@ namespace Dumpling::Dx12
 	}
 	*/
 
-	Dumpling::FormRenderer::Ptr Renderer::CreateFormRenderer(std::optional<RendererSocket> socket, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
-	{
-		auto re = Potato::IR::MemoryResourceRecord::Allocate<FormRenderer>(resource);
-
-		if(re)
-		{
-			RendererSocket cur_socket;
-			if(socket.has_value())
-			{
-				cur_socket = *socket;
-			}
-			return new(re.Get()) FormRenderer{re, cur_socket, this, property };
-		}
-		return {};
-	}
-
 	void FormRenderer::Release()
 	{
 		auto re = record;
@@ -167,6 +151,7 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
+	/*
 	void FormRenderer::OnFormCreated(Form& interface)
 	{
 		Windows::Win32Form* real_form = dynamic_cast<Windows::Win32Form*>(&interface);
@@ -176,6 +161,7 @@ namespace Dumpling::Dx12
 			swap_chain = renderer->CreateSwapChain(property, real_form->GetWnd());
 		}
 	}
+	*/
 
 	/*
 	ComPtr<IDXGIFactory2> rptr;

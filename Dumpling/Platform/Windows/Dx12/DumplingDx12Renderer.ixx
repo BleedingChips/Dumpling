@@ -52,14 +52,12 @@ export namespace Dumpling::Dx12
 		friend struct Dumpling::HardDevice::Wrapper;
 	};
 
-	
-
 	struct Renderer : public Dumpling::Renderer, public Potato::Pointer::DefaultIntrusiveInterface
 	{
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Dumpling::Renderer::Wrapper>;
 
-		Dumpling::FormRenderer::Ptr CreateFormRenderer(std::optional<RendererSocket> socket = std::nullopt, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		Dumpling::FormRenderer::Ptr CreateFormRenderer(Form& form, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		Dx12SwapChainPtr CreateSwapChain(FormRenderTargetProperty property, HWND hwnd);
 
 		Dx12DevicePtr GetDx12Device() const { return device; }
@@ -92,16 +90,14 @@ export namespace Dumpling::Dx12
 
 	protected:
 
-		FormRenderer(Potato::IR::MemoryResourceRecord record, RendererSocket socket, Renderer::Ptr renderer, FormRenderTargetProperty property)
-			: record(record), socket(socket), renderer(std::move(renderer)), property(property) {}
+		FormRenderer(Potato::IR::MemoryResourceRecord record, Renderer::Ptr renderer, FormRenderTargetProperty property)
+			: record(record), renderer(std::move(renderer)), property(property) {}
 
 		virtual void AddFormRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		virtual void SubFormRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
-		virtual void OnFormCreated(Form& interface) override;
 
 		Potato::IR::MemoryResourceRecord record;
-		RendererSocket socket;
 		Renderer::Ptr renderer;
 		FormRenderTargetProperty property;
 		Dx12SwapChainPtr swap_chain;

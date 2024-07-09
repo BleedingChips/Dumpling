@@ -12,8 +12,8 @@ int main()
 {
 	auto device = HardDevice::Create();
 	auto renderer = device->CreateRenderer();
-	auto output = renderer->CreateFormRenderer();
-	auto form = Form::Create({}, output);
+	//auto output = renderer->CreateFormRenderer();
+	auto form = Form::Create({});
 
 	FormProperty pro;
 	pro.title = u8"DumplingDx12Test";
@@ -24,13 +24,15 @@ int main()
 
 	renderer->Execute({}, pipeline);
 
+	//renderer->RegisterPass();
+
 	while(true)
 	{
 		bool need_quit = false;
 		while(
-			Form::PeekMessageEventOnce([&](Form*, FormEvent event)->FormEventRespond
+			Form::PeekMessageEventOnce([&](Form*, FormEvent event, FormEventRespond)
 		{
-			if(event.message == FormEventEnum::DESTORYED)
+			if(event.message == FormEventEnum::QUIT)
 			{
 				need_quit = true;
 			}
