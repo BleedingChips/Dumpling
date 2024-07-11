@@ -7,25 +7,28 @@ import std;
 using namespace Dumpling;
 
 
-struct TopEventResponder : public Dumpling::FormEventResponder
+struct TopEventCapture: public Dumpling::FormEventCapture
 {
-	void AddFormEventResponderRef() const override {}
-	void SubFormEventResponderRef() const override {}
-	FormEventRespond Respond(Form& interface, FormEvent event) override
+	void AddFormEventCaptureRef() const override {}
+	void SubFormEventCaptureRef() const override {}
+	FormEvent::Category AcceptedCategory() const override { return FormEvent::Category::MODIFY; }
+	FormEvent::Respond Receive(Form& interface, FormEvent::Modify event) override
 	{
-		if(event.message == FormEventEnum::DESTROY)
+		if(event.message == FormEvent::Modify::Message::DESTROY)
 		{
 			Form::PostFormQuitEvent();
 		}
-		return FormEventRespond::Default;
+		return FormEvent::Respond::PASS;
 	}
 };
 
 
 int main()
 {
-	TopEventResponder responder;
-	auto form = Form::Create(&responder);
+	TopEventCapture responder;
+	auto form = Form::Create();
+
+	form->InsertCapture(&responder);
 
 	FormProperty pro;
 	pro.title = u8"DumplingFormTest";
@@ -36,9 +39,9 @@ int main()
 	{
 		bool need_quit = false;
 		while(
-			Form::PeekMessageEventOnce([&](Form* form, FormEvent event, FormEventRespond respond)
+			Form::PeekMessageEventOnce([&](FormEvent::System event)
 		{
-			if(event.message == FormEventEnum::QUIT)
+			if(event.message == decltype(event.message)::QUIT)
 			{
 				need_quit = true;
 			}

@@ -10,34 +10,84 @@ import DumplingWindowsForm;
 
 namespace Dumpling
 {
-
-	FormEventRespond Form::HandleResponder(FormEvent event)
+	bool Form::InsertCapture_AssumedLocked(FormEventCapture::Ptr capture, std::size_t priority)
 	{
-		if(responder)
+		if(capture)
 		{
-			auto re = responder->Respond(*this, event);
-			if(re != FormEventRespond::Default)
-				return re;
+			auto ite = std::find_if(captures.begin(), captures.end(), [=](CaptureTuple& tuple)
+			{
+				return tuple.priority < priority;
+			});
+			captures.insert(ite, {priority, capture->AcceptedCategory(), capture});
+			return true;
 		}
-		return FormEventRespond::Default;
+		return false;
+	}
+	FormEvent::Respond Form::HandleEvent(FormEvent::System event)
+	{
+		std::shared_lock sl(capture_mutex);
+		for(auto& ite : captures)
+		{
+			if((ite.acceptable_category & FormEvent::Category::SYSTEM) != FormEvent::Category::UNACCEPTABLE)
+			{
+				auto re = ite.capture->Receive(*this, event);
+				if(re == FormEvent::Respond::CAPTURED)
+				{
+					return FormEvent::Respond::CAPTURED;
+				}
+			}
+		}
+		return FormEvent::Respond::PASS;
+	}
+
+	FormEvent::Respond Form::HandleEvent(FormEvent::Modify event)
+	{
+		std::shared_lock sl(capture_mutex);
+		for(auto& ite : captures)
+		{
+			if((ite.acceptable_category & FormEvent::Category::MODIFY) != FormEvent::Category::UNACCEPTABLE)
+			{
+				auto re = ite.capture->Receive(*this, event);
+				if(re == FormEvent::Respond::CAPTURED)
+				{
+					return FormEvent::Respond::CAPTURED;
+				}
+			}
+		}
+		return FormEvent::Respond::PASS;
+	}
+
+	FormEvent::Respond Form::HandleEvent(FormEvent::Input event)
+	{
+		std::shared_lock sl(capture_mutex);
+		for(auto& ite : captures)
+		{
+			if((ite.acceptable_category & FormEvent::Category::INPUT) != FormEvent::Category::UNACCEPTABLE)
+			{
+				auto re = ite.capture->Receive(*this, event);
+				if(re == FormEvent::Respond::CAPTURED)
+				{
+					return FormEvent::Respond::CAPTURED;
+				}
+			}
+		}
+		return FormEvent::Respond::PASS;
 	}
 
 	Form::Ptr Form::Create(
-		FormEventResponder::Ptr respond,
 		std::size_t identity_id,
 		std::pmr::memory_resource* resource
 	)
 	{
 #ifdef _WIN32
 		return Windows::Win32Form::Create(
-			std::move(respond),
 			identity_id,
 			resource
 		);
 #endif
 	}
 
-	bool Form::PeekMessageEventOnce(void(*func)(void*, Form*, FormEvent, FormEventRespond), void* data)
+	bool Form::PeekMessageEventOnce(void(*func)(void*, FormEvent::System), void* data)
 	{
 #ifdef _WIN32
 		return Windows::Win32Form::PeekMessageEvent(

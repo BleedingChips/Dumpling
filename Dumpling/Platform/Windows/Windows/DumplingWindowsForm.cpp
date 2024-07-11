@@ -4,6 +4,7 @@ module;
 #include <Windows.h>
 
 #undef max
+#undef IGNORE
 
 #define DUMPLING_WM_GLOBAL_MESSAGE static_cast<UINT>(WM_USER + 100)
 
@@ -23,7 +24,17 @@ namespace Dumpling::Windows
 
 	wchar_t const* form_class_style_name = L"Dumpling_Default_GameStyle";
 
-	std::optional<FormEvent> TranslateDumplingFormEvent(UINT msg, WPARAM wParam, LPARAM lParam);
+	std::variant<std::nullopt_t, FormEvent::System, FormEvent::Modify, FormEvent::Input> TranslateDumplingFormEvent(UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		switch(msg)
+		{
+		case WM_QUIT:
+			return FormEvent::System{FormEvent::System::Message::QUIT};
+		case WM_NCDESTROY:
+			return FormEvent::Modify{FormEvent::Modify::Message::DESTROY};
+		}
+		return std::nullopt;
+	}
 
 	FormClassStyle::FormClassStyle()
 	{
@@ -75,36 +86,33 @@ namespace Dumpling::Windows
 		return false;
 	}
 
-	Form::Ptr Win32Form::Create(FormEventResponder::Ptr respond, std::size_t identity_id, std::pmr::memory_resource* resource)
+	Form::Ptr Win32Form::Create(std::size_t identity_id, std::pmr::memory_resource* resource)
 	{
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<Win32Form>(resource);
 		if(re)
 		{
-			auto ptr = new(re.Get()) Win32Form{ re, std::move(respond), identity_id };
+			auto ptr = new(re.Get()) Win32Form{ re, identity_id };
 			return ptr;
 		}
 		return {};
 	}
 
-	bool Win32Form::PeekMessageEvent(void(*func)(void*, Form*, FormEvent, FormEventRespond), void* data)
+	bool Win32Form::PeekMessageEvent(void(*func)(void*, FormEvent::System), void* data)
 	{
 		MSG msg;
 		auto re = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
 		if(re)
 		{
 			LRESULT result = S_OK;
-			Win32Form* ptr = nullptr;
 			if(msg.hwnd != nullptr)
 			{
-				ptr = reinterpret_cast<Win32Form*>(GetWindowLongPtrW(msg.hwnd, GWLP_USERDATA));
-			}
-			result = DispatchMessageW(&msg);
-			if(func != nullptr)
+				DispatchMessageW(&msg);
+			}else
 			{
 				auto event = TranslateDumplingFormEvent(msg.message, msg.lParam, msg.wParam);
-				if(event)
+				if(std::holds_alternative<FormEvent::System>(event))
 				{
-					func(data, ptr, *event, FormEventRespond::Default);
+					func(data, std::get<FormEvent::System>(event));
 				}
 			}
 		}
@@ -166,23 +174,25 @@ namespace Dumpling::Windows
 
 	HRESULT Win32Form::HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+		using namespace FormEvent;
 		auto event = TranslateDumplingFormEvent(msg, wParam, lParam);
-		if(event)
+		Respond respond = Respond::PASS;
+		if(std::holds_alternative<System>(event))
 		{
-			auto re = HandleResponder(*event);
-		}
-		return DefWindowProcW(hWnd, msg, wParam, lParam);
-	}
-
-	std::optional<FormEvent> TranslateDumplingFormEvent(UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		switch(msg)
+			respond = Form::HandleEvent(std::get<System>(event));
+		}else if(std::holds_alternative<Modify>(event))
 		{
-		case WM_NCDESTROY:
-			return FormEvent{FormEventEnum::DESTROY};
-		case WM_QUIT:
-			return FormEvent{FormEventEnum::QUIT};
+			respond = Form::HandleEvent(std::get<Modify>(event));
+		}else if(std::holds_alternative<Input>(event))
+		{
+			respond = Form::HandleEvent(std::get<Input>(event));
 		}
-		return std::nullopt;
+		if(respond == Respond::PASS)
+		{
+			return DefWindowProcW(hWnd, msg, wParam, lParam);
+		}else
+		{
+			return S_OK;
+		}
 	}
 }
