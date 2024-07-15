@@ -59,29 +59,33 @@ namespace Dumpling::Windows
 
 	bool Win32Form::Init(FormProperty property, std::pmr::memory_resource* temp)
 	{
-		std::pmr::wstring str(temp);
-		auto re = Potato::Encode::StrEncoder<char8_t, wchar_t>::RequireSpace(property.title);
-		str.resize(re.TargetSpace + 1);
-		std::span<wchar_t> wstr{str.data(), str.size()};
-		Potato::Encode::StrEncoder<char8_t, wchar_t>::EncodeUnSafe(property.title, 
-			wstr
-		);
-		static FormClassStyle class_style;
-
-		HWND new_hwnd = CreateWindowExW(
-			0,
-			form_class_style_name,
-			str.data(),
-			GetWSStyle(property.style),
-			100, 100, property.form_size.width, property.form_size.height,
-			NULL,
-			NULL,
-			GetModuleHandle(0),
-			static_cast<void*>(this)
-		);
-		if(new_hwnd != nullptr)
+		std::lock_guard lg(mutex);
+		if(hwnd == nullptr)
 		{
-			return true;
+			std::pmr::wstring str(temp);
+			auto re = Potato::Encode::StrEncoder<char8_t, wchar_t>::RequireSpace(property.title);
+			str.resize(re.TargetSpace + 1);
+			std::span<wchar_t> wstr{ str.data(), str.size() };
+			Potato::Encode::StrEncoder<char8_t, wchar_t>::EncodeUnSafe(property.title,
+				wstr
+			);
+			static FormClassStyle class_style;
+
+			HWND new_hwnd = CreateWindowExW(
+				0,
+				form_class_style_name,
+				str.data(),
+				GetWSStyle(property.style),
+				100, 100, property.form_size.width, property.form_size.height,
+				NULL,
+				NULL,
+				GetModuleHandle(0),
+				static_cast<void*>(this)
+			);
+			if (new_hwnd != nullptr)
+			{
+				return true;
+			}
 		}
 		return false;
 	}
@@ -130,10 +134,7 @@ namespace Dumpling::Windows
 				assert(Struct != nullptr);
 				Win32Form* inter = static_cast<Win32Form*>(Struct->lpCreateParams);
 				assert(inter != nullptr);
-				{
-					std::lock_guard sl(inter->mutex);
-					inter->hwnd = hWnd;
-				}
+				inter->hwnd = hWnd;
 				SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
 				inter->AddFormRef();
 				return inter->HandleEvent(hWnd, msg, wParam, lParam);

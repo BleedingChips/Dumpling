@@ -30,7 +30,7 @@ int main()
 
 	auto device = HardDevice::Create();
 	auto renderer = device->CreateRenderer();
-	//auto output = renderer->CreateFormRenderer();
+	
 	auto form = Form::Create();
 
 	FormProperty pro;
@@ -39,6 +39,8 @@ int main()
 	form->InsertCapture(&top);
 
 	form->Init(pro);
+
+	auto output = renderer->CreateFormRenderer(*form);
 
 	auto pipeline = Pipeline::Create();
 

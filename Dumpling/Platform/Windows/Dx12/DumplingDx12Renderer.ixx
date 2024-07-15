@@ -21,6 +21,7 @@ export namespace Dumpling::Dx12
 {
 
 	using Dumpling::Windows::ComPtr;
+
 	using Dx12FactoryPtr = ComPtr<IDXGIFactory2>;
 	using Dx12DevicePtr = ComPtr<ID3D12Device>;
 	using Dx12SwapChainPtr = ComPtr<IDXGISwapChain1>;
@@ -85,21 +86,22 @@ export namespace Dumpling::Dx12
 
 	
 
-	struct FormRenderer : public Dumpling::FormRenderer, public Potato::Pointer::DefaultIntrusiveInterface
+	struct FormRenderer : public Dumpling::FormRenderer, public Dumpling::RendererResource, public Potato::Pointer::DefaultIntrusiveInterface
 	{
 
 	protected:
 
-		FormRenderer(Potato::IR::MemoryResourceRecord record, Renderer::Ptr renderer, FormRenderTargetProperty property)
-			: record(record), renderer(std::move(renderer)), property(property) {}
+		FormRenderer(Potato::IR::MemoryResourceRecord record, Dx12SwapChainPtr swap_chain)
+			: record(record), swap_chain(std::move(swap_chain)){}
 
 		virtual void AddFormRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		virtual void SubFormRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		virtual void AddRendererResourceRef() const override { AddFormRendererRef(); }
+		virtual void SubRendererResourceRef() const override { SubFormRendererRef(); }
+
 		void Release() override;
 
 		Potato::IR::MemoryResourceRecord record;
-		Renderer::Ptr renderer;
-		FormRenderTargetProperty property;
 		Dx12SwapChainPtr swap_chain;
 
 		friend struct Renderer;

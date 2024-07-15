@@ -3,6 +3,7 @@ module;
 #include <cassert>
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <intsafe.h>
 
 #undef interface
 
@@ -87,6 +88,44 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
+	Dumpling::FormRenderer::Ptr Renderer::CreateFormRenderer(Form& form, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
+	{
+		auto ptr = &form;
+		auto win32_form = dynamic_cast<Windows::Win32Form*>(ptr);
+		if(win32_form != nullptr)
+		{
+			auto hwnd = win32_form->GetWnd();
+			if(hwnd != nullptr)
+			{
+				Dx12SwapChainPtr swap_chain;
+				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+				swapChainDesc.BufferCount = 2;
+				swapChainDesc.Width = 1024;
+				swapChainDesc.Height = 768;
+				swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+				swapChainDesc.SampleDesc.Count = 1;
+
+				auto re2 = factory->CreateSwapChainForHwnd(
+					direct_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
+					swap_chain.GetAddressOf()
+				);
+
+				if(SUCCEEDED(re2) && swap_chain)
+				{
+					auto rec = Potato::IR::MemoryResourceRecord::Allocate<FormRenderer>(resource);
+					if(rec)
+					{
+						return new (rec.Get()) FormRenderer{rec, std::move(swap_chain)};
+					}
+				}
+			}
+		}
+		return {};
+	}
+
+	/*
 	Dx12SwapChainPtr Renderer::CreateSwapChain(FormRenderTargetProperty property, HWND hwnd)
 	{
 		Dx12SwapChainPtr result;
@@ -105,6 +144,7 @@ namespace Dumpling::Dx12
 		);
 		return result;
 	}
+	*/
 
 	void Renderer::Release()
 	{
