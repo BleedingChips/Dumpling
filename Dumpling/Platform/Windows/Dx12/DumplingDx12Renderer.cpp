@@ -12,139 +12,40 @@ module DumplingDx12Renderer;
 
 namespace Dumpling::Dx12
 {
-	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Dumpling::HardDevice::Ptr
+
+
+	Dumpling::Renderer::Ptr Renderer::Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource)
 	{
-		auto re = Potato::IR::MemoryResourceRecord::Allocate<HardDevice>(resource);
-		if(re)
+
+		Dx12::DevicePtr dev_ptr;
+		auto  re = D3D12CreateDevice(target_adapter, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
+		if(SUCCEEDED(re))
 		{
-			Dx12FactoryPtr rptr;
-			UINT Flags = 0;
-			Flags |= DXGI_CREATE_FACTORY_DEBUG;
-			HRESULT result = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
-			if(SUCCEEDED(result))
-			{
-				return new(re.Get()) HardDevice{re, std::move(rptr)};
-			}else
-			{
-				re.Deallocate();
-			}
-		}
-		return {};
-	}
+			Dx12::CommandQueuePtr command_queue;
+			D3D12_COMMAND_QUEUE_DESC desc{
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+			0
+			};
 
-	void HardDevice::Release()
-	{
-		auto re = record;
-		this->~HardDevice();
-		re.Deallocate();
-	}
+			auto re = dev_ptr->CreateCommandQueue(
+				&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
+			);
 
-	std::optional<AdapterDescription> HardDevice::EnumAdapter(std::size_t ite) const
-	{
-		return {};
-	}
-
-	Dumpling::Renderer::Ptr HardDevice::CreateRenderer(std::optional<std::size_t> adapter_count, std::pmr::memory_resource* resource)
-	{
-		if(factory)
-		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<Renderer>(resource);
-			if(record)
+			if(SUCCEEDED(re))
 			{
-				ComPtr<IDXGIAdapter> adapter;
-				if(adapter_count.has_value())
+
+				auto record = Potato::IR::MemoryResourceRecord::Allocate<Dx12::Renderer>(resource);
+				if(record)
 				{
-					auto re = factory->EnumAdapters(*adapter_count, adapter.GetAddressOf());
-					if(!SUCCEEDED(re))
-					{
-						record.Deallocate();
-						return {};
-					}
-				}
-				Dx12DevicePtr dev_ptr;
-				auto  re = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
-				if(SUCCEEDED(re))
-				{
-					Dx12CommandQueuePtr command_queue;
-					D3D12_COMMAND_QUEUE_DESC desc{
-						D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-						D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-						D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-					0
-					};
-
-					auto re = dev_ptr->CreateCommandQueue(
-						&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
-					);
-
-					if(SUCCEEDED(re))
-					{
-						return new (record.Get()) Renderer{record, factory, std::move(dev_ptr), std::move(command_queue)};
-					}
-				}
-				record.Deallocate();
-			}
-		}
-		return {};
-	}
-
-	Dumpling::FormRenderer::Ptr Renderer::CreateFormRenderer(Form& form, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
-	{
-		auto ptr = &form;
-		auto win32_form = dynamic_cast<Windows::Win32Form*>(ptr);
-		if(win32_form != nullptr)
-		{
-			auto hwnd = win32_form->GetWnd();
-			if(hwnd != nullptr)
-			{
-				Dx12SwapChainPtr swap_chain;
-				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-				swapChainDesc.BufferCount = 2;
-				swapChainDesc.Width = 1024;
-				swapChainDesc.Height = 768;
-				swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-				swapChainDesc.SampleDesc.Count = 1;
-
-				auto re2 = factory->CreateSwapChainForHwnd(
-					direct_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
-					swap_chain.GetAddressOf()
-				);
-
-				if(SUCCEEDED(re2) && swap_chain)
-				{
-					auto rec = Potato::IR::MemoryResourceRecord::Allocate<FormRenderer>(resource);
-					if(rec)
-					{
-						return new (rec.Get()) FormRenderer{rec, std::move(swap_chain)};
-					}
+					return new (record.Get()) Dx12::Renderer{record, std::move(dev_ptr), std::move(command_queue)};
 				}
 			}
 		}
 		return {};
 	}
 
-	/*
-	Dx12SwapChainPtr Renderer::CreateSwapChain(FormRenderTargetProperty property, HWND hwnd)
-	{
-		Dx12SwapChainPtr result;
-		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-		swapChainDesc.BufferCount = 2;
-		swapChainDesc.Width = 1024;
-		swapChainDesc.Height = 768;
-		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		swapChainDesc.SampleDesc.Count = 1;
-
-		auto re2 = factory->CreateSwapChainForHwnd(
-			direct_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
-			result.GetAddressOf()
-		);
-		return result;
-	}
-	*/
 
 	void Renderer::Release()
 	{
@@ -153,43 +54,7 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
-	/*
-	CommandQueue::Ptr Renderer::GetCommandQueue(std::thread::id thread_id)
-	{
-		std::lock_guard lg(mutex);
-		for (auto& ite : commands)
-		{
-			if (ite.thread_id == thread_id)
-			{
-				return ite.queue;
-			}
-		}
-		{
-			
-
-			ComPtr<ID3D12CommandQueue> que_ptr2;
-
-			auto re2 = device->CreateCommandQueue(
-				&desc, __uuidof(decltype(que_ptr2)::InterfaceType), reinterpret_cast<void**>(que_ptr2.GetAddressOf())
-			);
-
-			//que_ptr->ExecuteCommandLists();
-
-			if (SUCCEEDED(re))
-			{
-				//return { std::move(que_ptr) };
-			}
-		}
-		return {};
-	}
-	*/
-
-	void FormRenderer::Release()
-	{
-		auto re = record;
-		this->~FormRenderer();
-		re.Deallocate();
-	}
+	
 
 	/*
 	void FormRenderer::OnFormCreated(Form& interface)

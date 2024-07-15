@@ -60,25 +60,6 @@ export namespace Dumpling
 		virtual void SubRendererResourceRef() const = 0;
 	};
 
-	struct ParameterLayout
-	{
-		enum class InoutType
-		{
-			INPUT,
-			OUTOUT,
-			TEMP
-		};
-
-		struct Element
-		{
-			InoutType inout_type;
-			std::u8string_view name;
-			RendererResourceType type;
-		};
-
-		std::pmr::vector<Element> layouts;
-	};
-
 	struct Pipeline
 	{
 		struct Wrapper
@@ -115,20 +96,20 @@ export namespace Dumpling
 		virtual void SubRendererRequesterRef() const = 0;
 	};
 
-	struct FormRenderer
+	struct RendererFormWrapper
 	{
 		struct Wrapper
 		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormRendererRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormRendererRef(); }
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddRendererFormWrapperRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererFormWrapperRef(); }
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<FormRenderer, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<RendererFormWrapper, Wrapper>;
 
 	protected:
 
-		virtual void AddFormRendererRef() const = 0;
-		virtual void SubFormRendererRef() const = 0;
+		virtual void AddRendererFormWrapperRef() const = 0;
+		virtual void SubRendererFormWrapperRef() const = 0;
 	};
 
 	struct SubRenderer
@@ -171,7 +152,6 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
-		virtual FormRenderer::Ptr CreateFormRenderer(Form& form, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
 		virtual bool Execute(PipelineRequester::Ptr requester, Pipeline::Ptr pipeline, Potato::IR::StructLayoutObject::Ptr parameter = {});
 		virtual std::optional<PassIdentity> RegisterPass(PassProperty pass_property);
 		virtual bool UnregisterPass(PassIdentity id);
@@ -200,6 +180,7 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Wrapper>;
 
+		virtual RendererFormWrapper::Ptr CreateFormRenderer(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 		virtual std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const = 0;

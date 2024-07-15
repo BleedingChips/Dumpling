@@ -10,6 +10,7 @@ import DumplingForm;
 
 #ifdef _WIN32
 import DumplingDx12Renderer;
+import DumplingDXGI;
 #endif
 
 
@@ -18,7 +19,7 @@ namespace Dumpling
 	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Ptr
 	{
 #ifdef _WIN32
-		return Dx12::HardDevice::Create(resource);
+		return DXGI::HardDevice::Create(resource);
 #endif
 	}
 
