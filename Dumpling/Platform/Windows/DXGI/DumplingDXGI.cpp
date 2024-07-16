@@ -46,7 +46,7 @@ namespace Dumpling::DXGI
 		return {};
 	}
 
-	FormWrapper::Ptr HardDevice::CreateFormRenderer(Form& form, Renderer& renderer, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
+	RendererFormWrapper::Ptr HardDevice::CreateFormWrapper(Form& form, Renderer& renderer, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
 	{
 		auto tar = dynamic_cast<Windows::Win32Form*>(&form);
 		auto ren = dynamic_cast<DXGIRenderer*>(&renderer);
@@ -76,11 +76,7 @@ namespace Dumpling::DXGI
 					);
 					if(SUCCEEDED(re))
 					{
-						auto record = Potato::IR::MemoryResourceRecord::Allocate<FormWrapper>(resource);
-						if(record)
-						{
-							return new (record.Get()) FormWrapper{record, std::move(swapChain)};
-						}
+						return ren->CreateFormWrapper(std::move(swapChain), resource);
 					}
 				}
 			}
@@ -105,12 +101,5 @@ namespace Dumpling::DXGI
 			return Dx12::Renderer::Create(adapter.Get(), resource);
 		}
 		return {};
-	}
-
-	void FormWrapper::Release()
-	{
-		auto re = record;
-		this->~FormWrapper();
-		re.Deallocate();
 	}
 }

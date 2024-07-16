@@ -40,7 +40,7 @@ int main()
 
 	form->Init(pro);
 
-	auto output = device->CreateFormRenderer(*form, *renderer);
+	auto output = device->CreateFormWrapper(*form, *renderer);
 
 	auto pipeline = Pipeline::Create();
 

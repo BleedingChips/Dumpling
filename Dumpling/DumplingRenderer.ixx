@@ -106,6 +106,8 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<RendererFormWrapper, Wrapper>;
 
+		virtual bool TryFlush() { return false; }
+
 	protected:
 
 		virtual void AddRendererFormWrapperRef() const = 0;
@@ -180,7 +182,7 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Wrapper>;
 
-		virtual RendererFormWrapper::Ptr CreateFormRenderer(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
+		virtual RendererFormWrapper::Ptr CreateFormWrapper(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 		virtual std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const = 0;

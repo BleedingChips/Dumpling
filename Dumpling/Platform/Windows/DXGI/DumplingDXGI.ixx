@@ -27,26 +27,11 @@ export namespace Dumpling::DXGI
 
 	export struct HardDevice;
 
-	struct FormWrapper : public Dumpling::RendererFormWrapper, public Dumpling::RendererResource, public Potato::Pointer::DefaultIntrusiveInterface
+	struct DXGIRenderer : public Dumpling::Renderer
 	{
-		using Ptr = Dumpling::RendererFormWrapper::Ptr;
-
-	protected:
-
-		FormWrapper(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain)
-			: record(record), swap_chain(std::move(swap_chain)){}
-
-		virtual void AddRendererFormWrapperRef() const override { DefaultIntrusiveInterface::AddRef(); }
-		virtual void SubRendererFormWrapperRef() const override { DefaultIntrusiveInterface::SubRef(); }
-		virtual void AddRendererResourceRef() const override { AddRendererFormWrapperRef(); }
-		virtual void SubRendererResourceRef() const override { SubRendererFormWrapperRef(); }
-
-		void Release() override;
-
-		Potato::IR::MemoryResourceRecord record;
-		SwapChainPtr swap_chain;
-
-		friend struct HardDevice;
+		//virtual IUnknown* GetDevice() const = 0;
+		virtual IUnknown* GetDevice() const = 0;
+		virtual RendererFormWrapper::Ptr CreateFormWrapper(SwapChainPtr SwapChain, std::pmr::memory_resource* resource) = 0;
 	};
 
 	export struct HardDevice : public Dumpling::HardDevice, public Potato::Pointer::DefaultIntrusiveInterface
@@ -55,7 +40,7 @@ export namespace Dumpling::DXGI
 		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Dumpling::HardDevice::Wrapper>;
 
 		static Dumpling::HardDevice::Ptr Create(std::pmr::memory_resource* resource);
-		virtual FormWrapper::Ptr CreateFormRenderer(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) override;
+		virtual RendererFormWrapper::Ptr CreateFormWrapper(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) override;
 
 	protected:
 
@@ -76,11 +61,7 @@ export namespace Dumpling::DXGI
 		friend struct Dumpling::HardDevice::Wrapper;
 	};
 
-	struct DXGIRenderer : public Dumpling::Renderer
-	{
-		//virtual IUnknown* GetDevice() const = 0;
-		virtual IUnknown* GetDevice() const = 0;
-	};
+	
 
 	
 

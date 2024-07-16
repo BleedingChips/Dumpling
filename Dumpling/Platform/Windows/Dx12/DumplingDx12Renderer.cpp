@@ -46,6 +46,19 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
+	RendererFormWrapper::Ptr Renderer::CreateFormWrapper(DXGI::SwapChainPtr swap_chain, std::pmr::memory_resource* resource)
+	{
+		if(swap_chain)
+		{
+			auto record = Potato::IR::MemoryResourceRecord::Allocate<FormWrapper>(resource);
+			if(record)
+			{
+				return new (record.Get()) FormWrapper{record, std::move(swap_chain)};
+			}
+		}
+		return {};
+	}
+
 
 	void Renderer::Release()
 	{
@@ -54,6 +67,12 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
+	void FormWrapper::Release()
+	{
+		auto re = record;
+		this->~FormWrapper();
+		re.Deallocate();
+	}
 	
 
 	/*

@@ -24,17 +24,44 @@ export namespace Dumpling::Dx12
 	using Dumpling::Windows::ComPtr;
 
 	using DevicePtr = ComPtr<ID3D12Device>;
-	
 	using CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
+	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
+	using CommandListPtr = ComPtr<ID3D12CommandList>;
+
+	export struct Renderer;
+
+	struct FormWrapper : public Dumpling::RendererFormWrapper, public Dumpling::RendererResource, public Potato::Pointer::DefaultIntrusiveInterface
+	{
+		using Ptr = Dumpling::RendererFormWrapper::Ptr;
+
+	protected:
+
+		FormWrapper(Potato::IR::MemoryResourceRecord record, DXGI::SwapChainPtr swap_chain)
+			: record(record), swap_chain(std::move(swap_chain)){}
+
+		virtual void AddRendererFormWrapperRef() const override { DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubRendererFormWrapperRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		virtual void AddRendererResourceRef() const override { AddRendererFormWrapperRef(); }
+		virtual void SubRendererResourceRef() const override { SubRendererFormWrapperRef(); }
+
+		void Release() override;
+
+		Potato::IR::MemoryResourceRecord record;
+		DXGI::SwapChainPtr swap_chain;
+
+		friend struct Renderer;
+	};
 
 	
 
-	struct Renderer : public DXGI::DXGIRenderer, public Potato::Pointer::DefaultIntrusiveInterface
+	export struct Renderer : public DXGI::DXGIRenderer, public Potato::Pointer::DefaultIntrusiveInterface
 	{
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Dumpling::Renderer::Wrapper>;
 
 		IUnknown* GetDevice() const override { return direct_queue.Get(); }
+		RendererFormWrapper::Ptr CreateFormWrapper(DXGI::SwapChainPtr swap_chain, std::pmr::memory_resource* resource) override;
+
 		//CommandQueuePtr GetDirectCommandQueue() const { return direct_queue; }
 
 		static Dumpling::Renderer::Ptr Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
@@ -53,13 +80,36 @@ export namespace Dumpling::Dx12
 		DevicePtr device;
 		CommandQueuePtr direct_queue;
 
-		friend struct HardDevice;
+		enum class Status
+		{
+			Using,
+			Idle
+		};
+
+		struct AllocatorStatus
+		{
+			Status status;
+			CommandAllocatorPtr allocator;
+			std::size_t max_frame_number;
+		};
+
+		struct CommandTuple
+		{
+			CommandListPtr list;
+			PassIdentity pass_identity;
+		};
+
 		friend struct Dumpling::Renderer::Wrapper;
 	};
-
 	
 
-	
+	struct SubRenderer : public Dumpling::SubRenderer, public Potato::Pointer::DefaultStrongWeakInterface
+	{
+	protected:
+		CommandListPtr command_list;
+		Renderer::Ptr owner;
+		std::size_t fast_comand_list_reference;
+	};
 
 
 
