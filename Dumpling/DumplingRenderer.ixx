@@ -8,6 +8,7 @@ import PotatoMisc;
 import PotatoPointer;
 import DumplingForm;
 import PotatoIR;
+import DumplingPipeline;
 
 export namespace Dumpling
 {
@@ -60,42 +61,6 @@ export namespace Dumpling
 		virtual void SubRendererResourceRef() const = 0;
 	};
 
-	struct Pipeline
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddPipelineRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubPipelineRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<Pipeline, Wrapper>;
-
-		static Ptr Create() { return {}; }
-
-		virtual Potato::IR::StructLayout::Ptr GetStructLayout() const = 0;
-
-	protected:
-
-		virtual void AddPipelineRef() const = 0;
-		virtual void SubPipelineRef() const = 0;
-	};
-
-	struct PipelineRequester
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddRendererRequesterRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererRequesterRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<PipelineRequester, Wrapper>;
-
-	protected:
-
-		virtual void AddRendererRequesterRef() const = 0;
-		virtual void SubRendererRequesterRef() const = 0;
-	};
-
 	struct RendererFormWrapper
 	{
 		struct Wrapper
@@ -133,17 +98,6 @@ export namespace Dumpling
 		virtual void SubSubRendererRef() const = 0;
 	};
 
-	struct PassProperty
-	{
-		std::u8string_view name;
-		Potato::IR::StructLayout::Ptr struct_layout;
-	};
-
-	struct PassIdentity
-	{
-		std::size_t id;
-	};
-
 	struct Renderer
 	{
 		struct Wrapper
@@ -154,15 +108,47 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
-		virtual bool Execute(PipelineRequester::Ptr requester, Pipeline::Ptr pipeline, Potato::IR::StructLayoutObject::Ptr parameter = {});
-		virtual std::optional<PassIdentity> RegisterPass(PassProperty pass_property);
-		virtual bool UnregisterPass(PassIdentity id);
-		virtual SubRenderer::Ptr EnumPass(PassIdentity id, std::size_t ite);
+		virtual bool Execute(PipelineRequester::Ptr requester, Pipeline const& pipeline);
+		virtual Pass::Ptr RegisterPass(PassProperty pass_property);
+		virtual bool UnregisterPass(Pass const&);
+		virtual SubRenderer::Ptr PopRequest(Pass const&);
 
 	protected:
 
+		Pass::Ptr RegisterPass_AssumedLocked(PassProperty pass_property);
+
+		virtual SubRenderer::Ptr CreateSubRenderer(PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter) = 0; 
 		virtual void AddRendererRef() const = 0;
 		virtual void SubRendererRef() const = 0;
+
+		std::shared_mutex pass_mutex;
+
+		enum class Status
+		{
+			WAITING,
+			RUNNING,
+			DONE,
+		};
+
+		struct PassTuple
+		{
+			std::u8string_view pass_name;
+			Pass::Ptr pass;
+		};
+
+		std::pmr::vector<PassTuple> passes;
+
+		std::mutex request_mutex;
+
+		struct PassRequest
+		{
+			Pass::Ptr pass;
+			Pipeline::Ptr pipeline;
+			PipelineRequester::Ptr requester;
+			Potato::IR::StructLayoutObject::Ptr object;
+		};
+
+		std::pmr::vector<PassRequest> requests;
 	};
 
 

@@ -13,6 +13,7 @@ import PotatoPointer;
 import PotatoIR;
 import DumplingForm;
 import DumplingWindowsForm;
+import DumplingPipeline;
 import DumplingRenderer;
 import DumplingDXGI;
 
@@ -71,6 +72,8 @@ export namespace Dumpling::Dx12
 		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue)
 			: record(record), device(std::move(device)), direct_queue(std::move(direct_queue)) {}
 
+		Dumpling::SubRenderer::Ptr CreateSubRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter) override;
+
 		void AddRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		void SubRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
@@ -96,19 +99,35 @@ export namespace Dumpling::Dx12
 		struct CommandTuple
 		{
 			CommandListPtr list;
-			PassIdentity pass_identity;
+			std::size_t reference_id;
 		};
 
 		friend struct Dumpling::Renderer::Wrapper;
 	};
 	
 
-	struct SubRenderer : public Dumpling::SubRenderer, public Potato::Pointer::DefaultStrongWeakInterface
+	struct SubRenderer : public Dumpling::SubRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
+		SubRenderer(Potato::IR::MemoryResourceRecord record)
+			: MemoryResourceRecordIntrusiveInterface(record)
+		{
+			
+		}
+
+		Potato::IR::StructLayoutObject::Ptr GetParameters() const override{ return {}; }
+		PipelineRequester::Ptr GetPipelineRequester() const override { return {}; }
+
 	protected:
+
+		
+
+		virtual void AddSubRendererRef() const override {MemoryResourceRecordIntrusiveInterface::AddRef();}
+		virtual void SubSubRendererRef() const override {MemoryResourceRecordIntrusiveInterface::SubRef();}
 		CommandListPtr command_list;
 		Renderer::Ptr owner;
 		std::size_t fast_comand_list_reference;
+
+		friend struct Renderer;
 	};
 
 

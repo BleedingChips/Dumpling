@@ -2,8 +2,7 @@
 #include "dxgi1_6.h"
 
 
-import DumplingForm;
-import DumplingRenderer;
+import Dumpling;
 import std;
 
 using namespace Dumpling;
@@ -44,6 +43,18 @@ int main()
 
 	auto pipeline = Pipeline::Create();
 
+	
+
+	auto pass = renderer->RegisterPass(
+		{
+			PassProperty::Category::FRAME,
+			u8"Func you",
+			{}
+		}
+	);
+
+	renderer->Execute({}, *pipeline);
+
 	//renderer->Execute({}, pipeline);
 
 	//renderer->RegisterPass();
@@ -63,6 +74,12 @@ int main()
 		{
 			
 		}
+
+		while(auto subrenderer = renderer->PopRequest(*pass))
+		{
+			volatile int i = 0;
+		}
+
 		if(need_quit)
 			break;
 	}
