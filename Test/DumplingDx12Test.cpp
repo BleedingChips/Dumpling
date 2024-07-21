@@ -53,7 +53,7 @@ int main()
 		}
 	);
 
-	renderer->Execute({}, *pipeline);
+	
 
 	//renderer->Execute({}, pipeline);
 
@@ -62,6 +62,10 @@ int main()
 	while(true)
 	{
 		bool need_quit = false;
+
+
+		renderer->Execute({}, *pipeline);
+
 		while(
 			Form::PeekMessageEventOnce([&](FormEvent::System event)
 		{
