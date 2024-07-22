@@ -88,9 +88,20 @@ namespace Dumpling
 			auto tar = ite - 1;
 			if(tar->pass.GetPointer() == &node)
 			{
-				auto temp = std::move(*tar);
-				requests.erase(tar);
-				return CreateSubRenderer(temp.requester, temp.object);
+				auto end_ite = requests.end() - 1;
+				if(tar != end_ite)
+				{
+					std::swap(*tar, *(ite - 1));
+				}
+				auto renderer = CreateSubRenderer(end_ite->requester, end_ite->object);
+				if(renderer)
+				{
+					requests.pop_back();
+					return renderer;
+				}else
+				{
+					return {};
+				}
 			}
 		}
 		return {};
