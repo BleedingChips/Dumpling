@@ -79,23 +79,23 @@ export namespace Dumpling
 		virtual void SubRendererFormWrapperRef() const = 0;
 	};
 
-	struct SubRenderer
+	struct PassRenderer
 	{
 		struct Wrapper
 		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddSubRendererRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubSubRendererRef(); }
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddPassRendererRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubPassRendererRef(); }
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<SubRenderer, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<PassRenderer, Wrapper>;
 
 		virtual PipelineRequester::Ptr GetPipelineRequester() const = 0;
 		virtual Potato::IR::StructLayoutObject::Ptr GetParameters() const = 0;
 
 	protected:
 
-		virtual void AddSubRendererRef() const = 0;
-		virtual void SubSubRendererRef() const = 0;
+		virtual void AddPassRendererRef() const = 0;
+		virtual void SubPassRendererRef() const = 0;
 	};
 
 	struct Renderer
@@ -108,16 +108,18 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
-		virtual bool Execute(PipelineRequester::Ptr requester, Pipeline const& pipeline);
+		virtual bool Commited(PipelineRequester::Ptr requester, Pipeline const& pipeline);
 		virtual Pass::Ptr RegisterPass(PassProperty pass_property);
 		virtual bool UnregisterPass(Pass const&);
-		virtual SubRenderer::Ptr PopRequest(Pass const&);
+		virtual PassRenderer::Ptr PopPassRenderer(Pass const&);
+		virtual bool TryFlushFrame() { FlushFrame(); return true; }
+		virtual void FlushFrame() = 0;
 
 	protected:
 
 		Pass::Ptr RegisterPass_AssumedLocked(PassProperty pass_property);
 
-		virtual SubRenderer::Ptr CreateSubRenderer(PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter) = 0; 
+		virtual PassRenderer::Ptr CreatePassRenderer(PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource) = 0; 
 		virtual void AddRendererRef() const = 0;
 		virtual void SubRendererRef() const = 0;
 

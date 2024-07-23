@@ -36,6 +36,7 @@ export namespace Dumpling
 		static Ptr Create(PassProperty property, FastIndex index, std::pmr::memory_resource* resource);
 
 		std::u8string_view GetName() const { return property.name; }
+		PassProperty GetProperty() const { return property; }
 
 	protected:
 

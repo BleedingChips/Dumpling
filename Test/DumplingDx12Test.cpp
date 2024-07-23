@@ -4,6 +4,7 @@
 
 import Dumpling;
 import std;
+import DumplingDx12Renderer;
 
 using namespace Dumpling;
 
@@ -64,7 +65,7 @@ int main()
 		bool need_quit = false;
 
 
-		renderer->Execute({}, *pipeline);
+		renderer->Commited({}, *pipeline);
 
 		while(
 			Form::PeekMessageEventOnce([&](FormEvent::System event)
@@ -79,10 +80,12 @@ int main()
 			
 		}
 
-		while(auto subrenderer = renderer->PopRequest(*pass))
+		while(auto passren = renderer->PopPassRenderer(*pass))
 		{
-			volatile int i = 0;
+			Dumpling::Dx12::PassRenderer* rend = dynamic_cast<Dumpling::Dx12::PassRenderer*>(passren.GetPointer());
 		}
+
+		renderer->FlushFrame();
 
 		if(need_quit)
 			break;

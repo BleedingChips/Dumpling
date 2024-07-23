@@ -67,12 +67,14 @@ export namespace Dumpling::Dx12
 
 		static Dumpling::Renderer::Ptr Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
+		void FlushFrame();
+
 	protected:
 
 		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue)
 			: record(record), device(std::move(device)), direct_queue(std::move(direct_queue)) {}
 
-		Dumpling::SubRenderer::Ptr CreateSubRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter) override;
+		Dumpling::PassRenderer::Ptr CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource) override;
 
 		void AddRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		void SubRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
@@ -89,12 +91,15 @@ export namespace Dumpling::Dx12
 			Idle
 		};
 
-		struct AllocatorStatus
+		struct AllocatorTuple
 		{
 			Status status;
 			CommandAllocatorPtr allocator;
 			std::size_t max_frame_number;
 		};
+
+		std::mutex command_mutex;
+		std::pmr::vector<AllocatorTuple> allocators;
 
 		struct CommandTuple
 		{
@@ -102,30 +107,39 @@ export namespace Dumpling::Dx12
 			std::size_t reference_id;
 		};
 
+		std::pmr::vector<CommandTuple> command;
+
 		friend struct Dumpling::Renderer::Wrapper;
 	};
 	
 
-	struct SubRenderer : public Dumpling::SubRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	struct PassRenderer : public Dumpling::PassRenderer, public Potato::Pointer::DefaultControllerViewerInterface
 	{
-		SubRenderer(Potato::IR::MemoryResourceRecord record)
-			: MemoryResourceRecordIntrusiveInterface(record)
+		PassRenderer(Potato::IR::MemoryResourceRecord record)
+			: record(record)
 		{
 			
 		}
 
 		Potato::IR::StructLayoutObject::Ptr GetParameters() const override{ return {}; }
 		PipelineRequester::Ptr GetPipelineRequester() const override { return {}; }
+		ID3D12CommandList* operator->() const { return command_list.Get(); }
 
 	protected:
 
-		
+		virtual void AddPassRendererRef() const override { DefaultControllerViewerInterface::AddViewerRef();}
+		virtual void SubPassRendererRef() const override { DefaultControllerViewerInterface::SubViewerRef();}
 
-		virtual void AddSubRendererRef() const override {MemoryResourceRecordIntrusiveInterface::AddRef();}
-		virtual void SubSubRendererRef() const override {MemoryResourceRecordIntrusiveInterface::SubRef();}
+		virtual void ViewerRelease() override;
+		virtual void ControllerRelease() override;
+
+
+	public:
+
+		Potato::IR::MemoryResourceRecord record;
 		CommandListPtr command_list;
 		Renderer::Ptr owner;
-		std::size_t fast_comand_list_reference;
+		std::size_t fast_command_list_reference;
 
 		friend struct Renderer;
 	};

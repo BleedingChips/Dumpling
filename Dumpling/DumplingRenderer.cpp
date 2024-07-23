@@ -48,7 +48,7 @@ namespace Dumpling
 		return {};
 	}
 
-	bool Renderer::Execute(PipelineRequester::Ptr requester, Pipeline const& pipeline)
+	bool Renderer::Commited(PipelineRequester::Ptr requester, Pipeline const& pipeline)
 	{
 		std::shared_lock sl(pass_mutex);
 		std::lock_guard lg(request_mutex);
@@ -80,7 +80,7 @@ namespace Dumpling
 		return false;
 	}
 
-	SubRenderer::Ptr Renderer::PopRequest(Pass const& node)
+	PassRenderer::Ptr Renderer::PopPassRenderer(Pass const& node)
 	{
 		std::lock_guard lg(request_mutex);
 		for(auto ite = requests.end(); ite != requests.begin(); --ite)
@@ -93,7 +93,7 @@ namespace Dumpling
 				{
 					std::swap(*tar, *(ite - 1));
 				}
-				auto renderer = CreateSubRenderer(end_ite->requester, end_ite->object);
+				auto renderer = CreatePassRenderer(end_ite->requester, end_ite->object, end_ite->pass->GetProperty(), std::pmr::get_default_resource());
 				if(renderer)
 				{
 					requests.pop_back();
@@ -105,5 +105,10 @@ namespace Dumpling
 			}
 		}
 		return {};
+	}
+
+	void Renderer::FlushFrame()
+	{
+		
 	}
 }

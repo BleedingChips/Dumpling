@@ -59,10 +59,11 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	Dumpling::SubRenderer::Ptr Renderer::CreateSubRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter)
+	Dumpling::PassRenderer::Ptr Renderer::CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource)
 	{
+		std::lock_guard lg(command_mutex);
 		//new (nullptr) SubRenderer {Potato::IR::MemoryResourceRecord{}};
-		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<SubRenderer>(std::pmr::get_default_resource());
+		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(resource);
 	}
 
 
