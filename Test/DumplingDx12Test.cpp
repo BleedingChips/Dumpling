@@ -83,6 +83,7 @@ int main()
 		while(auto passren = renderer->PopPassRenderer(*pass))
 		{
 			Dumpling::Dx12::PassRenderer* rend = dynamic_cast<Dumpling::Dx12::PassRenderer*>(passren.GetPointer());
+			//(*rend)
 		}
 
 		renderer->FlushFrame();

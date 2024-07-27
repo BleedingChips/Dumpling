@@ -28,6 +28,7 @@ export namespace Dumpling::Dx12
 	using CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
 	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
 	using CommandListPtr = ComPtr<ID3D12CommandList>;
+	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
 
 	export struct Renderer;
 
@@ -80,22 +81,25 @@ export namespace Dumpling::Dx12
 		void SubRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
 
-		
+		std::atomic_size_t frame_count = 0;
+
+
 		Potato::IR::MemoryResourceRecord record;
 		DevicePtr device;
 		CommandQueuePtr direct_queue;
 
 		enum class Status
 		{
-			Using,
-			Idle
+			IDLE,
+			USING,
+			WAITING,
 		};
 
 		struct AllocatorTuple
 		{
 			Status status;
 			CommandAllocatorPtr allocator;
-			std::size_t max_frame_number;
+			std::size_t using_frame_number;
 		};
 
 		std::mutex command_mutex;
@@ -115,15 +119,15 @@ export namespace Dumpling::Dx12
 
 	struct PassRenderer : public Dumpling::PassRenderer, public Potato::Pointer::DefaultControllerViewerInterface
 	{
-		PassRenderer(Potato::IR::MemoryResourceRecord record)
-			: record(record)
+		PassRenderer(Potato::IR::MemoryResourceRecord record, GraphicCommandListPtr ptr, std::size_t allocator_index)
+			: record(record), command_list(std::move(ptr)), fast_allocator_index(allocator_index)
 		{
 			
 		}
 
 		Potato::IR::StructLayoutObject::Ptr GetParameters() const override{ return {}; }
 		PipelineRequester::Ptr GetPipelineRequester() const override { return {}; }
-		ID3D12CommandList* operator->() const { return command_list.Get(); }
+		ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
 
 	protected:
 
@@ -137,9 +141,9 @@ export namespace Dumpling::Dx12
 	public:
 
 		Potato::IR::MemoryResourceRecord record;
-		CommandListPtr command_list;
+		GraphicCommandListPtr command_list;
 		Renderer::Ptr owner;
-		std::size_t fast_command_list_reference;
+		std::size_t fast_allocator_index;
 
 		friend struct Renderer;
 	};

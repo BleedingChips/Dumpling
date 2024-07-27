@@ -4,6 +4,8 @@ module;
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <intsafe.h>
+#include <intsafe.h>
+#include <intsafe.h>
 
 #undef interface
 
@@ -62,8 +64,56 @@ namespace Dumpling::Dx12
 	Dumpling::PassRenderer::Ptr Renderer::CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource)
 	{
 		std::lock_guard lg(command_mutex);
-		//new (nullptr) SubRenderer {Potato::IR::MemoryResourceRecord{}};
-		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(resource);
+
+		CommandAllocatorPtr cur_allocator;
+		std::size_t allocator_index = 0;
+		std::size_t cur_frame = frame_count;
+		for(auto& ite : allocators)
+		{
+			if(ite.status == Status::IDLE || ite.status == Status::WAITING && ite.using_frame_number == cur_frame)
+			{
+				cur_allocator = ite.allocator;
+			}else
+			{
+				++allocator_index;
+			}
+		}
+		if(!cur_allocator)
+		{
+			auto re = device->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT, 
+				__uuidof(decltype(cur_allocator)::InterfaceType), reinterpret_cast<void**>(cur_allocator.GetAddressOf())
+			);
+			if(SUCCEEDED(re))
+			{
+				allocators.emplace_back(
+					Status::IDLE,
+					cur_allocator,
+					0
+				);
+			}else
+			{
+				return {};
+			}
+		}
+
+		GraphicCommandListPtr ptr;
+
+		auto re = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+				cur_allocator.Get(), nullptr, __uuidof(decltype(ptr)::InterfaceType), reinterpret_cast<void**>(ptr.GetAddressOf())
+			);
+
+		if(SUCCEEDED(re))
+		{
+			Dumpling::PassRenderer::Ptr result = Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(resource,ptr, allocator_index);
+			if(result)
+			{
+				allocators[allocator_index].status = Status::USING;
+				allocators[allocator_index].using_frame_number = frame_count;
+			}
+			return result;
+		}
+		return {};
 	}
 
 
