@@ -67,26 +67,23 @@ int main()
 
 		renderer->Commited({}, *pipeline);
 
-		while(
-			Form::PeekMessageEventOnce([&](FormEvent::System event)
+
+		Form::PeekMessageEvent([&](FormEvent::System event)
 		{
-			if(event.message == FormEvent::System::Message::QUIT)
+			if (event.message == FormEvent::System::Message::QUIT)
 			{
 				need_quit = true;
 			}
-		})
-			)
-		{
-			
-		}
+		});
 
 		while(auto passren = renderer->PopPassRenderer(*pass))
 		{
-			Dumpling::Dx12::PassRenderer* rend = dynamic_cast<Dumpling::Dx12::PassRenderer*>(passren.GetPointer());
-			//(*rend)
+			auto rs = output->GetAvailableRenderResource();
+			passren->ClearRendererTarget(*rs);
 		}
 
 		renderer->FlushFrame();
+		renderer->FlushWindows(*output);
 
 		if(need_quit)
 			break;

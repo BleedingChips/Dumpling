@@ -13,6 +13,20 @@ import DumplingPipeline;
 export namespace Dumpling
 {
 
+	struct Color
+	{
+		float R = 0.0f;
+		float G = 0.0f;
+		float B = 0.0f;
+		float A = 1.0f;
+
+		static Color red;
+		static Color white;
+		static Color blue;
+		static Color black;
+	};
+
+
 	enum TexFormat
 	{
 		RGBA8
@@ -72,6 +86,7 @@ export namespace Dumpling
 		using Ptr = Potato::Pointer::IntrusivePtr<RendererFormWrapper, Wrapper>;
 
 		virtual bool TryFlush() { return false; }
+		virtual RendererResource::Ptr GetAvailableRenderResource() = 0;
 
 	protected:
 
@@ -91,6 +106,8 @@ export namespace Dumpling
 
 		virtual PipelineRequester::Ptr GetPipelineRequester() const = 0;
 		virtual Potato::IR::StructLayoutObject::Ptr GetParameters() const = 0;
+
+		virtual bool ClearRendererTarget(RendererResource& render_target, Color color = Color::black, std::size_t index = 0) = 0;
 
 	protected:
 
@@ -114,6 +131,7 @@ export namespace Dumpling
 		virtual PassRenderer::Ptr PopPassRenderer(Pass const&);
 		virtual bool TryFlushFrame() { FlushFrame(); return true; }
 		virtual void FlushFrame() = 0;
+		virtual bool FlushWindows(RendererFormWrapper&) = 0;
 
 	protected:
 

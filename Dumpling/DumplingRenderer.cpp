@@ -16,6 +16,16 @@ import DumplingDXGI;
 
 namespace Dumpling
 {
+
+	Color Color::red = Color{1.0f, 0.0f, 0.0f};
+	Color Color::white = Color{1.0f, 1.0f, 1.0f};
+	Color Color::blue = Color{ 0.0f, 0.0f, 1.0f };
+	Color Color::black = Color{};
+
+
+
+
+
 	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Ptr
 	{
 #ifdef _WIN32

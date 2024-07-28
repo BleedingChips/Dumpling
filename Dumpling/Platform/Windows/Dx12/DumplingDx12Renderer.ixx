@@ -36,6 +36,8 @@ export namespace Dumpling::Dx12
 	{
 		using Ptr = Dumpling::RendererFormWrapper::Ptr;
 
+		virtual Dumpling::RendererResource::Ptr GetAvailableRenderResource() override { return this; }
+
 	protected:
 
 		FormWrapper(Potato::IR::MemoryResourceRecord record, DXGI::SwapChainPtr swap_chain)
@@ -68,7 +70,8 @@ export namespace Dumpling::Dx12
 
 		static Dumpling::Renderer::Ptr Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		void FlushFrame();
+		void FlushFrame() override;
+		bool FlushWindows(RendererFormWrapper&) override;
 
 	protected:
 
@@ -128,6 +131,7 @@ export namespace Dumpling::Dx12
 		Potato::IR::StructLayoutObject::Ptr GetParameters() const override{ return {}; }
 		PipelineRequester::Ptr GetPipelineRequester() const override { return {}; }
 		ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
+		bool ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index = 0) override;
 
 	protected:
 

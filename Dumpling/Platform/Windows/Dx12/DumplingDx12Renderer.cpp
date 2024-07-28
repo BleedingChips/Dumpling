@@ -116,12 +116,26 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
+	void Renderer::FlushFrame()
+	{
+		
+	}
+
+	bool Renderer::FlushWindows(RendererFormWrapper& windows)
+	{
+		return true;
+	}
 
 	void Renderer::Release()
 	{
 		auto re = record;
 		this->~Renderer();
 		re.Deallocate();
+	}
+
+	bool PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
+	{
+		return true;
 	}
 
 	void FormWrapper::Release()
