@@ -3,9 +3,6 @@ module;
 #include <cassert>
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include <intsafe.h>
-#include <intsafe.h>
-#include <intsafe.h>
 
 #undef interface
 
@@ -15,6 +12,12 @@ module DumplingDx12Renderer;
 namespace Dumpling::Dx12
 {
 
+	Renderer::Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr in_device, CommandQueuePtr direct_queue)
+	: record(record), device(std::move(in_device)), direct_queue(std::move(direct_queue))
+	{
+		assert(device);
+		device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(current_fence)::InterfaceType), reinterpret_cast<void**>(current_fence.GetAddressOf()));
+	}
 
 	Dumpling::Renderer::Ptr Renderer::Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource)
 	{
@@ -63,14 +66,16 @@ namespace Dumpling::Dx12
 
 	Dumpling::PassRenderer::Ptr Renderer::CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource)
 	{
-		std::lock_guard lg(command_mutex);
+		std::lock(frame_mutex, command_mutex);
+		std::lock_guard lg(frame_mutex, std::adopt_lock);
+		std::lock_guard lg2(command_mutex, std::adopt_lock);
 
 		CommandAllocatorPtr cur_allocator;
 		std::size_t allocator_index = 0;
-		std::size_t cur_frame = frame_count;
+		std::size_t cur_frame = current_frame;
 		for(auto& ite : allocators)
 		{
-			if(ite.status == Status::IDLE || ite.status == Status::WAITING && ite.using_frame_number == cur_frame)
+			if(ite.status == Status::IDLE || ite.status == Status::WAITING && ite.frame_number == cur_frame)
 			{
 				cur_allocator = ite.allocator;
 			}else
@@ -89,7 +94,7 @@ namespace Dumpling::Dx12
 				allocators.emplace_back(
 					Status::IDLE,
 					cur_allocator,
-					0
+					cur_frame
 				);
 			}else
 			{
@@ -105,20 +110,92 @@ namespace Dumpling::Dx12
 
 		if(SUCCEEDED(re))
 		{
-			Dumpling::PassRenderer::Ptr result = Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(resource,ptr, allocator_index);
+
+			Dumpling::PassRenderer::Ptr result = Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(
+				resource, 
+				Renderer::Ptr{this}, 
+				std::move(ptr), 
+				PassRendererIdentity{allocator_index}
+			);
 			if(result)
 			{
 				allocators[allocator_index].status = Status::USING;
-				allocators[allocator_index].using_frame_number = frame_count;
+				allocators[allocator_index].frame_number = current_frame;
+				++losing_command;
 			}
 			return result;
 		}
 		return {};
 	}
 
-	void Renderer::FlushFrame()
+	void Renderer::FinishPassRenderer(GraphicCommandListPtr ptr, PassRendererIdentity identity)
 	{
-		
+		if(ptr)
+		{
+			ptr->Close();
+			std::lock_guard lg(command_mutex);
+			allocators[identity.reference_allocator_index].status = Status::WAITING;
+			frame_command.emplace_back(std::move(ptr), identity);
+			assert(losing_command >= 1);
+			--losing_command;
+		}
+	}
+
+	std::optional<std::size_t> Renderer::CommitedAndSwapContext()
+	{
+		std::lock(frame_mutex, command_mutex);
+		std::lock_guard lg(frame_mutex, std::adopt_lock);
+		std::lock_guard lg2(command_mutex, std::adopt_lock);
+		if(losing_command != 0)
+		{
+			return std::nullopt;
+		}
+		for(auto& ite : allocators)
+		{
+			if(ite.frame_number == current_frame)
+			{
+				assert(ite.status != Status::USING);
+				if(ite.status == Status::WAITING)
+					ite.status = Status::Block;
+			}
+		}
+		for(auto& ite : frame_command)
+		{
+			direct_queue->ExecuteCommandLists(1, ite.list.GetAddressOf());
+		}
+		direct_queue->Signal(current_fence.Get(), current_frame);
+		frame_command.clear();
+		auto tem_count = current_frame;
+		current_frame += 1;
+		return tem_count;
+	}
+
+	std::tuple<bool, std::size_t> Renderer::TryFlushFrame(std::size_t require_frame)
+	{
+
+		auto cur_value = current_fence->GetCompletedValue();
+
+		std::lock_guard lg(frame_mutex);
+
+		if(require_frame <= cur_value)
+		{
+			if(last_flush_frame != cur_value)
+			{
+				last_flush_frame = cur_value;
+				std::lock_guard lg(command_mutex);
+				for(auto& ite : allocators)
+				{
+					if(ite.frame_number <= cur_value && ite.status == Status::Block)
+					{
+						ite.allocator->Reset();
+						ite.status = Status::IDLE;
+					}
+				}
+			}
+			return {true, cur_value};
+		}
+
+		return {false, cur_value};
 	}
 
 	bool Renderer::FlushWindows(RendererFormWrapper& windows)
@@ -144,7 +221,16 @@ namespace Dumpling::Dx12
 		this->~FormWrapper();
 		re.Deallocate();
 	}
-	
+
+	PassRenderer::~PassRenderer()
+	{
+		if(owner)
+		{
+			owner->FinishPassRenderer(std::move(command_list), identity);
+			owner.Reset();
+		}
+	}
+
 
 	/*
 	void FormRenderer::OnFormCreated(Form& interface)

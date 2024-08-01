@@ -58,7 +58,7 @@ namespace Dumpling
 		return {};
 	}
 
-	bool Renderer::Commited(PipelineRequester::Ptr requester, Pipeline const& pipeline)
+	bool Renderer::ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline)
 	{
 		std::shared_lock sl(pass_mutex);
 		std::lock_guard lg(request_mutex);
@@ -115,10 +115,5 @@ namespace Dumpling
 			}
 		}
 		return {};
-	}
-
-	void Renderer::FlushFrame()
-	{
-		
 	}
 }

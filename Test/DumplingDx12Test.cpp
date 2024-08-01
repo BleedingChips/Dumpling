@@ -5,6 +5,7 @@
 import Dumpling;
 import std;
 import DumplingDx12Renderer;
+import DumplingWindowsForm;
 
 using namespace Dumpling;
 
@@ -26,6 +27,11 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 
 int main()
 {
+	{
+		ID3D12Debug* debugController;
+		D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
+		debugController->EnableDebugLayer();
+	}
 	TopEventCapture top;
 
 	auto device = HardDevice::Create();
@@ -55,7 +61,9 @@ int main()
 	);
 
 	
-
+	//#if defined(DEBUG) || defined(_DEBUG)
+	
+	//#endif
 	//renderer->Execute({}, pipeline);
 
 	//renderer->RegisterPass();
@@ -65,7 +73,7 @@ int main()
 		bool need_quit = false;
 
 
-		renderer->Commited({}, *pipeline);
+		renderer->ExecutePipeline({}, *pipeline);
 
 
 		Form::PeekMessageEvent([&](FormEvent::System event)
@@ -82,8 +90,19 @@ int main()
 			passren->ClearRendererTarget(*rs);
 		}
 
-		renderer->FlushFrame();
-		renderer->FlushWindows(*output);
+		auto frame = renderer->CommitedAndSwapContext();
+
+		while(true)
+		{
+			auto [b, i] = renderer->TryFlushFrame(*frame);
+			if(b)
+			{
+				break;
+			}else
+			{
+				std::this_thread::yield();
+			}
+		}
 
 		if(need_quit)
 			break;

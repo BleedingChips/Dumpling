@@ -29,6 +29,7 @@ export namespace Dumpling::Dx12
 	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
 	using CommandListPtr = ComPtr<ID3D12CommandList>;
 	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
+	using FencePtr = ComPtr<ID3D12Fence>;
 
 	export struct Renderer;
 
@@ -56,10 +57,17 @@ export namespace Dumpling::Dx12
 		friend struct Renderer;
 	};
 
-	
+	struct PassRendererIdentity
+	{
+		std::size_t reference_allocator_index;
+	};
+
+	export struct PassRenderer;
 
 	export struct Renderer : public DXGI::DXGIRenderer, public Potato::Pointer::DefaultIntrusiveInterface
 	{
+
+		
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Dumpling::Renderer::Wrapper>;
 
@@ -70,22 +78,21 @@ export namespace Dumpling::Dx12
 
 		static Dumpling::Renderer::Ptr Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		void FlushFrame() override;
+		std::optional<std::size_t> CommitedAndSwapContext() override;
+		std::tuple<bool, std::size_t> TryFlushFrame(std::size_t require_frame) override;
 		bool FlushWindows(RendererFormWrapper&) override;
+		std::size_t GetFrame() const override { std::shared_lock sl(frame_mutex); return current_frame;  }
 
 	protected:
 
-		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue)
-			: record(record), device(std::move(device)), direct_queue(std::move(direct_queue)) {}
+		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue);
 
 		Dumpling::PassRenderer::Ptr CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource) override;
+		void FinishPassRenderer(GraphicCommandListPtr ptr, PassRendererIdentity identity);
 
 		void AddRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
 		void SubRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
-
-		std::atomic_size_t frame_count = 0;
-
 
 		Potato::IR::MemoryResourceRecord record;
 		DevicePtr device;
@@ -96,34 +103,43 @@ export namespace Dumpling::Dx12
 			IDLE,
 			USING,
 			WAITING,
+			Block
 		};
 
 		struct AllocatorTuple
 		{
 			Status status;
 			CommandAllocatorPtr allocator;
-			std::size_t using_frame_number;
+			std::size_t frame_number;
 		};
 
-		std::mutex command_mutex;
+		FencePtr current_fence;
+		mutable std::shared_mutex frame_mutex;
+		std::size_t current_frame = 1;
+		std::size_t last_flush_frame = 0;
+
+
+		mutable std::shared_mutex command_mutex;
 		std::pmr::vector<AllocatorTuple> allocators;
 
 		struct CommandTuple
 		{
 			CommandListPtr list;
-			std::size_t reference_id;
+			PassRendererIdentity identity;
 		};
 
-		std::pmr::vector<CommandTuple> command;
+		std::pmr::vector<CommandTuple> frame_command;
+		std::size_t losing_command = 0;
 
 		friend struct Dumpling::Renderer::Wrapper;
+		friend struct PassRenderer;
 	};
 	
 
-	struct PassRenderer : public Dumpling::PassRenderer, public Potato::Pointer::DefaultControllerViewerInterface
+	export struct PassRenderer : public Dumpling::PassRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		PassRenderer(Potato::IR::MemoryResourceRecord record, GraphicCommandListPtr ptr, std::size_t allocator_index)
-			: record(record), command_list(std::move(ptr)), fast_allocator_index(allocator_index)
+		PassRenderer(Potato::IR::MemoryResourceRecord record, Renderer::Ptr owner, GraphicCommandListPtr ptr, PassRendererIdentity identity)
+			: MemoryResourceRecordIntrusiveInterface(record), owner(std::move(owner)), command_list(std::move(ptr)), identity(identity)
 		{
 			
 		}
@@ -132,22 +148,19 @@ export namespace Dumpling::Dx12
 		PipelineRequester::Ptr GetPipelineRequester() const override { return {}; }
 		ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
 		bool ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index = 0) override;
+		~PassRenderer();
 
 	protected:
 
-		virtual void AddPassRendererRef() const override { DefaultControllerViewerInterface::AddViewerRef();}
-		virtual void SubPassRendererRef() const override { DefaultControllerViewerInterface::SubViewerRef();}
-
-		virtual void ViewerRelease() override;
-		virtual void ControllerRelease() override;
+		virtual void AddPassRendererRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
+		virtual void SubPassRendererRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 
 
 	public:
 
-		Potato::IR::MemoryResourceRecord record;
 		GraphicCommandListPtr command_list;
 		Renderer::Ptr owner;
-		std::size_t fast_allocator_index;
+		PassRendererIdentity identity;
 
 		friend struct Renderer;
 	};

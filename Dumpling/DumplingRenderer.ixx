@@ -125,12 +125,13 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Wrapper>;
 
-		virtual bool Commited(PipelineRequester::Ptr requester, Pipeline const& pipeline);
+		virtual bool ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline);
 		virtual Pass::Ptr RegisterPass(PassProperty pass_property);
 		virtual bool UnregisterPass(Pass const&);
 		virtual PassRenderer::Ptr PopPassRenderer(Pass const&);
-		virtual bool TryFlushFrame() { FlushFrame(); return true; }
-		virtual void FlushFrame() = 0;
+		virtual std::optional<std::size_t> CommitedAndSwapContext() = 0;
+		virtual std::size_t GetFrame() const = 0;
+		virtual std::tuple<bool, std::size_t> TryFlushFrame(std::size_t require_frame) = 0;
 		virtual bool FlushWindows(RendererFormWrapper&) = 0;
 
 	protected:
