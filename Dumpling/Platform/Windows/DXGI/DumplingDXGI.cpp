@@ -12,7 +12,8 @@ module DumplingDXGI;
 
 import DumplingDx12Renderer;
 
-namespace Dumpling::DXGI
+
+namespace Dumpling
 {
 	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Dumpling::HardDevice::Ptr
 	{
@@ -46,60 +47,17 @@ namespace Dumpling::DXGI
 		return {};
 	}
 
-	RendererFormWrapper::Ptr HardDevice::CreateFormWrapper(Form& form, Renderer& renderer, FormRenderTargetProperty property, std::pmr::memory_resource* resource)
+	bool HardDevice::InitDebugLayout()
 	{
-		auto tar = dynamic_cast<Windows::Win32Form*>(&form);
-		auto ren = dynamic_cast<DXGIRenderer*>(&renderer);
-		if(tar != nullptr && ren != nullptr)
+		static std::mutex debug_mutex;
+		static Windows::ComPtr<ID3D12Debug> debug_layout;
+		std::lock_guard lg(debug_mutex);
+		if(!debug_layout)
 		{
-			auto hwnd = tar->GetWnd();
-			if(hwnd != nullptr)
-			{
-				ComPtr<IDXGIFactory2> new_factor;
-				factory->QueryInterface(__uuidof(decltype(new_factor)::InterfaceType), reinterpret_cast<void**>(new_factor.GetAddressOf()));
-				if(new_factor)
-				{
-
-					DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-					swapChainDesc.BufferCount = 2;
-					swapChainDesc.Width = 1024;
-					swapChainDesc.Height = 768;
-					swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-					swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-					swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-					swapChainDesc.SampleDesc.Count = 1;
-
-					ComPtr<IDXGISwapChain1> swapChain;
-					auto re = factory->CreateSwapChainForHwnd(
-						ren->GetDevice(), hwnd, &swapChainDesc, nullptr, nullptr,
-						swapChain.GetAddressOf()
-					);
-					if(SUCCEEDED(re))
-					{
-						return ren->CreateFormWrapper(std::move(swapChain), resource);
-					}
-				}
-			}
+			D3D12GetDebugInterface(IID_PPV_ARGS(debug_layout.GetAddressOf()));
+			if(debug_layout)
+				debug_layout->EnableDebugLayer();
 		}
-		return {};
-	}
-
-	Dumpling::Renderer::Ptr HardDevice::CreateRenderer(std::optional<std::size_t> adapter_count, std::pmr::memory_resource* resource)
-	{
-		if(factory)
-		{
-
-			ComPtr<IDXGIAdapter> adapter;
-			if(adapter_count.has_value())
-			{
-				auto re = factory->EnumAdapters(*adapter_count, adapter.GetAddressOf());
-				if(!SUCCEEDED(re))
-				{
-					return {};
-				}
-			}
-			return Dx12::Renderer::Create(adapter.Get(), resource);
-		}
-		return {};
+		return debug_layout;
 	}
 }

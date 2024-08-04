@@ -8,57 +8,52 @@ module;
 
 export module DumplingDXGI;
 
+
 import std;
 import PotatoPointer;
 import PotatoIR;
-import DumplingForm;
 import DumplingWindowsForm;
-import DumplingRenderer;
 
 
-
-export namespace Dumpling::DXGI
+export namespace Dumpling
 {
-
 	using Dumpling::Windows::ComPtr;
 
 	using FactoryPtr = ComPtr<IDXGIFactory2>;
 	using SwapChainPtr = ComPtr<IDXGISwapChain1>;
 
-	export struct HardDevice;
-
-	struct DXGIRenderer : public Dumpling::Renderer
+	struct AdapterDescription
 	{
-		//virtual IUnknown* GetDevice() const = 0;
-		virtual IUnknown* GetDevice() const = 0;
-		virtual RendererFormWrapper::Ptr CreateFormWrapper(SwapChainPtr SwapChain, std::pmr::memory_resource* resource) = 0;
+		std::size_t index = 0;
 	};
 
-	export struct HardDevice : public Dumpling::HardDevice, public Potato::Pointer::DefaultIntrusiveInterface
+	export struct HardDevice : public Potato::Pointer::DefaultIntrusiveInterface
 	{
 
-		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Dumpling::HardDevice::Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice>;
 
-		static Dumpling::HardDevice::Ptr Create(std::pmr::memory_resource* resource);
-		virtual RendererFormWrapper::Ptr CreateFormWrapper(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) override;
+		static HardDevice::Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		static bool InitDebugLayout();
+		std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const;
+
+	public:
+		auto GetFactory() const { return factory.Get(); }
 
 	protected:
 
 		HardDevice(Potato::IR::MemoryResourceRecord record, FactoryPtr factory)
 			: record(record), factory(std::move(factory)) {}
 
-		void AddHardDeviceRef() const override { DefaultIntrusiveInterface::AddRef(); }
-		void SubHardDeviceRef() const override { DefaultIntrusiveInterface::SubRef(); }
 		void Release() override;
 
-		std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const override;
+		
 
-		virtual Dumpling::Renderer::Ptr CreateRenderer(std::optional<std::size_t> adapter_count, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		//virtual Dumpling::Renderer::Ptr CreateRenderer(std::optional<std::size_t> adapter_count, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 		Potato::IR::MemoryResourceRecord record;
 		FactoryPtr factory;
 
-		friend struct Dumpling::HardDevice::Wrapper;
+		friend struct Renderer;
 	};
 
 	

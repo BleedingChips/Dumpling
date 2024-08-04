@@ -18,7 +18,7 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 	{
 		if(event.message == FormEvent::Modify::Message::DESTROY)
 		{
-			Form::PostFormQuitEvent();
+			Form::PostQuitEvent();
 		}
 		return FormEvent::Respond::PASS;
 	}
@@ -27,15 +27,12 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 
 int main()
 {
-	{
-		ID3D12Debug* debugController;
-		D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
-		debugController->EnableDebugLayer();
-	}
+	HardDevice::InitDebugLayout();
+
 	TopEventCapture top;
 
 	auto device = HardDevice::Create();
-	auto renderer = device->CreateRenderer();
+	auto renderer = Renderer::Create();
 	
 	auto form = Form::Create();
 
@@ -46,7 +43,7 @@ int main()
 
 	form->Init(pro);
 
-	auto output = device->CreateFormWrapper(*form, *renderer);
+	auto output = renderer->CreateFormWrapper(*device, *form);
 
 	auto pipeline = Pipeline::Create();
 

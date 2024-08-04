@@ -16,7 +16,7 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 	{
 		if(event.message == FormEvent::Modify::Message::DESTROY)
 		{
-			Form::PostFormQuitEvent();
+			Form::PostQuitEvent();
 		}
 		return FormEvent::Respond::PASS;
 	}

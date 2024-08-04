@@ -5,22 +5,37 @@ module;
 #include "wrl.h"
 
 #undef interface
+#undef max
 
 export module DumplingDx12Renderer;
 
 import std;
 import PotatoPointer;
 import PotatoIR;
-import DumplingForm;
 import DumplingWindowsForm;
 import DumplingPipeline;
-import DumplingRenderer;
 import DumplingDXGI;
+export import DumplingRendererTypes;
 
-
-
-export namespace Dumpling::Dx12
+export namespace Dumpling
 {
+
+
+	struct RendererResource
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddRendererResourceRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererResourceRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<RendererResource, Wrapper>;
+
+	protected:
+
+		virtual void AddRendererResourceRef() const = 0;
+		virtual void SubRendererResourceRef() const = 0;
+	};
 
 	using Dumpling::Windows::ComPtr;
 
@@ -33,26 +48,32 @@ export namespace Dumpling::Dx12
 
 	export struct Renderer;
 
-	struct FormWrapper : public Dumpling::RendererFormWrapper, public Dumpling::RendererResource, public Potato::Pointer::DefaultIntrusiveInterface
+	struct FormWrapper : public RendererResource, public Potato::Pointer::DefaultIntrusiveInterface
 	{
-		using Ptr = Dumpling::RendererFormWrapper::Ptr;
 
-		virtual Dumpling::RendererResource::Ptr GetAvailableRenderResource() override { return this; }
+		struct Config
+		{
+			
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<FormWrapper>;
+
+		RendererResource::Ptr GetAvailableRenderResource() { return this; }
 
 	protected:
 
-		FormWrapper(Potato::IR::MemoryResourceRecord record, DXGI::SwapChainPtr swap_chain)
+		FormWrapper(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain)
 			: record(record), swap_chain(std::move(swap_chain)){}
 
-		virtual void AddRendererFormWrapperRef() const override { DefaultIntrusiveInterface::AddRef(); }
-		virtual void SubRendererFormWrapperRef() const override { DefaultIntrusiveInterface::SubRef(); }
+		virtual void AddRendererFormWrapperRef() const { DefaultIntrusiveInterface::AddRef(); }
+		virtual void SubRendererFormWrapperRef() const { DefaultIntrusiveInterface::SubRef(); }
 		virtual void AddRendererResourceRef() const override { AddRendererFormWrapperRef(); }
 		virtual void SubRendererResourceRef() const override { SubRendererFormWrapperRef(); }
 
 		void Release() override;
 
 		Potato::IR::MemoryResourceRecord record;
-		DXGI::SwapChainPtr swap_chain;
+		SwapChainPtr swap_chain;
 
 		friend struct Renderer;
 	};
@@ -64,37 +85,59 @@ export namespace Dumpling::Dx12
 
 	export struct PassRenderer;
 
-	export struct Renderer : public DXGI::DXGIRenderer, public Potato::Pointer::DefaultIntrusiveInterface
+	export struct Renderer : public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
 
+		using Ptr = Potato::Pointer::IntrusivePtr<Renderer>;
+
+		FormWrapper::Ptr CreateFormWrapper(HardDevice& hard_device, Form& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+
+		struct PassRenderer : public Potato::IR::MemoryResourceRecordIntrusiveInterface
+		{
+			PassRenderer(Potato::IR::MemoryResourceRecord record, Renderer::Ptr owner, GraphicCommandListPtr ptr, PassRendererIdentity identity)
+				: MemoryResourceRecordIntrusiveInterface(record), owner(std::move(owner)), command_list(std::move(ptr)), identity(identity) {}
+
+			using Ptr = Potato::Pointer::IntrusivePtr<PassRenderer>;
+
+			Potato::IR::StructLayoutObject::Ptr GetParameters() const { return {}; }
+			PipelineRequester::Ptr GetPipelineRequester() const { return {}; }
+			ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
+			bool ClearRendererTarget(RendererResource& render_target, Color color = Color::black, std::size_t index = 0);
+			~PassRenderer();
+
+		public:
+
+			GraphicCommandListPtr command_list;
+			Renderer::Ptr owner;
+			PassRendererIdentity identity;
+
+			friend struct Renderer;
+		};
+
+		IUnknown* GetDevice() const { return direct_queue.Get(); }
 		
-
-		using Ptr = Potato::Pointer::IntrusivePtr<Renderer, Dumpling::Renderer::Wrapper>;
-
-		IUnknown* GetDevice() const override { return direct_queue.Get(); }
-		RendererFormWrapper::Ptr CreateFormWrapper(DXGI::SwapChainPtr swap_chain, std::pmr::memory_resource* resource) override;
-
 		//CommandQueuePtr GetDirectCommandQueue() const { return direct_queue; }
 
-		static Dumpling::Renderer::Ptr Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		static Renderer::Ptr Create(std::optional<AdapterDescription> adapter = std::nullopt, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		std::optional<std::size_t> CommitedAndSwapContext() override;
-		std::tuple<bool, std::size_t> TryFlushFrame(std::size_t require_frame) override;
-		bool FlushWindows(RendererFormWrapper&) override;
-		std::size_t GetFrame() const override { std::shared_lock sl(frame_mutex); return current_frame;  }
+		std::optional<std::size_t> CommitedAndSwapContext();
+		std::tuple<bool, std::size_t> TryFlushFrame(std::size_t require_frame);
+		bool FlushWindows(FormWrapper&);
+		std::size_t GetFrame() const { std::shared_lock sl(frame_mutex); return current_frame;  }
+
+		PassRenderer::Ptr PopPassRenderer(Pass const& pass, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		bool ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline) { return pipeline_manager.ExecutePipeline(std::move(requester), pipeline); }
+		Pass::Ptr RegisterPass(PassProperty pass_property){ return pipeline_manager.RegisterPass(std::move(pass_property)); }
+		//bool UnregisterPass(Pass const& pass) {}
 
 	protected:
 
 		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue);
 
-		Dumpling::PassRenderer::Ptr CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource) override;
 		void FinishPassRenderer(GraphicCommandListPtr ptr, PassRendererIdentity identity);
 
-		void AddRendererRef() const override { DefaultIntrusiveInterface::AddRef(); }
-		void SubRendererRef() const override { DefaultIntrusiveInterface::SubRef(); }
-		void Release() override;
+		PipelineManager pipeline_manager;
 
-		Potato::IR::MemoryResourceRecord record;
 		DevicePtr device;
 		CommandQueuePtr direct_queue;
 
@@ -131,39 +174,18 @@ export namespace Dumpling::Dx12
 		std::pmr::vector<CommandTuple> frame_command;
 		std::size_t losing_command = 0;
 
-		friend struct Dumpling::Renderer::Wrapper;
 		friend struct PassRenderer;
 	};
+}
+
+
+
+/*
+
+export namespace Dumpling::Dx12
+{
+
 	
-
-	export struct PassRenderer : public Dumpling::PassRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
-	{
-		PassRenderer(Potato::IR::MemoryResourceRecord record, Renderer::Ptr owner, GraphicCommandListPtr ptr, PassRendererIdentity identity)
-			: MemoryResourceRecordIntrusiveInterface(record), owner(std::move(owner)), command_list(std::move(ptr)), identity(identity)
-		{
-			
-		}
-
-		Potato::IR::StructLayoutObject::Ptr GetParameters() const override{ return {}; }
-		PipelineRequester::Ptr GetPipelineRequester() const override { return {}; }
-		ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
-		bool ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index = 0) override;
-		~PassRenderer();
-
-	protected:
-
-		virtual void AddPassRendererRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
-		virtual void SubPassRendererRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
-
-
-	public:
-
-		GraphicCommandListPtr command_list;
-		Renderer::Ptr owner;
-		PassRendererIdentity identity;
-
-		friend struct Renderer;
-	};
 
 
 
@@ -410,4 +432,4 @@ export namespace Dumpling::Dx12
 
 	
 
-}
+//}

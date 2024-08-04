@@ -1,16 +1,10 @@
 module;
 
-module DumplingForm;
-
-
-
-#ifdef _WIN32
-import DumplingWindowsForm;
-#endif
+module DumplingFormEvent;
 
 namespace Dumpling
 {
-	bool Form::InsertCapture_AssumedLocked(FormEventCapture::Ptr capture, std::size_t priority)
+	bool CaptureManager::InsertCapture_AssumedLocked(FormEventCapture::Ptr capture, std::size_t priority)
 	{
 		if(capture)
 		{
@@ -23,14 +17,14 @@ namespace Dumpling
 		}
 		return false;
 	}
-	FormEvent::Respond Form::HandleEvent(FormEvent::System event)
+	FormEvent::Respond CaptureManager::HandleEvent(Form& form, FormEvent::System event)
 	{
 		std::shared_lock sl(capture_mutex);
 		for(auto& ite : captures)
 		{
 			if((ite.acceptable_category & FormEvent::Category::SYSTEM) != FormEvent::Category::UNACCEPTABLE)
 			{
-				auto re = ite.capture->Receive(*this, event);
+				auto re = ite.capture->Receive(form, event);
 				if(re == FormEvent::Respond::CAPTURED)
 				{
 					return FormEvent::Respond::CAPTURED;
@@ -40,14 +34,14 @@ namespace Dumpling
 		return FormEvent::Respond::PASS;
 	}
 
-	FormEvent::Respond Form::HandleEvent(FormEvent::Modify event)
+	FormEvent::Respond CaptureManager::HandleEvent(Form& form, FormEvent::Modify event)
 	{
 		std::shared_lock sl(capture_mutex);
 		for(auto& ite : captures)
 		{
 			if((ite.acceptable_category & FormEvent::Category::MODIFY) != FormEvent::Category::UNACCEPTABLE)
 			{
-				auto re = ite.capture->Receive(*this, event);
+				auto re = ite.capture->Receive(form, event);
 				if(re == FormEvent::Respond::CAPTURED)
 				{
 					return FormEvent::Respond::CAPTURED;
@@ -57,14 +51,14 @@ namespace Dumpling
 		return FormEvent::Respond::PASS;
 	}
 
-	FormEvent::Respond Form::HandleEvent(FormEvent::Input event)
+	FormEvent::Respond CaptureManager::HandleEvent(Form& form, FormEvent::Input event)
 	{
 		std::shared_lock sl(capture_mutex);
 		for(auto& ite : captures)
 		{
 			if((ite.acceptable_category & FormEvent::Category::INPUT) != FormEvent::Category::UNACCEPTABLE)
 			{
-				auto re = ite.capture->Receive(*this, event);
+				auto re = ite.capture->Receive(form, event);
 				if(re == FormEvent::Respond::CAPTURED)
 				{
 					return FormEvent::Respond::CAPTURED;
@@ -73,36 +67,5 @@ namespace Dumpling
 		}
 		return FormEvent::Respond::PASS;
 	}
-
-	Form::Ptr Form::Create(
-		std::size_t identity_id,
-		std::pmr::memory_resource* resource
-	)
-	{
-#ifdef _WIN32
-		return Windows::Win32Form::Create(
-			identity_id,
-			resource
-		);
-#endif
-	}
-
-	bool Form::PeekMessageEventOnce(void(*func)(void*, FormEvent::System), void* data)
-	{
-#ifdef _WIN32
-		return Windows::Win32Form::PeekMessageEvent(
-			func,
-			data
-		);
-#endif
-	}
-
-	void Form::PostFormQuitEvent()
-	{
-		#ifdef _WIN32
-		return Windows::Win32Form::PostQuitEvent();
-#endif
-	}
-
 
 }

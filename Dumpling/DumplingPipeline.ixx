@@ -6,7 +6,6 @@ export module DumplingPipeline;
 import std;
 import PotatoMisc;
 import PotatoPointer;
-import DumplingForm;
 import PotatoIR;
 
 export namespace Dumpling
@@ -78,6 +77,60 @@ export namespace Dumpling
 
 		virtual void AddRendererRequesterRef() const = 0;
 		virtual void SubRendererRequesterRef() const = 0;
+	};
+
+	struct PipelineManager
+	{
+
+		struct PassRequest
+		{
+			Pass::Ptr pass;
+			Pipeline::Ptr pipeline;
+			PipelineRequester::Ptr requester;
+			Potato::IR::StructLayoutObject::Ptr object;
+		};
+
+		bool ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline);
+		Pass::Ptr RegisterPass(PassProperty pass_property);
+		bool UnregisterPass(Pass const&);
+
+		struct MemorySetting
+		{
+			std::pmr::memory_resource* self_resource = std::pmr::get_default_resource();
+			std::pmr::memory_resource* pass_resource = std::pmr::get_default_resource();
+		};
+
+		PipelineManager(MemorySetting setting = {});
+
+		std::optional<PassRequest> PopPassRequest(Pass const&);
+		bool PushPassRequest(PassRequest pass);
+
+	protected:
+
+		Pass::Ptr RegisterPass_AssumedLocked(PassProperty pass_property);
+
+		std::shared_mutex pass_mutex;
+
+		enum class Status
+		{
+			WAITING,
+			RUNNING,
+			DONE,
+		};
+
+		struct PassTuple
+		{
+			std::u8string_view pass_name;
+			Pass::Ptr pass;
+		};
+
+		std::pmr::vector<PassTuple> passes;
+
+		std::mutex request_mutex;
+
+		std::pmr::vector<PassRequest> requests;
+
+		std::pmr::memory_resource* pass_resource = nullptr;
 	};
 
 }

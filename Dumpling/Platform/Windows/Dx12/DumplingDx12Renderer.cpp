@@ -9,24 +9,24 @@ module;
 module DumplingDx12Renderer;
 
 
-namespace Dumpling::Dx12
+namespace Dumpling
 {
 
 	Renderer::Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr in_device, CommandQueuePtr direct_queue)
-	: record(record), device(std::move(in_device)), direct_queue(std::move(direct_queue))
+		: MemoryResourceRecordIntrusiveInterface(record), device(std::move(in_device)), direct_queue(std::move(direct_queue))
 	{
 		assert(device);
 		device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(current_fence)::InterfaceType), reinterpret_cast<void**>(current_fence.GetAddressOf()));
 	}
 
-	Dumpling::Renderer::Ptr Renderer::Create(IDXGIAdapter* target_adapter, std::pmr::memory_resource* resource)
+	Renderer::Ptr Renderer::Create(std::optional<AdapterDescription> adapter, std::pmr::memory_resource* resource)
 	{
 
-		Dx12::DevicePtr dev_ptr;
-		auto  re = D3D12CreateDevice(target_adapter, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
+		DevicePtr dev_ptr;
+		auto  re = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
 		if(SUCCEEDED(re))
 		{
-			Dx12::CommandQueuePtr command_queue;
+			CommandQueuePtr command_queue;
 			D3D12_COMMAND_QUEUE_DESC desc{
 				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
 				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
@@ -41,89 +41,85 @@ namespace Dumpling::Dx12
 			if(SUCCEEDED(re))
 			{
 
-				auto record = Potato::IR::MemoryResourceRecord::Allocate<Dx12::Renderer>(resource);
+				auto record = Potato::IR::MemoryResourceRecord::Allocate<Renderer>(resource);
 				if(record)
 				{
-					return new (record.Get()) Dx12::Renderer{record, std::move(dev_ptr), std::move(command_queue)};
+					return new (record.Get()) Renderer{record, std::move(dev_ptr), std::move(command_queue)};
 				}
 			}
 		}
 		return {};
 	}
 
-	RendererFormWrapper::Ptr Renderer::CreateFormWrapper(DXGI::SwapChainPtr swap_chain, std::pmr::memory_resource* resource)
-	{
-		if(swap_chain)
-		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<FormWrapper>(resource);
-			if(record)
-			{
-				return new (record.Get()) FormWrapper{record, std::move(swap_chain)};
-			}
-		}
-		return {};
-	}
-
-	Dumpling::PassRenderer::Ptr Renderer::CreatePassRenderer(::Dumpling::PipelineRequester::Ptr requester, Potato::IR::StructLayoutObject::Ptr parameter, PassProperty property, std::pmr::memory_resource* resource)
+	Renderer::PassRenderer::Ptr Renderer::PopPassRenderer(Pass const& pass, std::pmr::memory_resource* resource)
 	{
 		std::lock(frame_mutex, command_mutex);
 		std::lock_guard lg(frame_mutex, std::adopt_lock);
 		std::lock_guard lg2(command_mutex, std::adopt_lock);
 
-		CommandAllocatorPtr cur_allocator;
-		std::size_t allocator_index = 0;
-		std::size_t cur_frame = current_frame;
-		for(auto& ite : allocators)
+		auto request = pipeline_manager.PopPassRequest(pass);
+		if(request.has_value())
 		{
-			if(ite.status == Status::IDLE || ite.status == Status::WAITING && ite.frame_number == cur_frame)
+			CommandAllocatorPtr cur_allocator;
+			std::size_t allocator_index = 0;
+			std::size_t cur_frame = current_frame;
+			for(auto& ite : allocators)
 			{
-				cur_allocator = ite.allocator;
-			}else
-			{
-				++allocator_index;
+				if(ite.status == Status::IDLE || ite.status == Status::WAITING && ite.frame_number == cur_frame)
+				{
+					cur_allocator = ite.allocator;
+				}else
+				{
+					++allocator_index;
+				}
 			}
-		}
-		if(!cur_allocator)
-		{
-			auto re = device->CreateCommandAllocator(
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT, 
-				__uuidof(decltype(cur_allocator)::InterfaceType), reinterpret_cast<void**>(cur_allocator.GetAddressOf())
-			);
+			if(!cur_allocator)
+			{
+				auto re = device->CreateCommandAllocator(
+					D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT, 
+					__uuidof(decltype(cur_allocator)::InterfaceType), reinterpret_cast<void**>(cur_allocator.GetAddressOf())
+				);
+				if(SUCCEEDED(re))
+				{
+					allocators.emplace_back(
+						Status::IDLE,
+						cur_allocator,
+						cur_frame
+					);
+				}else
+				{
+					pipeline_manager.PushPassRequest(std::move(*request));
+					return {};
+				}
+			}
+
+			GraphicCommandListPtr ptr;
+
+			auto re = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+					cur_allocator.Get(), nullptr, __uuidof(decltype(ptr)::InterfaceType), reinterpret_cast<void**>(ptr.GetAddressOf())
+				);
+
 			if(SUCCEEDED(re))
 			{
-				allocators.emplace_back(
-					Status::IDLE,
-					cur_allocator,
-					cur_frame
+
+				PassRenderer::Ptr result = Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(
+					resource, 
+					Renderer::Ptr{this}, 
+					std::move(ptr), 
+					PassRendererIdentity{allocator_index}
 				);
-			}else
-			{
-				return {};
+				if(result)
+				{
+					allocators[allocator_index].status = Status::USING;
+					allocators[allocator_index].frame_number = current_frame;
+					++losing_command;
+					return result;
+				}else
+				{
+					pipeline_manager.PushPassRequest(std::move(*request));
+					return {};
+				}
 			}
-		}
-
-		GraphicCommandListPtr ptr;
-
-		auto re = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-				cur_allocator.Get(), nullptr, __uuidof(decltype(ptr)::InterfaceType), reinterpret_cast<void**>(ptr.GetAddressOf())
-			);
-
-		if(SUCCEEDED(re))
-		{
-
-			Dumpling::PassRenderer::Ptr result = Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(
-				resource, 
-				Renderer::Ptr{this}, 
-				std::move(ptr), 
-				PassRendererIdentity{allocator_index}
-			);
-			if(result)
-			{
-				allocators[allocator_index].status = Status::USING;
-				allocators[allocator_index].frame_number = current_frame;
-				++losing_command;
-			}
-			return result;
 		}
 		return {};
 	}
@@ -198,19 +194,45 @@ namespace Dumpling::Dx12
 		return {false, cur_value};
 	}
 
-	bool Renderer::FlushWindows(RendererFormWrapper& windows)
+	bool Renderer::FlushWindows(FormWrapper& windows)
 	{
 		return true;
 	}
 
-	void Renderer::Release()
+	FormWrapper::Ptr Renderer::CreateFormWrapper(HardDevice& hard_device, Form& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
 	{
-		auto re = record;
-		this->~Renderer();
-		re.Deallocate();
+		ComPtr<IDXGIFactory2> new_factor;
+		hard_device.GetFactory()->QueryInterface(__uuidof(decltype(new_factor)::InterfaceType), reinterpret_cast<void**>(new_factor.GetAddressOf()));
+		if(new_factor)
+		{
+
+			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+			swapChainDesc.BufferCount = 2;
+			swapChainDesc.Width = 1024;
+			swapChainDesc.Height = 768;
+			swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			swapChainDesc.SampleDesc.Count = 1;
+
+			ComPtr<IDXGISwapChain1> swapChain;
+			auto re = new_factor->CreateSwapChainForHwnd(
+				direct_queue.Get(), form.GetWnd(), &swapChainDesc, nullptr, nullptr,
+				swapChain.GetAddressOf()
+			);
+			if(SUCCEEDED(re))
+			{
+				auto record = Potato::IR::MemoryResourceRecord::Allocate<FormWrapper>(resource);
+				if(record)
+				{
+					return new (record.Get()) FormWrapper{record, std::move(swapChain)};
+				}
+			}
+		}
+		return {};
 	}
 
-	bool PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
+	bool Renderer::PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
 	{
 		return true;
 	}
@@ -222,7 +244,7 @@ namespace Dumpling::Dx12
 		re.Deallocate();
 	}
 
-	PassRenderer::~PassRenderer()
+	Renderer::PassRenderer::~PassRenderer()
 	{
 		if(owner)
 		{
