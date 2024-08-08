@@ -107,10 +107,6 @@ export namespace Dumpling
 
 	protected:
 
-		Pass::Ptr RegisterPass_AssumedLocked(PassProperty pass_property);
-
-		std::shared_mutex pass_mutex;
-
 		enum class Status
 		{
 			WAITING,

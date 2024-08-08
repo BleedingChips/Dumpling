@@ -81,11 +81,15 @@ int main()
 			}
 		});
 
-		while(auto passren = renderer->PopPassRenderer(*pass))
+		PassRenderer ren;
+
+		while(renderer->PopPassRenderer(ren, *pass))
 		{
 			auto rs = output->GetAvailableRenderResource();
-			passren->ClearRendererTarget(*rs);
+			ren.ClearRendererTarget(*rs);
 		}
+
+		renderer->FinishPassRenderer(ren);
 
 		auto frame = renderer->CommitedAndSwapContext();
 

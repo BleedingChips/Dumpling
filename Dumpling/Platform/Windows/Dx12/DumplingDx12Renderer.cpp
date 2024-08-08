@@ -51,12 +51,15 @@ namespace Dumpling
 		return {};
 	}
 
-	Renderer::PassRenderer::Ptr Renderer::PopPassRenderer(Pass const& pass, std::pmr::memory_resource* resource)
+	bool Renderer::PopPassRenderer(PassRenderer& output_renderer, Pass const& pass)
 	{
-		std::lock(frame_mutex, command_mutex);
-		std::lock_guard lg(frame_mutex, std::adopt_lock);
-		std::lock_guard lg2(command_mutex, std::adopt_lock);
+		std::lock_guard lg(pipeline_mutex);
+		return PopPassRenderer_AssumedLocked(output_renderer, pass);
+	}
 
+	bool Renderer::PopPassRenderer_AssumedLocked(PassRenderer& output_renderer, Pass const& pass)
+	{
+		FinishPassRenderer_AssumedLocked(output_renderer);
 		auto request = pipeline_manager.PopPassRequest(pass);
 		if(request.has_value())
 		{
@@ -89,7 +92,7 @@ namespace Dumpling
 				}else
 				{
 					pipeline_manager.PushPassRequest(std::move(*request));
-					return {};
+					return false;
 				}
 			}
 
@@ -101,47 +104,45 @@ namespace Dumpling
 
 			if(SUCCEEDED(re))
 			{
-
-				PassRenderer::Ptr result = Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PassRenderer>(
-					resource, 
-					Renderer::Ptr{this}, 
-					std::move(ptr), 
-					PassRendererIdentity{allocator_index}
-				);
-				if(result)
-				{
-					allocators[allocator_index].status = Status::USING;
-					allocators[allocator_index].frame_number = current_frame;
-					++losing_command;
-					return result;
-				}else
-				{
-					pipeline_manager.PushPassRequest(std::move(*request));
-					return {};
-				}
+				output_renderer.command_list = ptr;
+				output_renderer.identity = {allocator_index};
+				allocators[allocator_index].status = Status::USING;
+				allocators[allocator_index].frame_number = current_frame;
+				++losing_command;
+				return true;
 			}
+			pipeline_manager.PushPassRequest(std::move(*request));
+			return false;
 		}
-		return {};
+		return false;
 	}
 
-	void Renderer::FinishPassRenderer(GraphicCommandListPtr ptr, PassRendererIdentity identity)
+
+	bool Renderer::FinishPassRenderer(PassRenderer& pass_renderer)
 	{
-		if(ptr)
+		std::lock_guard lg(pipeline_mutex);
+		return FinishPassRenderer_AssumedLocked(pass_renderer);
+	}
+
+	bool Renderer::FinishPassRenderer_AssumedLocked(PassRenderer& pass_renderer)
+	{
+		if(pass_renderer.command_list)
 		{
-			ptr->Close();
-			std::lock_guard lg(command_mutex);
-			allocators[identity.reference_allocator_index].status = Status::WAITING;
-			frame_command.emplace_back(std::move(ptr), identity);
+			auto tem = std::move(pass_renderer.command_list);
+			pass_renderer.identity = {};
+			tem->Close();
+			allocators[pass_renderer.identity.reference_allocator_index].status = Status::WAITING;
+			frame_command.emplace_back(std::move(tem), pass_renderer.identity);
 			assert(losing_command >= 1);
 			--losing_command;
+			return true;
 		}
+		return false;
 	}
 
 	std::optional<std::size_t> Renderer::CommitedAndSwapContext()
 	{
-		std::lock(frame_mutex, command_mutex);
-		std::lock_guard lg(frame_mutex, std::adopt_lock);
-		std::lock_guard lg2(command_mutex, std::adopt_lock);
+		std::lock_guard lg(pipeline_mutex);
 		if(losing_command != 0)
 		{
 			return std::nullopt;
@@ -171,14 +172,13 @@ namespace Dumpling
 
 		auto cur_value = current_fence->GetCompletedValue();
 
-		std::lock_guard lg(frame_mutex);
+		std::lock_guard lg(pipeline_mutex);
 
 		if(require_frame <= cur_value)
 		{
-			if(last_flush_frame != cur_value)
+			if(last_flush_frame_count != cur_value)
 			{
-				last_flush_frame = cur_value;
-				std::lock_guard lg(command_mutex);
+				last_flush_frame_count = cur_value;
 				for(auto& ite : allocators)
 				{
 					if(ite.frame_number <= cur_value && ite.status == Status::Block)
@@ -232,7 +232,7 @@ namespace Dumpling
 		return {};
 	}
 
-	bool Renderer::PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
+	bool PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
 	{
 		return true;
 	}
@@ -242,15 +242,6 @@ namespace Dumpling
 		auto re = record;
 		this->~FormWrapper();
 		re.Deallocate();
-	}
-
-	Renderer::PassRenderer::~PassRenderer()
-	{
-		if(owner)
-		{
-			owner->FinishPassRenderer(std::move(command_list), identity);
-			owner.Reset();
-		}
 	}
 
 

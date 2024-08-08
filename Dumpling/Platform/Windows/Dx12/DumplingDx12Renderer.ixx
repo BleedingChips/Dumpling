@@ -3,6 +3,7 @@ module;
 #include "d3d12.h"
 #include "dxgi1_6.h"
 #include "wrl.h"
+#include <cassert>
 
 #undef interface
 #undef max
@@ -20,6 +21,17 @@ export import DumplingRendererTypes;
 export namespace Dumpling
 {
 
+	using Dumpling::Windows::ComPtr;
+
+	using DevicePtr = ComPtr<ID3D12Device>;
+	using CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
+	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
+	using CommandListPtr = ComPtr<ID3D12CommandList>;
+	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
+	using FencePtr = ComPtr<ID3D12Fence>;
+	using ResourcePtr = ComPtr<ID3D12Resource>;
+
+	export struct Renderer;
 
 	struct RendererResource
 	{
@@ -31,22 +43,19 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<RendererResource, Wrapper>;
 
+		struct Description
+		{
+			ResourcePtr resource_ptr;
+			D3D12_RESOURCE_BARRIER_FLAGS default_flags;
+		};
+
+		virtual Description GetDescription() const = 0;
+
 	protected:
 
 		virtual void AddRendererResourceRef() const = 0;
 		virtual void SubRendererResourceRef() const = 0;
 	};
-
-	using Dumpling::Windows::ComPtr;
-
-	using DevicePtr = ComPtr<ID3D12Device>;
-	using CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
-	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
-	using CommandListPtr = ComPtr<ID3D12CommandList>;
-	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
-	using FencePtr = ComPtr<ID3D12Fence>;
-
-	export struct Renderer;
 
 	struct FormWrapper : public RendererResource, public Potato::Pointer::DefaultIntrusiveInterface
 	{
@@ -59,6 +68,8 @@ export namespace Dumpling
 		using Ptr = Potato::Pointer::IntrusivePtr<FormWrapper>;
 
 		RendererResource::Ptr GetAvailableRenderResource() { return this; }
+
+		Description GetDescription() const override { return {}; }
 
 	protected:
 
@@ -83,7 +94,26 @@ export namespace Dumpling
 		std::size_t reference_allocator_index;
 	};
 
-	export struct PassRenderer;
+	struct PassRenderer
+	{
+		PassRenderer() = default;
+		Potato::IR::StructLayoutObject::Ptr GetParameters() const { return {}; }
+		PipelineRequester::Ptr GetPipelineRequester() const { return {}; }
+		ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
+		bool ClearRendererTarget(RendererResource& render_target, Color color = Color::black, std::size_t index = 0);
+
+		~PassRenderer()
+		{
+			assert(!command_list);
+		}
+
+	protected:
+
+		GraphicCommandListPtr command_list;
+		PassRendererIdentity identity;
+
+		friend struct Renderer;
+	};
 
 	export struct Renderer : public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
@@ -92,27 +122,7 @@ export namespace Dumpling
 
 		FormWrapper::Ptr CreateFormWrapper(HardDevice& hard_device, Form& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		struct PassRenderer : public Potato::IR::MemoryResourceRecordIntrusiveInterface
-		{
-			PassRenderer(Potato::IR::MemoryResourceRecord record, Renderer::Ptr owner, GraphicCommandListPtr ptr, PassRendererIdentity identity)
-				: MemoryResourceRecordIntrusiveInterface(record), owner(std::move(owner)), command_list(std::move(ptr)), identity(identity) {}
-
-			using Ptr = Potato::Pointer::IntrusivePtr<PassRenderer>;
-
-			Potato::IR::StructLayoutObject::Ptr GetParameters() const { return {}; }
-			PipelineRequester::Ptr GetPipelineRequester() const { return {}; }
-			ID3D12GraphicsCommandList* operator->() const { return command_list.Get(); }
-			bool ClearRendererTarget(RendererResource& render_target, Color color = Color::black, std::size_t index = 0);
-			~PassRenderer();
-
-		public:
-
-			GraphicCommandListPtr command_list;
-			Renderer::Ptr owner;
-			PassRendererIdentity identity;
-
-			friend struct Renderer;
-		};
+		
 
 		IUnknown* GetDevice() const { return direct_queue.Get(); }
 		
@@ -123,20 +133,22 @@ export namespace Dumpling
 		std::optional<std::size_t> CommitedAndSwapContext();
 		std::tuple<bool, std::size_t> TryFlushFrame(std::size_t require_frame);
 		bool FlushWindows(FormWrapper&);
-		std::size_t GetFrame() const { std::shared_lock sl(frame_mutex); return current_frame;  }
+		std::size_t GetFrame() const { std::shared_lock sl(pipeline_mutex); return current_frame;  }
 
-		PassRenderer::Ptr PopPassRenderer(Pass const& pass, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		bool PopPassRenderer(PassRenderer& output_renderer, Pass const& pass);
+		bool FinishPassRenderer(PassRenderer& output_renderer);
 		bool ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline) { return pipeline_manager.ExecutePipeline(std::move(requester), pipeline); }
 		Pass::Ptr RegisterPass(PassProperty pass_property){ return pipeline_manager.RegisterPass(std::move(pass_property)); }
 		//bool UnregisterPass(Pass const& pass) {}
 
 	protected:
 
+		bool FinishPassRenderer_AssumedLocked(PassRenderer& output_renderer);
+		bool PopPassRenderer_AssumedLocked(PassRenderer& output_renderer, Pass const& pass);
+
 		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue);
 
-		void FinishPassRenderer(GraphicCommandListPtr ptr, PassRendererIdentity identity);
-
-		PipelineManager pipeline_manager;
+		
 
 		DevicePtr device;
 		CommandQueuePtr direct_queue;
@@ -157,12 +169,12 @@ export namespace Dumpling
 		};
 
 		FencePtr current_fence;
-		mutable std::shared_mutex frame_mutex;
-		std::size_t current_frame = 1;
-		std::size_t last_flush_frame = 0;
 
+		mutable std::shared_mutex pipeline_mutex;
+		PipelineManager pipeline_manager;
+		std::uint64_t current_frame = 1;
+		std::uint64_t last_flush_frame_count = 0;
 
-		mutable std::shared_mutex command_mutex;
 		std::pmr::vector<AllocatorTuple> allocators;
 
 		struct CommandTuple

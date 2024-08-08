@@ -43,12 +43,6 @@ namespace Dumpling
 
 	Pass::Ptr PipelineManager::RegisterPass(PassProperty pass_property)
 	{
-		std::lock_guard lg(pass_mutex);
-		return RegisterPass_AssumedLocked(std::move(pass_property));
-	}
-
-	Pass::Ptr PipelineManager::RegisterPass_AssumedLocked(PassProperty pass_property)
-	{
 		for(auto& ite : passes)
 		{
 			if(ite.pass_name == pass_property.name)
@@ -68,8 +62,6 @@ namespace Dumpling
 
 	bool PipelineManager::ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline)
 	{
-		std::shared_lock sl(pass_mutex);
-		std::lock_guard lg(request_mutex);
 		for(auto& ite : passes)
 		{
 			requests.emplace_back(
@@ -84,7 +76,6 @@ namespace Dumpling
 
 	bool PipelineManager::UnregisterPass(Pass const& node)
 	{
-		std::lock_guard lg(pass_mutex);
 		auto ite = std::find_if(passes.begin(), passes.end(), [&](
 			PassTuple& tuple)
 		{
