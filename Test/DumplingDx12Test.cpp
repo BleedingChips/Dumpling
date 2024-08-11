@@ -65,6 +65,10 @@ int main()
 
 	//renderer->RegisterPass();
 
+	float R = 0.0f;
+	float G = 0.0f;
+	float B = 0.0f;
+
 	while(true)
 	{
 		bool need_quit = false;
@@ -86,7 +90,15 @@ int main()
 		while(renderer->PopPassRenderer(ren, *pass))
 		{
 			auto rs = output->GetAvailableRenderResource();
-			ren.ClearRendererTarget(*rs);
+			ren.ClearRendererTarget(*rs,
+					{
+						R,
+						G,
+						B,
+						1.0f
+					}
+				
+				);
 		}
 
 		renderer->FinishPassRenderer(ren);
@@ -98,12 +110,26 @@ int main()
 			auto [b, i] = renderer->TryFlushFrame(*frame);
 			if(b)
 			{
+				renderer->FlushWindows(*output);
 				break;
 			}else
 			{
 				std::this_thread::yield();
 			}
 		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds{10});
+
+		R += 0.03f;
+		G += 0.06f;
+		B += 0.09f;
+
+		if(R >= 1.0f)
+			R -= 1.0f;
+		if(G >= 1.0f)
+			G -= 1.0f;
+		if(B >= 1.0f)
+			B -= 1.0f;
 
 		if(need_quit)
 			break;

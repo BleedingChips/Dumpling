@@ -30,6 +30,7 @@ export namespace Dumpling
 	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
 	using FencePtr = ComPtr<ID3D12Fence>;
 	using ResourcePtr = ComPtr<ID3D12Resource>;
+	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
 
 	export struct Renderer;
 
@@ -46,10 +47,11 @@ export namespace Dumpling
 		struct Description
 		{
 			ResourcePtr resource_ptr;
-			D3D12_RESOURCE_BARRIER_FLAGS default_flags;
+			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
+			D3D12_RESOURCE_STATES default_state;
 		};
 
-		virtual Description GetDescription() const = 0;
+		virtual Description GetDescription(D3D12_RESOURCE_STATES require_state) const = 0;
 
 	protected:
 
@@ -69,12 +71,12 @@ export namespace Dumpling
 
 		RendererResource::Ptr GetAvailableRenderResource() { return this; }
 
-		Description GetDescription() const override { return {}; }
+		Description GetDescription(D3D12_RESOURCE_STATES require_state) const override;
 
 	protected:
 
-		FormWrapper(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain)
-			: record(record), swap_chain(std::move(swap_chain)){}
+		FormWrapper(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, std::size_t offset)
+			: record(record), swap_chain(std::move(swap_chain)), m_rtvHeap(std::move(m_rtvHeap)), offset(offset) {}
 
 		virtual void AddRendererFormWrapperRef() const { DefaultIntrusiveInterface::AddRef(); }
 		virtual void SubRendererFormWrapperRef() const { DefaultIntrusiveInterface::SubRef(); }
@@ -85,6 +87,8 @@ export namespace Dumpling
 
 		Potato::IR::MemoryResourceRecord record;
 		SwapChainPtr swap_chain;
+		DescriptorHeapPtr m_rtvHeap;
+		std::size_t offset;
 
 		friend struct Renderer;
 	};

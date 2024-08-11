@@ -3,6 +3,8 @@ module;
 #include <cassert>
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <intsafe.h>
+#include <OCIdl.h>
 
 #undef interface
 
@@ -196,6 +198,7 @@ namespace Dumpling
 
 	bool Renderer::FlushWindows(FormWrapper& windows)
 	{
+		windows.swap_chain->Present(1, 0);
 		return true;
 	}
 
@@ -222,11 +225,42 @@ namespace Dumpling
 			);
 			if(SUCCEEDED(re))
 			{
-				auto record = Potato::IR::MemoryResourceRecord::Allocate<FormWrapper>(resource);
-				if(record)
+				SwapChainPtr swap_chain;
+				if(SUCCEEDED(swapChain.As(&swap_chain)))
 				{
-					return new (record.Get()) FormWrapper{record, std::move(swapChain)};
+					DescriptorHeapPtr m_rtvHeap;
+					D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+			        rtvHeapDesc.NumDescriptors = swapChainDesc.BufferCount;
+			        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+			        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+			        auto re = device->CreateDescriptorHeap(&rtvHeapDesc, 
+						
+						__uuidof(decltype(m_rtvHeap)::InterfaceType), reinterpret_cast<void**>(m_rtvHeap.GetAddressOf())
+					);
+					if(SUCCEEDED(re))
+					{
+						std::size_t m_rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+						D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle {m_rtvHeap->GetCPUDescriptorHandleForHeapStart()};
+
+				        // Create a RTV and a command allocator for each frame.
+				        for (UINT n = 0; n < swapChainDesc.BufferCount; n++)
+				        {
+							ResourcePtr resource;
+				            swap_chain->GetBuffer(n, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
+				            device->CreateRenderTargetView(resource.Get(), nullptr, rtvHandle);
+							rtvHandle.ptr += m_rtvDescriptorSize;
+				        }
+
+						auto record = Potato::IR::MemoryResourceRecord::Allocate<FormWrapper>(resource);
+						if(record)
+						{
+							return new (record.Get()) FormWrapper{record, std::move(swap_chain), std::move(m_rtvHeap), std::move(m_rtvDescriptorSize)};
+						}
+					}
 				}
+
+
+				
 			}
 		}
 		return {};
@@ -234,6 +268,40 @@ namespace Dumpling
 
 	bool PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
 	{
+		auto desc = render_target.GetDescription(D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET);
+		if(desc.resource_ptr)
+		{
+			if(desc.default_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					D3D12_RESOURCE_TRANSITION_BARRIER{
+						desc.resource_ptr.Get(),
+						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						desc.default_state,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET
+					}
+				};
+				command_list->ResourceBarrier(1, &barrier);
+			}
+			std::array<float, 4> co =  {color.R, color.G, color.B, color.A};
+			command_list->ClearRenderTargetView(desc.cpu_handle, co.data(), 0, nullptr);
+			if(desc.default_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					D3D12_RESOURCE_TRANSITION_BARRIER{
+						desc.resource_ptr.Get(),
+						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET,
+						desc.default_state
+					}
+				};
+				command_list->ResourceBarrier(1, &barrier);
+			}
+		}
 		return true;
 	}
 
@@ -242,6 +310,22 @@ namespace Dumpling
 		auto re = record;
 		this->~FormWrapper();
 		re.Deallocate();
+	}
+
+	auto FormWrapper::GetDescription(D3D12_RESOURCE_STATES require_state) const -> Description
+	{
+		if(require_state == D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
+		{
+			auto index = swap_chain->GetCurrentBackBufferIndex();
+			ResourcePtr resource;
+			swap_chain->GetBuffer(index, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
+			return{
+				resource,
+				m_rtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + offset * index,
+				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PRESENT
+			};
+		}
+		return {};
 	}
 
 

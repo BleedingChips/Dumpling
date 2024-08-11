@@ -20,7 +20,7 @@ export namespace Dumpling
 	using Dumpling::Windows::ComPtr;
 
 	using FactoryPtr = ComPtr<IDXGIFactory2>;
-	using SwapChainPtr = ComPtr<IDXGISwapChain1>;
+	using SwapChainPtr = ComPtr<IDXGISwapChain3>;
 
 	struct AdapterDescription
 	{
