@@ -24,6 +24,17 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 	}
 };
 
+struct PipeI : public Dumpling::Pipeline
+{
+
+	virtual std::span<PassInfo> GetPassInfo() const { return {}; }
+	virtual std::span<std::size_t> GetDependence() const  { return {}; }
+	virtual Potato::IR::StructLayout::Ptr GetStruct() const  { return {}; }
+	virtual void AddPipelineRef() const {}
+	virtual void SubPipelineRef() const {}
+
+	PipeI()  {}
+};
 
 int main()
 {
@@ -38,6 +49,7 @@ int main()
 
 	FormProperty pro;
 	pro.title = u8"DumplingDx12Test";
+	pro.form_size = {1024, 600};
 
 	form->InsertCapture(&top);
 
@@ -45,9 +57,9 @@ int main()
 
 	auto output = renderer->CreateFormWrapper(*device, *form);
 
-	auto pipeline = Pipeline::Create();
-
 	
+
+	PipeI pipe;
 
 	auto pass = renderer->RegisterPass(
 		{
@@ -56,6 +68,12 @@ int main()
 			{}
 		}
 	);
+
+	auto pipe_instance = renderer->CreatePipelineInstance(pipe);
+
+	
+
+	
 
 	
 	//#if defined(DEBUG) || defined(_DEBUG)
@@ -74,7 +92,7 @@ int main()
 		bool need_quit = false;
 
 
-		renderer->ExecutePipeline({}, *pipeline);
+		renderer->ExecutePipeline({}, *pipe_instance);
 
 
 		Form::PeekMessageEvent([&](FormEvent::System event)

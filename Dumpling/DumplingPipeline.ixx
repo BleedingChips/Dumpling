@@ -47,28 +47,44 @@ export namespace Dumpling
 		FastIndex index;
 	};
 
-	struct Pipeline : public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	struct Pipeline
 	{
 
-		using Ptr = Potato::Pointer::IntrusivePtr<Pipeline>;
-
-		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		//virtual Potato::IR::StructLayout::Ptr GetStructLayout() const = 0;
-		Pipeline(Potato::IR::MemoryResourceRecord record)
-			: MemoryResourceRecordIntrusiveInterface(record)
+		struct Wrapper
 		{
-			
-		}
-	protected:
+			void AddRef(Pipeline const* ptr) const { ptr->AddPipelineRef(); }
+			void SubRef(Pipeline const* ptr) const { ptr->SubPipelineRef(); }
+		};
 
+		using Ptr = Potato::Pointer::IntrusivePtr<Pipeline, Wrapper>;
+
+		struct PassInfo
+		{
+			std::u8string_view pass_name;
+			Potato::Misc::IndexSpan<> dependence_index;
+		};
+
+		struct Index
+		{
+			std::size_t pass_info_index;
+			std::size_t dependence_index;
+		};
+
+		virtual std::span<PassInfo> GetPassInfo() const = 0;
+		virtual std::span<std::size_t> GetDependence() const = 0;
+		virtual Potato::IR::StructLayout::Ptr GetStruct() const = 0;
+
+	protected:
+		virtual void AddPipelineRef() const = 0;
+		virtual void SubPipelineRef() const = 0;
 	};
 
 	struct PipelineRequester
 	{
 		struct Wrapper
 		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddRendererRequesterRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererRequesterRef(); }
+			void AddRef(PipelineRequester const* ptr) const { ptr->AddRendererRequesterRef(); }
+			void SubRef(PipelineRequester const* ptr) const { ptr->SubRendererRequesterRef(); }
 		};
 
 		using Ptr = Potato::Pointer::IntrusivePtr<PipelineRequester, Wrapper>;
@@ -77,6 +93,16 @@ export namespace Dumpling
 
 		virtual void AddRendererRequesterRef() const = 0;
 		virtual void SubRendererRequesterRef() const = 0;
+	};
+
+	struct PipelineInstance : public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	{
+		using Ptr = Potato::Pointer::IntrusivePtr<PipelineInstance>;
+
+	protected:
+		PipelineInstance(Potato::IR::MemoryResourceRecord record) : MemoryResourceRecordIntrusiveInterface(record) {}
+	
+		friend struct Potato::IR::MemoryResourceRecord;
 	};
 
 	struct PipelineManager
@@ -90,7 +116,8 @@ export namespace Dumpling
 			Potato::IR::StructLayoutObject::Ptr object;
 		};
 
-		bool ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline);
+		PipelineInstance::Ptr CreatPipelineInstance(Pipeline const& pipeline, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		bool ExecutePipeline(PipelineRequester::Ptr requester, PipelineInstance const& pipeline);
 		Pass::Ptr RegisterPass(PassProperty pass_property);
 		bool UnregisterPass(Pass const&);
 
@@ -118,6 +145,7 @@ export namespace Dumpling
 		{
 			std::u8string_view pass_name;
 			Pass::Ptr pass;
+			bool Available = false;
 		};
 
 		std::pmr::vector<PassTuple> passes;

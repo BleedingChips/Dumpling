@@ -139,9 +139,10 @@ export namespace Dumpling
 		bool FlushWindows(FormWrapper&);
 		std::size_t GetFrame() const { std::shared_lock sl(pipeline_mutex); return current_frame;  }
 
+		PipelineInstance::Ptr CreatePipelineInstance(Pipeline const& pipeline, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) { return pipeline_manager.CreatPipelineInstance(pipeline, resource);}
 		bool PopPassRenderer(PassRenderer& output_renderer, Pass const& pass);
 		bool FinishPassRenderer(PassRenderer& output_renderer);
-		bool ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline) { return pipeline_manager.ExecutePipeline(std::move(requester), pipeline); }
+		bool ExecutePipeline(PipelineRequester::Ptr requester, PipelineInstance const& pipeline_instance) { return pipeline_manager.ExecutePipeline(std::move(requester), pipeline_instance); }
 		Pass::Ptr RegisterPass(PassProperty pass_property){ return pipeline_manager.RegisterPass(std::move(pass_property)); }
 		//bool UnregisterPass(Pass const& pass) {}
 

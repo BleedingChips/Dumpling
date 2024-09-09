@@ -34,12 +34,13 @@ namespace Dumpling
 		return {};
 	}
 
-
+	/*
 	auto Pipeline::Create(std::pmr::memory_resource* resource)
 		-> Ptr
 	{
 		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<Pipeline>(resource);
 	}
+	*/
 
 	Pass::Ptr PipelineManager::RegisterPass(PassProperty pass_property)
 	{
@@ -60,7 +61,7 @@ namespace Dumpling
 		return {};
 	}
 
-	bool PipelineManager::ExecutePipeline(PipelineRequester::Ptr requester, Pipeline const& pipeline)
+	bool PipelineManager::ExecutePipeline(PipelineRequester::Ptr requester, PipelineInstance const& pipeline)
 	{
 		for(auto& ite : passes)
 		{
@@ -72,6 +73,11 @@ namespace Dumpling
 			);
 		}
 		return true;
+	}
+
+	PipelineInstance::Ptr PipelineManager::CreatPipelineInstance(Pipeline const& pipeline, std::pmr::memory_resource* resource)
+	{
+		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PipelineInstance>(resource);
 	}
 
 	bool PipelineManager::UnregisterPass(Pass const& node)
