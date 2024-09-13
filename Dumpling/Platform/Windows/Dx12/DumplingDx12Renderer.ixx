@@ -15,7 +15,6 @@ import PotatoPointer;
 import PotatoIR;
 import DumplingWindowsForm;
 import DumplingPipeline;
-import DumplingDXGI;
 export import DumplingRendererTypes;
 
 export namespace Dumpling
@@ -31,6 +30,8 @@ export namespace Dumpling
 	using FencePtr = ComPtr<ID3D12Fence>;
 	using ResourcePtr = ComPtr<ID3D12Resource>;
 	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
+	using FactoryPtr = ComPtr<IDXGIFactory2>;
+	using SwapChainPtr = ComPtr<IDXGISwapChain3>;
 
 	export struct Renderer;
 
@@ -93,6 +94,58 @@ export namespace Dumpling
 		friend struct Renderer;
 	};
 
+
+	struct PassRenderer
+	{
+		struct Wrapper
+		{
+			void AddRef(PassRenderer const* ptr) { ptr->AddPassRendererRef(); }
+			void SubRef(PassRenderer const* ptr) { ptr->SubPassRendererRef(); }
+		};
+		using Ptr = Potato::Pointer::IntrusivePtr<PassRenderer, Wrapper>;
+	protected:
+		virtual void AddPassRendererRef() const = 0;
+		virtual void SubPassRendererRef() const = 0;
+	};
+
+	struct FrameRenderer
+	{
+		struct Wrapper
+		{
+			void AddRef(FrameRenderer const* ptr) { ptr->AddFrameRendererRef(); }
+			void SubRef(FrameRenderer const* ptr) { ptr->SubFrameRendererRef(); }
+		};
+		using Ptr = Potato::Pointer::IntrusivePtr<FrameRenderer, Wrapper>;
+	protected:
+		virtual void AddFrameRendererRef() const = 0;
+		virtual void SubFrameRendererRef() const = 0;
+	};
+
+	struct Device
+	{
+		struct Wrapper
+		{
+			void AddRef(Device const* ptr) { ptr->AddDeviceRef(); }
+			void SubRef(Device const* ptr) { ptr->SubDeviceRef(); }
+		};
+		using Ptr = Potato::Pointer::IntrusivePtr<Device, Wrapper>;
+
+		static Ptr Create(std::pmr::memory_resource* resource);
+		FormWrapper::Ptr CreateFormWrapper(Form& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+
+	protected:
+
+		FactoryPtr factory;
+		DevicePtr device;
+		CommandQueuePtr direct_command_queue;
+
+		virtual void AddDeviceRef() const = 0;
+		virtual void SubDeviceRef() const = 0;
+	};
+
+
+	/*
 	struct PassRendererIdentity
 	{
 		std::size_t reference_allocator_index;
@@ -119,6 +172,13 @@ export namespace Dumpling
 		friend struct Renderer;
 	};
 
+	struct FrameRenderer : public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	{
+		using Ptr = Potato::Pointer::IntrusivePtr<PipelineRenderer>;
+	protected:
+		CommandQueuePtr direct_queue;
+	};
+
 	export struct Renderer : public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
 
@@ -136,6 +196,8 @@ export namespace Dumpling
 
 		std::optional<std::size_t> CommitedAndSwapContext();
 		std::tuple<bool, std::size_t> TryFlushFrame(std::size_t require_frame);
+		bool ForceFlush(std::size_t require_frame, std::chrono::steady_clock::duration waitting_duration = std::chrono::microseconds{10});
+
 		bool FlushWindows(FormWrapper&);
 		std::size_t GetFrame() const { std::shared_lock sl(pipeline_mutex); return current_frame;  }
 
@@ -152,8 +214,6 @@ export namespace Dumpling
 		bool PopPassRenderer_AssumedLocked(PassRenderer& output_renderer, Pass const& pass);
 
 		Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr direct_queue);
-
-		
 
 		DevicePtr device;
 		CommandQueuePtr direct_queue;
@@ -193,6 +253,7 @@ export namespace Dumpling
 
 		friend struct PassRenderer;
 	};
+	*/
 }
 
 

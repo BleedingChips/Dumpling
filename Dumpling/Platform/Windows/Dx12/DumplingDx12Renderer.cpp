@@ -13,7 +13,7 @@ module DumplingDx12Renderer;
 
 namespace Dumpling
 {
-
+	/*
 	Renderer::Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr in_device, CommandQueuePtr direct_queue)
 		: MemoryResourceRecordIntrusiveInterface(record), device(std::move(in_device)), direct_queue(std::move(direct_queue))
 	{
@@ -196,6 +196,20 @@ namespace Dumpling
 		return {false, cur_value};
 	}
 
+	bool Renderer::ForceFlush(std::size_t require_frame, std::chrono::steady_clock::duration waitting_duration = std::chrono::microseconds{10})
+	{
+		while(true)
+		{
+			auto [re, frame] = TryFlushFrame(require_frame);
+			if(!re)
+			{
+				std::this_thread::sleep_for(waitting_duration);
+			}else{
+				return true;
+			}
+		}
+	}
+
 	bool Renderer::FlushWindows(FormWrapper& windows)
 	{
 		windows.swap_chain->Present(1, 0);
@@ -324,6 +338,7 @@ namespace Dumpling
 		}
 		return {};
 	}
+	*/
 
 
 	/*

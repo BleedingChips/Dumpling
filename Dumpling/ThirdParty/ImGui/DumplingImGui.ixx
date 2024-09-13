@@ -7,6 +7,10 @@ export module DumplingImGui;
 
 import std;
 
+#ifdef _WIN32
+export import DumplingImGuiWin32Dx12;
+#endif
+
 export namespace Dumpling::Imgui
 {
 	void InitImGui();

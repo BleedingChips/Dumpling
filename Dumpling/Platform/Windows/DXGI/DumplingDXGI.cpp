@@ -15,6 +15,7 @@ import DumplingDx12Renderer;
 
 namespace Dumpling
 {
+	/*
 	auto HardDevice::Create(std::pmr::memory_resource* resource) -> Dumpling::HardDevice::Ptr
 	{
 		auto re = Potato::IR::MemoryResourceRecord::Allocate<HardDevice>(resource);
@@ -60,4 +61,5 @@ namespace Dumpling
 		}
 		return debug_layout;
 	}
+	*/
 }

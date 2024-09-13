@@ -19,9 +19,8 @@ export namespace Dumpling
 {
 	using Dumpling::Windows::ComPtr;
 
-	using FactoryPtr = ComPtr<IDXGIFactory2>;
-	using SwapChainPtr = ComPtr<IDXGISwapChain3>;
-
+	
+	/*
 	struct AdapterDescription
 	{
 		std::size_t index = 0;
@@ -55,7 +54,7 @@ export namespace Dumpling
 
 		friend struct Renderer;
 	};
-
+	*/
 	
 
 	

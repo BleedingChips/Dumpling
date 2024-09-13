@@ -1,100 +1,331 @@
 module;
 
-
+#include <cassert>
 module DumplingPipeline;
 
 
 namespace Dumpling
 {
+	PassIndex PassTable::LocatePass(std::u8string_view name) const
+	{
+		for(std::size_t i = 0; i < passes.size(); ++i)
+		{
+			auto& ref = passes[i];
+			auto str = ref.pass_name.Slice(std::u8string_view(pass_name));
+			if(str == name)
+			{
+				return {i};
+			}
+		}
+		return {};
+	}
+
+	PassIndex PassTable::RegisterPass(std::u8string_view name, PassProperty pass_property)
+	{
+		auto old_str_index = pass_name.size();
+		pass_name.append(name);
+		auto index = passes.size();
+		passes.emplace_back(
+			Potato::Misc::IndexSpan<>{old_str_index, pass_name.size()},
+			pass_property
+		);
+		return {index};
+	}
+
+	struct DefaultPipelineInstanceT : public PipelineInstance, public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	{
+
+		DefaultPipelineInstanceT( 
+			Potato::IR::MemoryResourceRecord record,  
+			std::span<PassReference> require_index,
+			std::span<std::size_t> direct_to,
+			std::span<ValueMapping> value_mapping,
+			Potato::IR::StructLayoutObject::Ptr struct_object
+		) : MemoryResourceRecordIntrusiveInterface(record), PipelineInstance(require_index, direct_to, value_mapping, std::move(struct_object))
+		{
+			
+		}
+
+		~DefaultPipelineInstanceT()
+		{
+			for(auto& ite : require_index)
+			{
+				ite.~PassReference();
+			}
+		}
+
+		void AddPipelineInstanceRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
+		void SubPipelineInstanceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
+	};
+
+	PipelineInstance::Ptr PassTable::CreatePipelineInstance(Pipeline const& pipeline, std::pmr::memory_resource* resource) const
+	{
+		auto require = pipeline.GetRequire();
+
+		std::size_t str_count = 0;
+		for(auto& ite : require.require_pass)
+		{
+			str_count += ite.pass_name.size();
+		}
+		auto layout = Potato::IR::Layout::Get<DefaultPipelineInstanceT>();
+		auto pass_require_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<PipelineInstance::PassReference>(str_count));
+		auto direct_to_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<std::size_t>(require.direct_to.size()));
+		//auto value_mapping_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<PipelineInstance::ValueMapping>(str_count));
+		auto str_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<char8_t>(str_count));
+		Potato::IR::FixLayoutCPP(layout);
+
+		auto re = Potato::IR::MemoryResourceRecord::Allocate(resource, layout);
+
+		if(re)
+		{
+			auto ptr = reinterpret_cast<PipelineInstance::PassReference*>(re.GetByte() + pass_require_offset);
+			auto str_ptr = reinterpret_cast<char8_t*>(re.GetByte() + str_offset);
+			auto ptr_ite = ptr;
+
+			for(auto& ite : require.require_pass)
+			{
+				auto pass_index = LocatePass(ite.pass_name);
+				if(pass_index)
+				{
+					new (ptr_ite) PipelineInstance::PassReference{
+						pass_index,
+						ite.direct_to,
+							//ite.mapping_value
+							{0, 0},
+						0
+					};
+					std::memcpy(str_ptr, ite.pass_name.data(), sizeof(char8_t) * ite.pass_name.size());
+					ptr_ite += 1;
+					str_ptr += ite.pass_name.size();
+				}else
+				{
+					auto ptr_ite2 = ptr;
+					while(ptr_ite2 != ptr)
+					{
+						ptr_ite2->~PassReference();
+						ptr_ite2+= 1;
+					}
+					re.Deallocate();
+					return {};
+				}
+			}
+
+			auto direct_ptr = reinterpret_cast<std::size_t*>(re.GetByte() + direct_to_offset);
+			std::memcpy(direct_ptr, require.direct_to.data(), sizeof(std::size_t) * require.direct_to.size());
+			Potato::IR::StructLayoutObject::Ptr object;
+			auto str_layout = pipeline.GetStructLayout();
+			if(str_layout)
+			{
+				object = Potato::IR::StructLayoutObject::DefaultConstruct(std::move(str_layout));
+			}
+			auto require_span = std::span(ptr, require.require_pass.size());
+			auto direct_span = std::span(direct_ptr, require.direct_to.size());
+			
+			for(auto ite : direct_span)
+			{
+				require_span[ite].indegree += 1;
+			}
+			return new (re.Get()) DefaultPipelineInstanceT {
+				re,
+				require_span,
+				direct_span,
+				{},
+				std::move(object)
+			};
+		}
+		return {};
+	}
+
+	bool PipelineRecorder::CommitPipeline(PassTable const& table, PipelineInstance const& pipeline, PipelineRequester::Ptr requester, std::pmr::memory_resource* resource)
+	{
+		auto require = pipeline.GetRequiresReference();
+		auto old_direct_to_count = direct_to.size();
+		auto old_request_count = requests.size();
+		for(auto& ite : require.require_index)
+		{
+			assert(ite.index.index < table.GetPassSize());
+			auto new_direct_to = ite.direct_to;
+			new_direct_to.WholeOffset(old_direct_to_count);
+			requests.emplace_back(
+				ite.index,
+				requester,
+				Potato::IR::StructLayoutObject::Ptr{},
+				new_direct_to,
+				State::Ready,
+				ite.indegree
+			);
+		}
+		direct_to.append_range(require.direct_to);
+		auto span = std::span(direct_to).subspan(old_direct_to_count);
+		for(auto& ite : span)
+			ite += old_request_count;
+		requests_count += require.require_index.size();
+		return true;
+	}
+
+
+	PipelineRecorder::PopResult PipelineRecorder::TryPopRequest(std::span<PassRequest> output)
+	{
+		std::size_t pop_request = 0;
+		std::size_t pass_offset = 0;
+		for(auto& ite : output)
+		{
+			bool Finded = false;
+			if(requests_count > 0)
+			{
+				for(; pass_offset < requests.size(); ++pass_offset)
+				{
+					auto& ref = requests[pass_offset];
+					if(ref.state == State::Ready && ref.indegree == 0)
+					{
+						ite.pass_index = ref.pass_index;
+						ite.object = std::move(ref.object);
+						ite.requester = std::move(ref.requester);
+						ite.reference_index = pass_offset;
+						Finded = true;
+						requests_count -= 1;
+						running_count += 1;
+						pop_request += 1;
+						ref.state = State::Running;
+						break;
+					}
+				}
+			}
+			if(!Finded)
+			{
+				return {pop_request, running_count, requests_count};
+			}
+		}
+		return {pop_request, running_count, requests_count};
+	}
+
+	PipelineRecorder::FinishResult PipelineRecorder::Finish(PassRequest& request)
+	{
+		assert(request.reference_index <= requests.size());
+		auto& ref = requests[request.reference_index];
+		assert(ref.state == State::Running);
+		ref.state = State::Done;
+		auto span = ref.direct_to.Slice(std::span(direct_to));
+		for(auto ite : span)
+		{
+			assert(requests[ite].indegree >= 1);
+			requests[ite].indegree -= 1;
+		}
+		running_count -= 1;
+		if(running_count == 0 && requests_count == 0)
+		{
+			requests.clear();
+			direct_to.clear();
+		}
+		return {running_count, requests_count};
+	}
+
+
+	/*
 	PipelineManager::PipelineManager(MemorySetting setting)
 		: passes(setting.self_resource), requests(setting.self_resource), pass_resource(setting.pass_resource)
 	{
 	}
 
-
-
-	auto Pass::Create(PassProperty property, FastIndex index,  std::pmr::memory_resource* resource)
-		->Ptr
+	PassIndex PipelineManager::RegisterPass(std::u8string_view name, PassProperty pass_property)
 	{
-		auto layout = Potato::IR::Layout::Get<Pass>();
-		auto offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<char8_t>(property.name.size()));
+		std::lock_guard lg(pass_mutex);
+		return RegisterPass_AssumedLocked(name, pass_property);
+	}
+
+	PassIndex PipelineManager::RegisterPass_AssumedLocked(std::u8string_view name, PassProperty pass_property)
+	{
+		auto old_str_index = pass_name.size();
+		pass_name.append(name);
+		auto index = passes.size();
+		passes.emplace_back(
+			Potato::Misc::IndexSpan<>{old_str_index, pass_name.size()},
+			pass_property
+		);
+		return {index};
+	}
+
+	PipelineInstance::Ptr PipelineManager::CreatePipelineInstance(Pipeline const& pipeline, std::pmr::memory_resource* resource)
+	{
+		auto require = pipeline.GetRequire();
+
+		std::size_t str_count = 0;
+		for(auto& ite : require.require_pass)
+		{
+			str_count += ite.pass_name.size();
+		}
+		auto layout = Potato::IR::Layout::Get<PipelineInstance>();
+		auto pass_require_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<PipelineInstance::PassReference>(str_count));
+		auto direct_to_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<std::size_t>(require.direct_to.size()));
+		//auto value_mapping_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<PipelineInstance::ValueMapping>(str_count));
+		auto str_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<char8_t>(str_count));
+		Potato::IR::FixLayoutCPP(layout);
+
 		auto re = Potato::IR::MemoryResourceRecord::Allocate(resource, layout);
+
 		if(re)
 		{
-			std::memcpy(re.GetByte() + offset, property.name.data(), property.name.size() * sizeof(char8_t));
-			std::u8string_view view {
-				reinterpret_cast<char8_t*>(re.GetByte() + offset),
-				property.name.size()
-			};
-			property.name = view;
-			return new (re.Get()) Pass{
-				re, std::move(property), index
+			std::shared_lock sl(pass_mutex);
+			auto ptr = reinterpret_cast<PipelineInstance::PassReference*>(re.GetByte() + pass_require_offset);
+			auto str_ptr = reinterpret_cast<char8_t*>(re.GetByte() + str_offset);
+			auto ptr_ite = ptr;
+
+			for(auto& ite : require.require_pass)
+			{
+				bool Find = false;
+				for(std::size_t i = 0; i < passes.size(); ++i)
+				{
+					auto& ref = passes[i];
+					auto str = ref.pass_name.Slice(std::u8string_view(pass_name));
+					if(str == ite.pass_name)
+					{
+						new (ptr_ite) PipelineInstance::PassReference{
+							PassIndex{i},
+							ite.direct_to,
+							//ite.mapping_value
+							{0, 0}
+						};
+						Find = true;
+						std::memcpy(str_ptr, ite.pass_name.data(), sizeof(char8_t) * ite.pass_name.size());
+						ptr_ite += 1;
+						str_ptr += ite.pass_name.size();
+						break;
+					}
+				}
+				if(!Find)
+				{
+					auto ptr_ite2 = ptr;
+					while(ptr_ite2 != ptr)
+					{
+						ptr_ite2->~PassReference();
+						ptr_ite2+= 1;
+					}
+					re.Deallocate();
+					return {};
+				}
+			}
+
+			auto direct_ptr = reinterpret_cast<std::size_t*>(re.GetByte() + direct_to_offset);
+			std::memcpy(direct_ptr, require.direct_to.data(), sizeof(std::size_t) * require.direct_to.size());
+			Potato::IR::StructLayoutObject::Ptr object;
+			auto str_layout = pipeline.GetStructLayout();
+			if(str_layout)
+			{
+				object = Potato::IR::StructLayoutObject::DefaultConstruct(std::move(str_layout));
+			}
+			return new (re.Get()) PipelineInstance {
+				re,
+				{ptr, require.require_pass.size()},
+				{direct_ptr, require.direct_to.size()},
+				{},
+				std::move(object)
 			};
 		}
 		return {};
-	}
-
-	/*
-	auto Pipeline::Create(std::pmr::memory_resource* resource)
-		-> Ptr
-	{
-		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<Pipeline>(resource);
 	}
 	*/
 
-	Pass::Ptr PipelineManager::RegisterPass(PassProperty pass_property)
-	{
-		for(auto& ite : passes)
-		{
-			if(ite.pass_name == pass_property.name)
-			{
-				return {};
-			}
-		}
-		auto pass_ptr = Pass::Create(pass_property, FastIndex{0, passes.size()}, pass_resource);
-		if(pass_ptr)
-		{
-			auto str = pass_ptr->GetName();
-			passes.emplace_back(str, pass_ptr);
-			return pass_ptr;
-		}
-		return {};
-	}
-
-	bool PipelineManager::ExecutePipeline(PipelineRequester::Ptr requester, PipelineInstance const& pipeline)
-	{
-		for(auto& ite : passes)
-		{
-			requests.emplace_back(
-				ite.pass,
-				Pipeline::Ptr{},
-				requester,
-				Potato::IR::StructLayoutObject::Ptr{}
-			);
-		}
-		return true;
-	}
-
-	PipelineInstance::Ptr PipelineManager::CreatPipelineInstance(Pipeline const& pipeline, std::pmr::memory_resource* resource)
-	{
-		return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<PipelineInstance>(resource);
-	}
-
-	bool PipelineManager::UnregisterPass(Pass const& node)
-	{
-		auto ite = std::find_if(passes.begin(), passes.end(), [&](
-			PassTuple& tuple)
-		{
-			return tuple.pass.GetPointer() == &node;
-		});
-		if(ite != passes.end())
-		{
-			passes.erase(ite);
-			return true;
-		}
-		return false;
-	}
-
+	/*
 	std::optional<PipelineManager::PassRequest> PipelineManager::PopPassRequest(Pass const& node)
 	{
 		std::lock_guard lg(request_mutex);
@@ -122,4 +353,5 @@ namespace Dumpling
 		requests.push_back(std::move(pass));
 		return true;
 	}
+	*/
 }
