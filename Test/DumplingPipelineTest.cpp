@@ -54,25 +54,36 @@ int main()
 	recorder.CommitPipeline(table, *in3, {});
 	recorder.CommitPipeline(table, *in3, {});
 
+	recorder.PushFrame();
+
+	recorder.CommitPipeline(table, *in3, {});
+	recorder.CommitPipeline(table, *in3, {});
+
+	recorder.PushFrame();
+
+	recorder.PopFrame();
+
 	std::array<Dumpling::PipelineRecorder::PassRequest, 10> storage;
 
 	while(true)
 	{
 		bool Done = false;
-		auto re = recorder.TryPopRequest(std::span(storage));
+		auto [count, state] = recorder.PopRequest(std::span(storage));
 
-		if(re.running_count == 0 && re.waiting_count == 0)
+		if(state.running_count == 0 && state.finish_count == state.total_count)
 		{
 			Done = true;
 		}
-		for(std::size_t i = 0; i < re.pop_count; ++i)
+		for(std::size_t i = 0; i < count; ++i)
 		{
-			auto k = recorder.Finish(storage[i]);
+			auto k = recorder.FinishRequest(storage[i]);
 			volatile int i2 = 0;
 		}
 		if(Done)
 			break;
 	}
+
+	recorder.PopFrame();
 
 	return 0;
 }

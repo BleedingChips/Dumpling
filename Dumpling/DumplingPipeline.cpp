@@ -139,13 +139,12 @@ namespace Dumpling
 	bool PipelineRecorder::CommitPipeline(PassTable const& table, PipelineInstance const& pipeline, PipelineRequester::Ptr requester, std::pmr::memory_resource* resource)
 	{
 		auto require = pipeline.GetRequiresReference();
-		auto old_direct_to_count = direct_to.size();
-		auto old_request_count = requests.size();
+		auto old_request_count = writing_frame.request_count;
 		for(auto& ite : require.require_index)
 		{
 			assert(ite.index.index < table.GetPassSize());
 			auto new_direct_to = ite.direct_to;
-			new_direct_to.WholeOffset(old_direct_to_count);
+			new_direct_to.WholeOffset(writing_frame.direct_to_count);
 			requests.emplace_back(
 				ite.index,
 				requester,
@@ -154,26 +153,28 @@ namespace Dumpling
 				State::Ready,
 				ite.indegree
 			);
+			writing_frame.request_count += 1;
 		}
+		auto old_direct_to_count = direct_to.size();
 		direct_to.append_range(require.direct_to);
 		auto span = std::span(direct_to).subspan(old_direct_to_count);
 		for(auto& ite : span)
 			ite += old_request_count;
-		requests_count += require.require_index.size();
+		writing_frame.direct_to_count += require.direct_to.size();
 		return true;
 	}
 
 
-	PipelineRecorder::PopResult PipelineRecorder::TryPopRequest(std::span<PassRequest> output)
+	std::tuple<std::size_t, PipelineRecorder::RequestState> PipelineRecorder::PopRequest(std::span<PassRequest> output)
 	{
 		std::size_t pop_request = 0;
 		std::size_t pass_offset = 0;
 		for(auto& ite : output)
 		{
 			bool Finded = false;
-			if(requests_count > 0)
+			if(current_state.finish_count < current_state.total_count)
 			{
-				for(; pass_offset < requests.size(); ++pass_offset)
+				for(; pass_offset < current_state.total_count; ++pass_offset)
 				{
 					auto& ref = requests[pass_offset];
 					if(ref.state == State::Ready && ref.indegree == 0)
@@ -183,8 +184,7 @@ namespace Dumpling
 						ite.requester = std::move(ref.requester);
 						ite.reference_index = pass_offset;
 						Finded = true;
-						requests_count -= 1;
-						running_count += 1;
+						current_state.running_count += 1;
 						pop_request += 1;
 						ref.state = State::Running;
 						break;
@@ -193,13 +193,13 @@ namespace Dumpling
 			}
 			if(!Finded)
 			{
-				return {pop_request, running_count, requests_count};
+				return {pop_request, current_state};
 			}
 		}
-		return {pop_request, running_count, requests_count};
+		return {pop_request, current_state};
 	}
 
-	PipelineRecorder::FinishResult PipelineRecorder::Finish(PassRequest& request)
+	PipelineRecorder::RequestState PipelineRecorder::FinishRequest(PassRequest& request)
 	{
 		assert(request.reference_index <= requests.size());
 		auto& ref = requests[request.reference_index];
@@ -211,13 +211,53 @@ namespace Dumpling
 			assert(requests[ite].indegree >= 1);
 			requests[ite].indegree -= 1;
 		}
-		running_count -= 1;
-		if(running_count == 0 && requests_count == 0)
+		current_state.running_count -= 1;
+		current_state.finish_count += 1;
+		return current_state;
+	}
+
+	bool PipelineRecorder::PushFrame()
+	{
+		if(writing_frame.request_count > 0)
 		{
-			requests.clear();
-			direct_to.clear();
+			frame_count.emplace_back(writing_frame);
+			writing_frame.request_count = 0;
+			writing_frame.direct_to_count = 0;
+			return true;
+		}else
+		{
+			return false;
 		}
-		return {running_count, requests_count};
+	}
+
+	bool PipelineRecorder::PopFrame()
+	{
+		requests.erase(
+			requests.begin(),
+			requests.begin() + reading_frame.request_count
+		);
+		direct_to.erase(
+			direct_to.begin(),
+			direct_to.begin() + reading_frame.direct_to_count
+		);
+		
+		if(!frame_count.empty())
+		{
+			reading_frame = frame_count.front();
+			current_state.total_count = reading_frame.request_count;
+			current_state.finish_count = 0;
+			current_state.running_count = 0;
+			frame_count.pop_front();
+			return true;
+		}else
+		{
+			reading_frame.direct_to_count = 0;
+			reading_frame.request_count = 0;
+			current_state.total_count = 0;
+			current_state.finish_count = 0;
+			current_state.running_count = 0;
+			return false;
+		}
 	}
 
 

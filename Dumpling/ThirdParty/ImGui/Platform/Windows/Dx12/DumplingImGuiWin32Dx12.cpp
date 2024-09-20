@@ -5,9 +5,9 @@ module;
 
 module DumplingImGuiWin32Dx12;
 
-namespace Dumpling::Imgui
+namespace Dumpling
 {
-	void InitImGui()
+	void InitImGui(Device& decive)
 	{
 		//ImGui
 	}

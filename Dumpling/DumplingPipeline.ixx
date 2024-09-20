@@ -184,7 +184,7 @@ export namespace Dumpling
 		};
 
 		PipelineRecorder(std::pmr::memory_resource* resource = std::pmr::get_default_resource())
-			: requests(resource), direct_to(resource) {}
+			: requests(resource), direct_to(resource), frame_count(resource) {}
 
 		bool CommitPipeline(PassTable const& table, PipelineInstance const& pipeline, PipelineRequester::Ptr, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
@@ -196,28 +196,35 @@ export namespace Dumpling
 			std::size_t reference_index;
 		};
 
-		struct PopResult
+		struct RequestState
 		{
-			std::size_t pop_count;
-			std::size_t running_count;
-			std::size_t waiting_count;
+			std::size_t running_count = 0;
+			std::size_t finish_count = 0;
+			std::size_t total_count = 0;
 		};
 
-		struct FinishResult
-		{
-			std::size_t running_count;
-			std::size_t waiting_count;
-		};
+		std::tuple<std::size_t, RequestState> PopRequest(std::span<PassRequest> output);
+		RequestState FinishRequest(PassRequest& request);
 
-		PopResult TryPopRequest(std::span<PassRequest> output);
-		FinishResult Finish(PassRequest& request);
+		bool PushFrame();
+		bool PopFrame();
 
 	protected:
 
+		struct FrameCount
+		{
+			std::size_t request_count = 0;
+			std::size_t direct_to_count = 0;
+		};
+
+		FrameCount writing_frame;
+		FrameCount reading_frame;
+
+		RequestState current_state;
+
 		std::pmr::vector<Request> requests;
 		std::pmr::vector<std::size_t> direct_to;
-		std::size_t requests_count = 0;
-		std::size_t running_count = 0;
+		std::pmr::deque<FrameCount> frame_count;
 	};
 
 	/*

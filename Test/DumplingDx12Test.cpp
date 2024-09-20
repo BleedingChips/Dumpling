@@ -24,6 +24,7 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 	}
 };
 
+/*
 struct PipeI : public Dumpling::Pipeline
 {
 
@@ -36,15 +37,17 @@ struct PipeI : public Dumpling::Pipeline
 	PipeI()  {}
 };
 
+*/
+
+
 int main()
 {
-	HardDevice::InitDebugLayout();
+	Device::InitDebugLayer();
 
 	TopEventCapture top;
 
-	auto device = HardDevice::Create();
-	auto renderer = Renderer::Create();
-	
+	auto device = Device::Create();
+
 	auto form = Form::Create();
 
 	FormProperty pro;
@@ -55,33 +58,9 @@ int main()
 
 	form->Init(pro);
 
-	auto output = renderer->CreateFormWrapper(*device, *form);
+	auto output = device->CreateFormWrapper(*form);
 
-	
-
-	PipeI pipe;
-
-	auto pass = renderer->RegisterPass(
-		{
-			PassProperty::Category::FRAME,
-			u8"Func you",
-			{}
-		}
-	);
-
-	auto pipe_instance = renderer->CreatePipelineInstance(pipe);
-
-	
-
-	
-
-	
-	//#if defined(DEBUG) || defined(_DEBUG)
-	
-	//#endif
-	//renderer->Execute({}, pipeline);
-
-	//renderer->RegisterPass();
+	auto form_renderer = device->CreateFrameRenderer();
 
 	float R = 0.0f;
 	float G = 0.0f;
@@ -90,9 +69,6 @@ int main()
 	while(true)
 	{
 		bool need_quit = false;
-
-
-		renderer->ExecutePipeline({}, *pipe_instance);
 
 
 		Form::PeekMessageEvent([&](FormEvent::System event)
@@ -105,9 +81,8 @@ int main()
 
 		PassRenderer ren;
 
-		while(renderer->PopPassRenderer(ren, *pass))
-		{
-			auto rs = output->GetAvailableRenderResource();
+		form_renderer->PopPassRenderer(ren);
+		auto rs = output->GetAvailableRenderResource();
 			ren.ClearRendererTarget(*rs,
 					{
 						R,
@@ -115,28 +90,25 @@ int main()
 						B,
 						1.0f
 					}
-				
-				);
-		}
+			);
+		form_renderer->FinishPassRenderer(ren);
 
-		renderer->FinishPassRenderer(ren);
+		auto tar = form_renderer->CommitFrame();
 
-		auto frame = renderer->CommitedAndSwapContext();
-
-		while(true)
+		while(tar.has_value())
 		{
-			auto [b, i] = renderer->TryFlushFrame(*frame);
-			if(b)
+			auto cur = form_renderer->TryFlushFrame();
+			if(cur != *tar)
 			{
-				renderer->FlushWindows(*output);
-				break;
+				std::this_thread::sleep_for(std::chrono::milliseconds{10});
 			}else
 			{
-				std::this_thread::yield();
+				tar.reset();
 			}
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds{10});
+		output->Flush();
+		
 
 		R += 0.03f;
 		G += 0.06f;
@@ -153,9 +125,6 @@ int main()
 			break;
 	}
 	
-
-	return 0;
-
 
 	return 0;
 }

@@ -7,8 +7,10 @@ module;
 export module DumplingImGuiWin32Dx12;
 
 import std;
+import DumplingDx12Renderer;
 
-export namespace Dumpling::Imgui
+export namespace Dumpling
 {
+	void InitImGui(Device& decive);
 	//void InitImGui();
 }
