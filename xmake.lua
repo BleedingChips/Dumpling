@@ -15,6 +15,7 @@ target("Dumpling")
         add_links("user32.lib")
         add_links("d3d12.lib")
         add_links("dxgi.lib")
+        add_links("gdi32.lib")
     end
     add_deps("Potato")
 target_end()

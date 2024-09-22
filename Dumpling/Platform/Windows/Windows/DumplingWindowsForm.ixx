@@ -4,6 +4,7 @@ module;
 #include <wrl.h>
 
 #undef max
+#undef interface
 
 export module DumplingWindowsForm;
 
@@ -16,7 +17,39 @@ import DumplingFormEvent;
 
 export namespace Dumpling
 {
-	struct Form : protected Potato::Pointer::DefaultIntrusiveInterface
+
+
+	export struct Form;
+
+	struct FormEventCapture
+	{
+		struct Wrapper
+		{
+			template<typename Type> void AddRef(Type* ptr) const { ptr->AddFormEventCaptureRef(); }
+			template<typename Type> void SubRef(Type* ptr) const { ptr->SubFormEventCaptureRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapture, Wrapper>;
+		FormEvent::Category GetAcceptedCategory() const { return accepted_category; }
+
+		virtual FormEvent::Respond Receive(Form& interface, FormEvent::Modify event) { return FormEvent::Respond::PASS; }
+		virtual FormEvent::Respond Receive(Form& interface, FormEvent::System event) { return FormEvent::Respond::PASS; }
+		virtual FormEvent::Respond Receive(Form& interface, FormEvent::Input event) { return FormEvent::Respond::PASS; }
+		virtual HRESULT ReceiveRaw(Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	protected:
+
+		FormEventCapture(FormEvent::Category accepted_category = FormEvent::Category::UNACCEPTABLE) : accepted_category(accepted_category){}
+
+		FormEvent::Category accepted_category;
+
+		virtual void AddFormEventCaptureRef() const = 0;
+		virtual void SubFormEventCaptureRef() const = 0;
+
+		friend struct Form;
+	};
+
+	export struct Form : protected Potato::Pointer::DefaultIntrusiveInterface
 	{
 
 		enum class Status
@@ -39,7 +72,7 @@ export namespace Dumpling
 
 		static LRESULT CALLBACK DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-		bool InsertCapture(FormEventCapture::Ptr capture, std::size_t priority = 0) { return capture_manager.InsertCapture(std::move(capture), priority); }
+		bool InsertCapture(FormEventCapture::Ptr capture, std::size_t priority = 0);
 
 
 		template<typename Func>
@@ -72,7 +105,7 @@ export namespace Dumpling
 		static bool PeekMessageEvent(void(*func)(void*, FormEvent::System), void*);
 
 		Form(Potato::IR::MemoryResourceRecord record, std::size_t identity_id)
-			: record(record), capture_manager( record.GetMemoryResource()) {}
+			: record(record), captures( record.GetMemoryResource()) {}
 
 		virtual ~Form() = default;
 
@@ -85,7 +118,21 @@ export namespace Dumpling
 
 		virtual HRESULT HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-		CaptureManager capture_manager;
+		std::size_t identity_id = 0;
+
+		std::shared_mutex capture_mutex;
+
+
+		struct CaptureTuple
+		{
+			std::size_t priority;
+			FormEvent::Category acceptable_category;
+			FormEventCapture::Ptr capture;
+		};
+
+		std::pmr::vector<CaptureTuple> captures;
+
+		friend struct FormHelper;
 
 		friend struct Potato::Pointer::DefaultIntrusiveWrapper;
 	};

@@ -73,16 +73,21 @@ export namespace Dumpling
 		RendererResource::Ptr GetAvailableRenderResource() { return this; }
 
 		Description GetDescription(D3D12_RESOURCE_STATES require_state) const override;
-		bool Flush();
+		bool Present(std::size_t syn_interval = 1);
+		bool LogicalNextFrame();
 
 	protected:
 
-		FormWrapper(SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, std::size_t offset)
-			: swap_chain(std::move(swap_chain)), m_rtvHeap(std::move(m_rtvHeap)), offset(offset) {}
+		FormWrapper(SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, std::size_t buffer_count, std::size_t offset)
+			: swap_chain(std::move(swap_chain)), m_rtvHeap(std::move(m_rtvHeap)), buffer_count(buffer_count), offset(offset) {}
 
 		SwapChainPtr swap_chain;
 		DescriptorHeapPtr m_rtvHeap;
-		std::size_t offset;
+		const std::size_t offset;
+		const std::size_t buffer_count;
+		mutable std::shared_mutex logical_mutex;
+		std::size_t available_logic_buffer_index = 0;
+		std::size_t logical_buffer_index = 0;
 
 		friend struct Renderer;
 	};

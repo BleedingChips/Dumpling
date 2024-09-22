@@ -11,7 +11,7 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 {
 	void AddFormEventCaptureRef() const override {}
 	void SubFormEventCaptureRef() const override {}
-	FormEvent::Category AcceptedCategory() const override { return FormEvent::Category::MODIFY; }
+	TopEventCapture() : FormEventCapture(FormEvent::Category::MODIFY) {}
 	FormEvent::Respond Receive(Form& interface, FormEvent::Modify event) override
 	{
 		if(event.message == FormEvent::Modify::Message::DESTROY)

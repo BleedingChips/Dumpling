@@ -5,6 +5,7 @@ module;
 
 #undef max
 #undef IGNORE
+#undef interface
 
 #define DUMPLING_WM_GLOBAL_MESSAGE static_cast<UINT>(WM_USER + 100)
 
@@ -13,7 +14,7 @@ module DumplingWindowsForm;
 import std;
 import PotatoIR;
 import PotatoEncode;
-
+import DumplingFormEvent;
 
 namespace
 {
@@ -30,24 +31,15 @@ namespace
 
 	wchar_t const* form_class_style_name = L"Dumpling_Default_GameStyle";
 
-	std::variant<std::nullopt_t, Dumpling::FormEvent::System, Dumpling::FormEvent::Modify, Dumpling::FormEvent::Input> TranslateDumplingFormEvent(UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		switch(msg)
-		{
-		case WM_QUIT:
-			return Dumpling::FormEvent::System{Dumpling::FormEvent::System::Message::QUIT};
-		case WM_NCDESTROY:
-			return Dumpling::FormEvent::Modify{Dumpling::FormEvent::Modify::Message::DESTROY};
-		}
-		return std::nullopt;
-	}
+	
 
 	FormClassStyle::FormClassStyle()
 	{
+		HBRUSH back_ground_brush = ::CreateSolidBrush(BLACK_BRUSH);
 		const WNDCLASSEXW static_class = {
 			sizeof(WNDCLASSEXW),
-			CS_HREDRAW | CS_VREDRAW ,
-			&Dumpling::Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, 0, NULL, form_class_style_name, NULL };
+			CS_HREDRAW | CS_VREDRAW,
+			&Dumpling::Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, back_ground_brush, NULL, form_class_style_name, NULL };
 
 		ATOM res = RegisterClassExW(&static_class);
 		assert(res != 0);
@@ -61,6 +53,92 @@ namespace
 
 namespace Dumpling
 {
+	Dumpling::FormEvent::Category TranslateCategory(UINT msg)
+	{
+		switch(msg)
+		{
+		case WM_QUIT:
+			return Dumpling::FormEvent::Category::SYSTEM;
+		case WM_NCDESTROY:
+			return Dumpling::FormEvent::Category::MODIFY;
+		default:
+			return Dumpling::FormEvent::Category::UNACCEPTABLE;
+		}
+	}
+
+	HRESULT MarkMessageSkip(UINT msg)
+	{
+		return E_NOTIMPL;
+	}
+
+	bool IsMessageMarkAsSkip(UINT msg, HRESULT result)
+	{
+		return result == E_NOTIMPL;
+	}
+
+
+	HRESULT TranslateResult(UINT msg, FormEvent::Respond respond)
+	{
+		switch(respond)
+		{
+		case FormEvent::Respond::CAPTURED:
+			return S_OK;
+		case FormEvent::Respond::PASS:
+			return E_NOTIMPL;
+		default:
+			assert(false);
+			return E_NOTIMPL;
+		}
+	}
+
+	FormEvent::System TranslateSystemMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		switch(msg)
+		{
+		case WM_QUIT:
+			return FormEvent::System{Dumpling::FormEvent::System::Message::QUIT};
+		}
+		assert(false);
+		return {};
+	}
+
+	FormEvent::Modify TranslateModifyMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		switch(msg)
+		{
+		case WM_NCDESTROY:
+			return FormEvent::Modify{Dumpling::FormEvent::Modify::Message::DESTROY};
+		}
+		assert(false);
+		return {};
+	}
+
+	FormEvent::Input TranslateInputMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		assert(false);
+		return {};
+	}
+
+	HRESULT FormEventCapture::ReceiveRaw(Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		return MarkMessageSkip(msg);
+	}
+
+	bool Form::InsertCapture(FormEventCapture::Ptr capture, std::size_t priority)
+	{
+		std::lock_guard lg(capture_mutex);
+		if(capture)
+		{
+			auto ite = std::find_if(captures.begin(), captures.end(), [=](CaptureTuple& tuple)
+			{
+				return tuple.priority < priority;
+			});
+			captures.insert(ite, {priority, capture->GetAcceptedCategory(), capture});
+			return true;
+		}
+		return false;
+	}
+
 	void Form::PostQuitEvent()
 	{
 		::PostQuitMessage(0);
@@ -122,10 +200,11 @@ namespace Dumpling
 				DispatchMessageW(&msg);
 			}else
 			{
-				auto event = TranslateDumplingFormEvent(msg.message, msg.lParam, msg.wParam);
-				if(std::holds_alternative<FormEvent::System>(event))
+				auto Category = TranslateCategory(msg.message);
+				if(Category == FormEvent::Category::SYSTEM)
 				{
-					func(data, std::get<FormEvent::System>(event));
+					auto sys_event = TranslateSystemMessage(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+					func(data, sys_event);
 				}
 			}
 		}
@@ -182,27 +261,85 @@ namespace Dumpling
 		re.Deallocate();
 	}
 
+	struct FormHelper
+	{
+		template<FormEvent::Category category, typename Type>
+		static HRESULT DeliverMessage(Form& form, Type message, std::span<Form::CaptureTuple> captures, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+		{
+			for(auto& Ite : captures)
+			{
+				if(Ite.acceptable_category == FormEvent::Category::RAW)
+				{
+					HRESULT re = Ite.capture->ReceiveRaw(form, category, hWnd, msg, wParam, lParam);
+					if(!IsMessageMarkAsSkip(msg, re))
+					{
+						return re;
+					}
+				}
+				else if((Ite.acceptable_category & category) != FormEvent::Category::UNACCEPTABLE)
+				{
+					HRESULT re = TranslateResult(msg, Ite.capture->Receive(form, message));
+					if(!IsMessageMarkAsSkip(msg, re))
+					{
+						return re;
+					}
+				}
+			}
+			return MarkMessageSkip(msg);
+		}
+	};
+
+	
+
 	HRESULT Form::HandleEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		using namespace FormEvent;
-		auto event = TranslateDumplingFormEvent(msg, wParam, lParam);
-		Respond respond = Respond::PASS;
-		if(std::holds_alternative<System>(event))
+
+		auto category = TranslateCategory(msg);
+		HRESULT re = MarkMessageSkip(msg);
 		{
-			respond = capture_manager.HandleEvent(*this, std::get<System>(event));
-		}else if(std::holds_alternative<Modify>(event))
-		{
-			respond = capture_manager.HandleEvent(*this, std::get<Modify>(event));
-		}else if(std::holds_alternative<Input>(event))
-		{
-			respond = capture_manager.HandleEvent(*this, std::get<Input>(event));
+			std::shared_lock sl(capture_mutex);
+			switch(category)
+			{
+			case FormEvent::Category::SYSTEM:
+				{
+					auto sys_event = TranslateSystemMessage(hwnd, msg, wParam, lParam);
+					re = FormHelper::DeliverMessage<FormEvent::Category::SYSTEM>(*this, std::move(sys_event), std::span(captures), hWnd, msg, wParam, lParam);
+				}
+				break;
+			case FormEvent::Category::MODIFY:
+				{
+					auto mod_event = TranslateModifyMessage(hwnd, msg, wParam, lParam);
+					re = FormHelper::DeliverMessage<FormEvent::Category::MODIFY>(*this, std::move(mod_event), std::span(captures), hWnd, msg, wParam, lParam);
+				}
+				break;
+			case FormEvent::Category::INPUT:
+				{
+					auto inp_event = TranslateInputMessage(hwnd, msg, wParam, lParam);
+					re = FormHelper::DeliverMessage<FormEvent::Category::INPUT>(*this, std::move(inp_event), std::span(captures), hWnd, msg, wParam, lParam);
+				}
+				break;
+			default:
+				{
+					for(auto& ite : captures)
+					{
+						if(ite.acceptable_category == FormEvent::Category::RAW)
+						{
+							auto re = ite.capture->ReceiveRaw(*this, category, hwnd, msg, wParam, lParam);
+							if(!IsMessageMarkAsSkip(msg, re))
+							{
+								break;
+							}
+						}
+					}
+				}
+				break;
+			}
 		}
-		if(respond == Respond::PASS)
+		if(!IsMessageMarkAsSkip(msg, re))
 		{
-			return DefWindowProcW(hWnd, msg, wParam, lParam);
-		}else
-		{
-			return S_OK;
+			return re;
 		}
+		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 }

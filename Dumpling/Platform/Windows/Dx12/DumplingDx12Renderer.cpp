@@ -27,9 +27,17 @@ namespace Dumpling
 		return debug_layout;
 	}
 
-	bool FormWrapper::Flush()
+	bool FormWrapper::LogicalNextFrame()
 	{
-		auto re = swap_chain->Present(1, 0);
+		std::lock_guard lg(logical_mutex);
+		++logical_buffer_index;
+		logical_buffer_index = (logical_buffer_index % buffer_count);
+		return true;
+	}
+
+	bool FormWrapper::Present(std::size_t syn_interval)
+	{
+		auto re = swap_chain->Present(syn_interval, 0);
 		return SUCCEEDED(re);
 	}
 
@@ -37,12 +45,12 @@ namespace Dumpling
 	{
 		if(require_state == D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
 		{
-			auto index = swap_chain->GetCurrentBackBufferIndex();
+			std::shared_lock sl(logical_mutex);
 			ResourcePtr resource;
-			swap_chain->GetBuffer(index, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
+			swap_chain->GetBuffer(logical_buffer_index, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
 			return{
 				resource,
-				m_rtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + offset * index,
+				m_rtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + offset * logical_buffer_index,
 				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PRESENT
 			};
 		}
@@ -51,8 +59,8 @@ namespace Dumpling
 
 	struct FormWrapperImp : public FormWrapper, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		FormWrapperImp(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, std::size_t offset)
-			: MemoryResourceRecordIntrusiveInterface(record), FormWrapper(std::move(swap_chain), std::move(m_rtvHeap), offset)
+		FormWrapperImp(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, std::size_t buffer_count, std::size_t offset)
+			: MemoryResourceRecordIntrusiveInterface(record), FormWrapper(std::move(swap_chain), std::move(m_rtvHeap), buffer_count, offset)
 		{
 			
 		}
@@ -95,8 +103,7 @@ namespace Dumpling
 				        rtvHeapDesc.NumDescriptors = swapChainDesc.BufferCount;
 				        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 				        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-				        auto re = device->CreateDescriptorHeap(&rtvHeapDesc, 
-							
+				        auto re = device->CreateDescriptorHeap(&rtvHeapDesc,
 							__uuidof(decltype(m_rtvHeap)::InterfaceType), reinterpret_cast<void**>(m_rtvHeap.GetAddressOf())
 						);
 						if(SUCCEEDED(re))
@@ -117,6 +124,7 @@ namespace Dumpling
 								resource,
 								std::move(swap_chain),
 								std::move(m_rtvHeap),
+								fig.swap_buffer_count,
 								m_rtvDescriptorSize
 							);
 						}
