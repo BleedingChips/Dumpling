@@ -27,30 +27,47 @@ namespace Dumpling
 		return debug_layout;
 	}
 
-	bool FormWrapper::LogicalNextFrame()
-	{
-		std::lock_guard lg(logical_mutex);
-		++logical_buffer_index;
-		logical_buffer_index = (logical_buffer_index % buffer_count);
-		return true;
-	}
-
 	bool FormWrapper::Present(std::size_t syn_interval)
 	{
 		auto re = swap_chain->Present(syn_interval, 0);
+		if(SUCCEEDED(re))
+		{
+			std::lock_guard lg(logic_mutex);
+			auto current = swap_chain->GetCurrentBackBufferIndex();
+			assert(config.swap_buffer_count == 1 || ((current_index + 1) % config.swap_buffer_count) == current);
+			current_index = current;
+		}
 		return SUCCEEDED(re);
+	}
+
+	bool FormWrapper::LogicPresent()
+	{
+		std::lock_guard lg(logic_mutex);
+		auto tar = (logic_current_index + 1) % config.swap_buffer_count;
+		if(tar == current_index)
+		{
+			return false;
+		}else
+		{
+			logic_current_index = tar;
+			return true;
+		}
 	}
 
 	auto FormWrapper::GetDescription(D3D12_RESOURCE_STATES require_state) const -> Description
 	{
 		if(require_state == D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
 		{
-			std::shared_lock sl(logical_mutex);
 			ResourcePtr resource;
-			swap_chain->GetBuffer(logical_buffer_index, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
+			std::size_t index = 0;
+			{
+				std::shared_lock sl(logic_mutex);
+				index = logic_current_index;
+			}
+			swap_chain->GetBuffer(index, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
 			return{
 				resource,
-				m_rtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + offset * logical_buffer_index,
+				m_rtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + offset * index,
 				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PRESENT
 			};
 		}
@@ -59,8 +76,8 @@ namespace Dumpling
 
 	struct FormWrapperImp : public FormWrapper, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		FormWrapperImp(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, std::size_t buffer_count, std::size_t offset)
-			: MemoryResourceRecordIntrusiveInterface(record), FormWrapper(std::move(swap_chain), std::move(m_rtvHeap), buffer_count, offset)
+		FormWrapperImp(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
+			: MemoryResourceRecordIntrusiveInterface(record), FormWrapper(std::move(swap_chain), std::move(m_rtvHeap), config, offset)
 		{
 			
 		}
@@ -124,7 +141,7 @@ namespace Dumpling
 								resource,
 								std::move(swap_chain),
 								std::move(m_rtvHeap),
-								fig.swap_buffer_count,
+								fig,
 								m_rtvDescriptorSize
 							);
 						}
@@ -255,9 +272,16 @@ namespace Dumpling
 					ite.state = State::Done;
 				}
 			}
-			queue->ExecuteCommandLists(need_commited_command.size(), need_commited_command.data());
-			auto re = queue->Signal(fence.Get(), current_frame);
-			assert(SUCCEEDED(re));
+			std::size_t old_frame;
+			{
+				std::lock_guard lg(frame_mutex);
+				queue->ExecuteCommandLists(need_commited_command.size(), need_commited_command.data());
+				auto re = queue->Signal(fence.Get(), current_frame);
+				assert(SUCCEEDED(re));
+				old_frame = current_frame;
+				++current_frame;
+			}
+			
 			for(auto ite : need_commited_command)
 			{
 				GraphicCommandListPtr temp;
@@ -269,8 +293,6 @@ namespace Dumpling
 				ite->Release();
 			}
 			need_commited_command.clear();
-			auto old_frame = current_frame;
-			current_frame += 1;
 			return old_frame;
 		}
 		return std::nullopt;
