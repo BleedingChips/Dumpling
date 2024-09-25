@@ -12,7 +12,7 @@ import std;
 import PotatoPointer;
 import PotatoIR;
 import PotatoTaskSystem;
-import DumplingFormEvent;
+export import DumplingFormEvent;
 
 
 export namespace Dumpling
@@ -136,6 +136,11 @@ export namespace Dumpling
 
 		friend struct Potato::Pointer::DefaultIntrusiveWrapper;
 	};
+
+	HRESULT MarkMessageSkip(UINT msg)
+	{
+		return E_NOTIMPL;
+	}
 }
 
 

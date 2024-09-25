@@ -7,6 +7,8 @@ target("DumplingImGui")
     add_files("*.cpp")
     add_files("*.ixx")
     if is_plat("windows") then
+        add_files("Platform/Windows/*.ixx")
+        add_files("Platform/Windows/*.cpp")
         add_files("Platform/Windows/Dx12/*.ixx")
         add_files("Platform/Windows/Dx12/*.cpp")
     end

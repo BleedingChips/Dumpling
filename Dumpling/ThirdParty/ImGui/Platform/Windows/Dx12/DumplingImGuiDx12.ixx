@@ -2,12 +2,13 @@
 module;
 
 #include "imgui_impl_dx12.h"
-#include "imgui_impl_win32.h"
 
-export module DumplingImGuiWin32Dx12;
+
+export module DumplingImGuiDx12;
 
 import std;
 import DumplingDx12Renderer;
+import DumplingImGuiWindows;
 
 export namespace Dumpling
 {

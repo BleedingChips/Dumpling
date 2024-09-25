@@ -3,7 +3,7 @@ module;
 
 #include "imgui.h"
 
-module DumplingImGuiWin32Dx12;
+module DumplingImGuiDx12;
 
 namespace Dumpling
 {

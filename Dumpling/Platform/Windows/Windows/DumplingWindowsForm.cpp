@@ -66,11 +66,6 @@ namespace Dumpling
 		}
 	}
 
-	HRESULT MarkMessageSkip(UINT msg)
-	{
-		return E_NOTIMPL;
-	}
-
 	bool IsMessageMarkAsSkip(UINT msg, HRESULT result)
 	{
 		return result == E_NOTIMPL;
