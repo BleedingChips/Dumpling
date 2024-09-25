@@ -137,9 +137,14 @@ export namespace Dumpling
 		friend struct Potato::Pointer::DefaultIntrusiveWrapper;
 	};
 
-	HRESULT MarkMessageSkip(UINT msg)
+	inline HRESULT MarkMessageSkip(UINT msg)
 	{
 		return E_NOTIMPL;
+	}
+
+	inline HRESULT MarkMessageProcessed(UINT msg)
+	{
+		return S_OK;
 	}
 }
 

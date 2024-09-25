@@ -32,6 +32,7 @@ export namespace Dumpling
 	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
 	using FactoryPtr = ComPtr<IDXGIFactory2>;
 	using SwapChainPtr = ComPtr<IDXGISwapChain3>;
+	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
 
 	export struct Renderer;
 
@@ -108,6 +109,8 @@ export namespace Dumpling
 		{
 			assert(!command);
 		}
+
+		GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
 
 	protected:
 
@@ -195,6 +198,9 @@ export namespace Dumpling
 		FormWrapper::Ptr CreateFormWrapper(Form& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		static bool InitDebugLayer();
+
+		DevicePtr::InterfaceType* GetDevice() { return device.Get(); }
+
 	protected:
 
 		Device(FactoryPtr factory, DevicePtr device, CommandQueuePtr queue)
