@@ -1,6 +1,8 @@
 
 module;
 
+#include "imgui.h"
+#include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
 
@@ -9,26 +11,31 @@ export module DumplingImGuiDx12;
 import std;
 import PotatoIR;
 import PotatoPointer;
+import DumplingImGuiContext;
 import DumplingWindowsForm;
 import DumplingDx12Renderer;
 import DumplingImGuiWindows;
 
-export namespace Dumpling
+export namespace Dumpling::Gui
 {
 
-	struct ImGuiContext : public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	struct HeadUpDisplayWin32Dx12 : public HeadUpDisplay, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		using Ptr = Potato::Pointer::IntrusivePtr<ImGuiContext>;
-		static Ptr Create(Device& device, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		ImGuiFormWrapper::Ptr CreateFormWrapper(Form& form, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		void StartFrame();
-		void EndFrame() { ImGui::Render(); }
-		void Commited(PassRenderer& renderer);
-		DescriptorHeapPtr::InterfaceType* GetHeap() { return heap.Get(); }
+		static Ptr Create(Form& form, Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		virtual void StartFrame();
+		virtual void EndFrame();
+		virtual void CommitedToRenderer(PassRenderer& renderer) override;
 	protected:
-		ImGuiContext(Potato::IR::MemoryResourceRecord record, DescriptorHeapPtr heap)
-			: MemoryResourceRecordIntrusiveInterface(record), heap(std::move(heap)) {}
-		~ImGuiContext();
+		void AddHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
+		void SubHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
+		HeadUpDisplayWin32Dx12(
+			Potato::IR::MemoryResourceRecord record, 
+			DescriptorHeapPtr heap,
+			Widget::Ptr top_widget,
+			ImGuiContext* context
+		)
+			: HeadUpDisplay(std::move(top_widget), context), MemoryResourceRecordIntrusiveInterface(record), heap(std::move(heap)) {}
+		~HeadUpDisplayWin32Dx12();
 		DescriptorHeapPtr heap;
 	};
 }

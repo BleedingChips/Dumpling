@@ -8,79 +8,84 @@ module;
 
 module DumplingImGuiDx12;
 
-namespace Dumpling
+namespace Dumpling::Gui
 {
-
-	auto ImGuiContext::Create(Device& device, std::pmr::memory_resource* resource) -> Ptr
+	auto HeadUpDisplayWin32Dx12::Create(Form& form, Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
 	{
 		IMGUI_CHECKVERSION();
-		
-		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
 
-		D3D12_DESCRIPTOR_HEAP_DESC desc{
-			D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			2,
-			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			0
-		};
-
-		DescriptorHeapPtr heap;
-		auto re = device.GetDevice()->CreateDescriptorHeap(
-			&desc, IID_PPV_ARGS(heap.GetAddressOf())
-		);
-
-		if(SUCCEEDED(re))
+		auto context = ImGui::CreateContext();
+		if(context != nullptr)
 		{
-			ImGui::CreateContext();
 			ImGuiIO& io = ImGui::GetIO();
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-			ImGui_ImplDX12_Init(
-					device.GetDevice(), 
-				2, 
-				DXGI_FORMAT_R8G8B8A8_UNORM, 
-				heap.Get(), 
-				heap->GetCPUDescriptorHandleForHeapStart(), 
-				heap->GetGPUDescriptorHandleForHeapStart()
+			D3D12_DESCRIPTOR_HEAP_DESC desc{
+				D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+				2,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0
+			};
+			
+			DescriptorHeapPtr heap;
+			auto re = device.GetDevice()->CreateDescriptorHeap(
+				&desc, IID_PPV_ARGS(heap.GetAddressOf())
 			);
 
-			auto re = Potato::IR::MemoryResourceRecord::Allocate<ImGuiContext>(resource);
-			if(re)
+			if(SUCCEEDED(re))
 			{
-				return new(re.Get()) ImGuiContext{re, std::move(heap)};
-			}else
-			{
-				ImGui_ImplDX12_Shutdown();
-				ImGui::DestroyContext();
+				if(ImGui_ImplWin32_Init(form.GetWnd()))
+				{
+					if(ImGui_ImplDX12_Init(
+							device.GetDevice(), 
+				2, 
+						DXGI_FORMAT_R8G8B8A8_UNORM, 
+				heap.Get(), 
+						heap->GetCPUDescriptorHandleForHeapStart(), 
+						heap->GetGPUDescriptorHandleForHeapStart()
+					))
+					{
+						auto re = Potato::IR::MemoryResourceRecord::Allocate<HeadUpDisplayWin32Dx12>(resource);
+						if(re)
+						{
+							return new(re.Get()) HeadUpDisplayWin32Dx12{re, std::move(heap), std::move(top_widget), context};
+						}
+						ImGui_ImplDX12_Shutdown();
+					}
+
+					ImGui_ImplWin32_Shutdown();
+				}
 			}
+			ImGui::DestroyContext(context);
+			return {};
 		}
 		return {};
 	}
 
-	ImGuiContext::~ImGuiContext()
+	HeadUpDisplayWin32Dx12::~HeadUpDisplayWin32Dx12()
 	{
 		ImGui_ImplDX12_Shutdown();
-		ImGui::DestroyContext();
+		ImGui_ImplWin32_Shutdown();
+		heap.Reset();
 	}
 
-	ImGuiFormWrapper::Ptr ImGuiContext::CreateFormWrapper(Form& form, std::pmr::memory_resource* resource)
+	void HeadUpDisplayWin32Dx12::StartFrame()
 	{
-		auto re = Potato::IR::MemoryResourceRecord::Allocate<ImGuiFormWrapper>(resource);
-		if(re)
-		{
-			return new(re.Get()) ImGuiFormWrapper{re, form};
-		}
-		return {};
-	}
-
-	void ImGuiContext::StartFrame()
-	{
+		ImGui::SetCurrentContext(context);
 		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
 	}
 
-	void ImGuiContext::Commited(PassRenderer& renderer)
+	void HeadUpDisplayWin32Dx12::CommitedToRenderer(PassRenderer& renderer)
 	{
+		renderer->SetDescriptorHeaps(1, heap.GetAddressOf());
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandList());
+	}
+
+	void HeadUpDisplayWin32Dx12::EndFrame()
+	{
+		ImGui::Render();
 	}
 }

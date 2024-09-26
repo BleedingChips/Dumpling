@@ -1,7 +1,6 @@
 
 module;
 
-#include "imgui_impl_dx12.h"
 #include "imgui_impl_win32.h"
 #include "Windows.h"
 
@@ -11,7 +10,6 @@ export module DumplingImGuiWindows;
 
 import std;
 import DumplingWindowsForm;
-import PotatoIR;
 import PotatoPointer;
 
 
@@ -29,23 +27,5 @@ export namespace Dumpling
 
 		void AddFormEventCaptureRef() const override {}
 		void SubFormEventCaptureRef() const override {}
-	};
-
-	export struct ImGuiContext;
-
-	struct ImGuiFormWrapper : public Potato::IR::MemoryResourceRecordIntrusiveInterface
-	{
-		using Ptr = Potato::Pointer::IntrusivePtr<ImGuiFormWrapper>;
-		void StartFrame();
-		void EndFrame() {};
-	protected:
-		ImGuiFormWrapper(Potato::IR::MemoryResourceRecord record, Form& form);
-		~ImGuiFormWrapper();
-
-		
-
-		Form::Ptr reference_form;
-
-		friend struct ImGuiContext;
 	};
 }
