@@ -135,6 +135,8 @@ export namespace Dumpling
 		std::optional<std::size_t> CommitFrame();
 		std::size_t GetCurrentFrame() const { std::shared_lock sl(frame_mutex); return current_frame; }
 		std::size_t TryFlushFrame();
+		bool FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
+		bool FlushToCurrentFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
 
 	protected:
 
@@ -148,6 +150,8 @@ export namespace Dumpling
 		{
 			
 		}
+
+		void ResetAllocator_AssumedLocked(std::size_t frame);
 
 		enum class State
 		{

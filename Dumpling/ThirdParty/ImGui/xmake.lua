@@ -13,5 +13,5 @@ target("DumplingImGui")
         add_files("Platform/Windows/Dx12/*.cpp")
     end
     add_deps("Dumpling")
-    add_packages("imgui")
+    add_packages("imgui", {Public=true})
 target_end()

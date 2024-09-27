@@ -153,12 +153,20 @@ namespace Dumpling
 			);
 			static FormClassStyle class_style;
 
+			RECT adject_rect {0, 0, property.form_size.width, property.form_size.height };
+
+			AdjustWindowRect(
+				&adject_rect,
+				GetWSStyle(property.style),
+				FALSE
+			);
+
 			HWND new_hwnd = CreateWindowExW(
 				0,
 				form_class_style_name,
 				str.data(),
 				GetWSStyle(property.style),
-				100, 100, property.form_size.width, property.form_size.height,
+				100, 100, adject_rect.right - adject_rect.left, adject_rect.bottom - adject_rect.top,
 				NULL,
 				NULL,
 				GetModuleHandle(0),

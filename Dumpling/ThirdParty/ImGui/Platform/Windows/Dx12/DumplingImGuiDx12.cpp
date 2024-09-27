@@ -38,10 +38,10 @@ namespace Dumpling::Gui
 				if(ImGui_ImplWin32_Init(form.GetWnd()))
 				{
 					if(ImGui_ImplDX12_Init(
-							device.GetDevice(), 
-				2, 
+						device.GetDevice(), 
+						2, 
 						DXGI_FORMAT_R8G8B8A8_UNORM, 
-				heap.Get(), 
+						heap.Get(), 
 						heap->GetCPUDescriptorHandleForHeapStart(), 
 						heap->GetGPUDescriptorHandleForHeapStart()
 					))
@@ -49,6 +49,7 @@ namespace Dumpling::Gui
 						auto re = Potato::IR::MemoryResourceRecord::Allocate<HeadUpDisplayWin32Dx12>(resource);
 						if(re)
 						{
+							form.InsertCapture(ImGuiFormEventCapture::GetInstance());
 							return new(re.Get()) HeadUpDisplayWin32Dx12{re, std::move(heap), std::move(top_widget), context};
 						}
 						ImGui_ImplDX12_Shutdown();

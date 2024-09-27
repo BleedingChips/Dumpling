@@ -94,7 +94,7 @@ namespace Dumpling
 		if(Hwnd != nullptr)
 		{
 			RECT rect;
-			if(GetWindowRect(Hwnd, &rect))
+			if(GetClientRect(Hwnd, &rect))
 			{
 				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 				swapChainDesc.BufferCount = fig.swap_buffer_count;
@@ -298,24 +298,79 @@ namespace Dumpling
 		return std::nullopt;
 	}
 
+	void FrameRenderer::ResetAllocator_AssumedLocked(std::size_t frame)
+	{
+		if (frame != last_flush_frame)
+		{
+			for (auto& ite : total_allocator)
+			{
+				if (ite.state == State::Done && ite.frame <= frame)
+				{
+					ite.state = State::Idle;
+					ite.allocator->Reset();
+				}
+			}
+			last_flush_frame = frame;
+		}
+	}
+
 	std::size_t FrameRenderer::TryFlushFrame()
 	{
 		auto cur = fence->GetCompletedValue();
 		{
 			std::lock_guard lg(renderer_mutex);
-			if(cur != last_flush_frame)
-			{
-				for(auto& ite : total_allocator)
-				{
-					if(ite.state == State::Done && ite.frame <= cur)
-					{
-						ite.state = State::Idle;
-					}
-				}
-				last_flush_frame = cur;
-			}
+			ResetAllocator_AssumedLocked(cur);
 		}
 		return cur;
+	}
+
+	bool FrameRenderer::FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration)
+	{
+		while(true)
+		{
+			auto cur = fence->GetCompletedValue();
+			{
+				std::lock_guard lg(renderer_mutex);
+				ResetAllocator_AssumedLocked(cur);
+				if(cur + 1 >= current_frame)
+				{
+					return true;
+				}
+			}
+			if(time_duration.has_value())
+			{
+				std::this_thread::sleep_for(*time_duration);
+			}else
+			{
+				std::this_thread::yield();
+			}
+		}
+		return true;
+	}
+
+	bool FrameRenderer::FlushToCurrentFrame(std::optional<std::chrono::steady_clock::duration> time_duration)
+	{
+		while (true)
+		{
+			auto cur = fence->GetCompletedValue();
+			{
+				std::lock_guard lg(renderer_mutex);
+				ResetAllocator_AssumedLocked(cur);
+				if (cur == current_frame)
+				{
+					return true;
+				}
+			}
+			if (time_duration.has_value())
+			{
+				std::this_thread::sleep_for(*time_duration);
+			}
+			else
+			{
+				std::this_thread::yield();
+			}
+		}
+		return true;
 	}
 
 	struct FrameRendererImp : public FrameRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
