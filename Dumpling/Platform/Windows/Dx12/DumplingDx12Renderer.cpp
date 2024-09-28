@@ -240,6 +240,7 @@ namespace Dumpling
 	{
 		if(output.command && output.frame == current_frame)
 		{
+			output.PreFinishRender();
 			auto re = output.command->Close();
 			if(SUCCEEDED(re))
 			{
@@ -348,31 +349,6 @@ namespace Dumpling
 		return true;
 	}
 
-	bool FrameRenderer::FlushToCurrentFrame(std::optional<std::chrono::steady_clock::duration> time_duration)
-	{
-		while (true)
-		{
-			auto cur = fence->GetCompletedValue();
-			{
-				std::lock_guard lg(renderer_mutex);
-				ResetAllocator_AssumedLocked(cur);
-				if (cur == current_frame)
-				{
-					return true;
-				}
-			}
-			if (time_duration.has_value())
-			{
-				std::this_thread::sleep_for(*time_duration);
-			}
-			else
-			{
-				std::this_thread::yield();
-			}
-		}
-		return true;
-	}
-
 	struct FrameRendererImp : public FrameRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
 		FrameRendererImp(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr ptr, FencePtr fence)
@@ -441,585 +417,155 @@ namespace Dumpling
 		return {};
 	}
 
-	bool PassRenderer::ClearRendererTarget(RendererResource& render_target, Color color, std::size_t index)
+	void RendererTargetCarrier::Clear()
 	{
-		auto desc = render_target.GetDescription(D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET);
+		for(auto& ite : target_data)
+		{
+			ite.reference_resource.Reset();
+		}
+		render_target_count = 0;
+		has_depth_stencil = false;
+	}
+	std::optional<std::size_t> RendererTargetCarrier::AddRenderTarget(RendererResource const& resource)
+	{
+		if(render_target_count < max_render_target_count)
+		{
+			auto desc = resource.GetDescription(D3D12_RESOURCE_STATE_RENDER_TARGET);
+			if(desc.resource_ptr)
+			{
+				auto& tar = target_data[render_target_count + 1];
+				tar.reference_resource = std::move(desc.resource_ptr);
+				tar.default_state = desc.default_state;
+				tar.handle = desc.cpu_handle;
+				target[render_target_count + 1] = tar.handle;
+				++render_target_count;
+				return render_target_count;
+			}
+		}
+		return std::nullopt;
+	}
+	bool RendererTargetCarrier::SetDepthStencil(RendererResource const& resource)
+	{
+		auto desc = resource.GetDescription(D3D12_RESOURCE_STATE_DEPTH_WRITE);
 		if(desc.resource_ptr)
 		{
-			if(desc.default_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
-			{
-				D3D12_RESOURCE_BARRIER barrier{
-					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					D3D12_RESOURCE_TRANSITION_BARRIER{
-						desc.resource_ptr.Get(),
-						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-						desc.default_state,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET
-					}
-				};
-				command->ResourceBarrier(1, &barrier);
-			}
-			std::array<float, 4> co =  {color.R, color.G, color.B, color.A};
-			command->ClearRenderTargetView(desc.cpu_handle, co.data(), 0, nullptr);
-			if(desc.default_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
-			{
-				D3D12_RESOURCE_BARRIER barrier{
-					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					D3D12_RESOURCE_TRANSITION_BARRIER{
-						desc.resource_ptr.Get(),
-						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET,
-						desc.default_state
-					}
-				};
-				command->ResourceBarrier(1, &barrier);
-			}
-		}
-		return true;
-	}
-
-
-
-
-
-
-
-
-	/*
-	Renderer::Renderer(Potato::IR::MemoryResourceRecord record, DevicePtr in_device, CommandQueuePtr direct_queue)
-		: MemoryResourceRecordIntrusiveInterface(record), device(std::move(in_device)), direct_queue(std::move(direct_queue))
-	{
-		assert(device);
-		device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(current_fence)::InterfaceType), reinterpret_cast<void**>(current_fence.GetAddressOf()));
-	}
-
-	Renderer::Ptr Renderer::Create(std::optional<AdapterDescription> adapter, std::pmr::memory_resource* resource)
-	{
-
-		DevicePtr dev_ptr;
-		auto  re = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
-		if(SUCCEEDED(re))
-		{
-			CommandQueuePtr command_queue;
-			D3D12_COMMAND_QUEUE_DESC desc{
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-			0
-			};
-
-			auto re = dev_ptr->CreateCommandQueue(
-				&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
-			);
-
-			if(SUCCEEDED(re))
-			{
-
-				auto record = Potato::IR::MemoryResourceRecord::Allocate<Renderer>(resource);
-				if(record)
-				{
-					return new (record.Get()) Renderer{record, std::move(dev_ptr), std::move(command_queue)};
-				}
-			}
-		}
-		return {};
-	}
-
-	bool Renderer::PopPassRenderer(PassRenderer& output_renderer, Pass const& pass)
-	{
-		std::lock_guard lg(pipeline_mutex);
-		return PopPassRenderer_AssumedLocked(output_renderer, pass);
-	}
-
-	bool Renderer::PopPassRenderer_AssumedLocked(PassRenderer& output_renderer, Pass const& pass)
-	{
-		FinishPassRenderer_AssumedLocked(output_renderer);
-		auto request = pipeline_manager.PopPassRequest(pass);
-		if(request.has_value())
-		{
-			CommandAllocatorPtr cur_allocator;
-			std::size_t allocator_index = 0;
-			std::size_t cur_frame = current_frame;
-			for(auto& ite : allocators)
-			{
-				if(ite.status == Status::IDLE || ite.status == Status::WAITING && ite.frame_number == cur_frame)
-				{
-					cur_allocator = ite.allocator;
-				}else
-				{
-					++allocator_index;
-				}
-			}
-			if(!cur_allocator)
-			{
-				auto re = device->CreateCommandAllocator(
-					D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT, 
-					__uuidof(decltype(cur_allocator)::InterfaceType), reinterpret_cast<void**>(cur_allocator.GetAddressOf())
-				);
-				if(SUCCEEDED(re))
-				{
-					allocators.emplace_back(
-						Status::IDLE,
-						cur_allocator,
-						cur_frame
-					);
-				}else
-				{
-					pipeline_manager.PushPassRequest(std::move(*request));
-					return false;
-				}
-			}
-
-			GraphicCommandListPtr ptr;
-
-			auto re = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-					cur_allocator.Get(), nullptr, __uuidof(decltype(ptr)::InterfaceType), reinterpret_cast<void**>(ptr.GetAddressOf())
-				);
-
-			if(SUCCEEDED(re))
-			{
-				output_renderer.command_list = ptr;
-				output_renderer.identity = {allocator_index};
-				allocators[allocator_index].status = Status::USING;
-				allocators[allocator_index].frame_number = current_frame;
-				++losing_command;
-				return true;
-			}
-			pipeline_manager.PushPassRequest(std::move(*request));
-			return false;
-		}
-		return false;
-	}
-
-
-	bool Renderer::FinishPassRenderer(PassRenderer& pass_renderer)
-	{
-		std::lock_guard lg(pipeline_mutex);
-		return FinishPassRenderer_AssumedLocked(pass_renderer);
-	}
-
-	bool Renderer::FinishPassRenderer_AssumedLocked(PassRenderer& pass_renderer)
-	{
-		if(pass_renderer.command_list)
-		{
-			auto tem = std::move(pass_renderer.command_list);
-			pass_renderer.identity = {};
-			tem->Close();
-			allocators[pass_renderer.identity.reference_allocator_index].status = Status::WAITING;
-			frame_command.emplace_back(std::move(tem), pass_renderer.identity);
-			assert(losing_command >= 1);
-			--losing_command;
+			auto& tar = target_data[0];
+			tar.reference_resource = std::move(desc.resource_ptr);
+			tar.default_state = desc.default_state;
+			tar.handle = desc.cpu_handle;
+			target[render_target_count + 1] = tar.handle;
+			has_depth_stencil = true;
 			return true;
 		}
 		return false;
 	}
 
-	std::optional<std::size_t> Renderer::CommitedAndSwapContext()
-	{
-		std::lock_guard lg(pipeline_mutex);
-		if(losing_command != 0)
-		{
-			return std::nullopt;
-		}
-		for(auto& ite : allocators)
-		{
-			if(ite.frame_number == current_frame)
-			{
-				assert(ite.status != Status::USING);
-				if(ite.status == Status::WAITING)
-					ite.status = Status::Block;
-			}
-		}
-		for(auto& ite : frame_command)
-		{
-			direct_queue->ExecuteCommandLists(1, ite.list.GetAddressOf());
-		}
-		direct_queue->Signal(current_fence.Get(), current_frame);
-		frame_command.clear();
-		auto tem_count = current_frame;
-		current_frame += 1;
-		return tem_count;
-	}
-
-	std::tuple<bool, std::size_t> Renderer::TryFlushFrame(std::size_t require_frame)
+	void PassRenderer::SetRenderTargets(RendererTargetCarrier const& render_targets)
 	{
 
-		auto cur_value = current_fence->GetCompletedValue();
-
-		std::lock_guard lg(pipeline_mutex);
-
-		if(require_frame <= cur_value)
+		if(render_targets.render_target_count != 0 || render_targets.has_depth_stencil)
 		{
-			if(last_flush_frame_count != cur_value)
+			if(render_targets.has_depth_stencil)
 			{
-				last_flush_frame_count = cur_value;
-				for(auto& ite : allocators)
-				{
-					if(ite.frame_number <= cur_value && ite.status == Status::Block)
-					{
-						ite.allocator->Reset();
-						ite.status = Status::IDLE;
+				auto& ref = render_targets.target_data[0];
+				render_target_barriers[render_target_barriers_count] = D3D12_RESOURCE_BARRIER{
+					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					D3D12_RESOURCE_TRANSITION_BARRIER{
+						ref.reference_resource.Get(),
+						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						ref.default_state,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_WRITE
 					}
-				}
-			}
-			return {true, cur_value};
-		}
-
-		return {false, cur_value};
-	}
-
-	bool Renderer::ForceFlush(std::size_t require_frame, std::chrono::steady_clock::duration waitting_duration = std::chrono::microseconds{10})
-	{
-		while(true)
-		{
-			auto [re, frame] = TryFlushFrame(require_frame);
-			if(!re)
-			{
-				std::this_thread::sleep_for(waitting_duration);
-			}else{
-				return true;
-			}
-		}
-	}
-
-	bool Renderer::FlushWindows(FormWrapper& windows)
-	{
-		windows.swap_chain->Present(1, 0);
-		return true;
-	}
-
-	FormWrapper::Ptr Renderer::CreateFormWrapper(HardDevice& hard_device, Form& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
-	{
-		
-	}
-
-	
-
-	void FormWrapper::Release()
-	{
-		auto re = record;
-		this->~FormWrapper();
-		re.Deallocate();
-	}
-	*/
-
-
-	/*
-	void FormRenderer::OnFormCreated(Form& interface)
-	{
-		Windows::Win32Form* real_form = dynamic_cast<Windows::Win32Form*>(&interface);
-		if(real_form != nullptr)
-		{
-			assert(!swap_chain && renderer);
-			swap_chain = renderer->CreateSwapChain(property, real_form->GetWnd());
-		}
-	}
-	*/
-
-	/*
-	ComPtr<IDXGIFactory2> rptr;
-	UINT Flags = 0;
-	if (EnableDebug)
-	{
-		Flags |= DXGI_CREATE_FACTORY_DEBUG;
-	}
-
-	HRESULT re = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
-	if (SUCCEEDED(re))
-	{
-		return HardwareDevice{ std::move(rptr) };
-	}
-	return {};
-	*/
-
-
-
-
-
-	/*
-	void InitDebugLayer()
-	{
-		{
-			ComPtr<ID3D12Debug> Debug;
-			D3D12GetDebugInterface(__uuidof(decltype(Debug)::InterfaceType), reinterpret_cast<void**>(Debug.GetAddressOf()));
-			if (Debug)
-			{
-				Debug->EnableDebugLayer();
-			}
-		}
-	}
-
-	void SwapChain::OnReInit(HWND hwnd, std::size_t size_x, std::size_t size_y)
-	{
-		if(factory && command_queue)
-		{
-			swap_chain.Reset();
-			ComPtr<IDXGIFactory2> new_factor;
-			factory->QueryInterface(__uuidof(decltype(new_factor)::InterfaceType), reinterpret_cast<void**>(new_factor.GetAddressOf()));
-			if(new_factor)
-			{
-
-				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-				swapChainDesc.BufferCount = Setting.buffer_count;
-				swapChainDesc.Width = size_x;
-				swapChainDesc.Height = size_y;
-				swapChainDesc.Format = Setting.format;
-				swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-				swapChainDesc.SampleDesc.Count = 1;
-
-				ComPtr<IDXGISwapChain1> ptr;
-				auto re = new_factor->CreateSwapChainForHwnd(command_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr, ptr.GetAddressOf());
-				if(SUCCEEDED(re))
-				{
-					swap_chain = ptr;
-				}
-			}
-		}
-	}
-
-	auto HardwareDevice::Create(bool EnableDebug)
-		-> HardwareDevice
-	{
-		ComPtr<IDXGIFactory2> rptr;
-		UINT Flags = 0;
-		if(EnableDebug)
-		{
-			Flags |= DXGI_CREATE_FACTORY_DEBUG;
-		}
-
-		HRESULT re = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
-		if(SUCCEEDED(re))
-		{
-			return HardwareDevice{std::move(rptr)};
-		}
-		return {};
-	}
-
-	Adapter HardwareDevice::EnumAdapter(std::size_t index)
-	{
-		if(ptr)
-		{
-			ComPtr<IDXGIFactory1> fptr;
-			auto re = ptr->QueryInterface(__uuidof(decltype(fptr)::InterfaceType), reinterpret_cast<void**>(fptr.GetAddressOf()));
-			if(SUCCEEDED(re) && fptr)
-			{
-				ComPtr<IDXGIAdapter1> r_ptr;
-				auto re = fptr->EnumAdapters1(index, r_ptr.GetAddressOf());
-				if(SUCCEEDED(re))
-				{
-					return std::move(r_ptr);
-				}
-			}
-		}
-		return {};
-	}
-
-	SwapChain::Ptr HardwareDevice::CreateSwapChain(SwapChinSetting setting, Renderer renderer, std::pmr::memory_resource* resource)
-	{
-		if (resource != nullptr && ptr && renderer)
-		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<SwapChain>(resource);
-			if (record)
-			{
-				return new (record.Get()) SwapChain{ record, setting, ptr, renderer.ptr };
-			}
-		}
-		return {};
-	}
-
-	Renderer SoftwareDevice::CreateRenderer()
-	{
-		if(ptr)
-		{
-			D3D12_COMMAND_QUEUE_DESC desc{
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-				0
-			};
-
-			ComPtr<ID3D12CommandQueue> que_ptr;
-
-			auto re = ptr->CreateCommandQueue(
-				&desc, __uuidof(decltype(que_ptr)::InterfaceType), reinterpret_cast<void**>(que_ptr.GetAddressOf())
-			);
-			if(SUCCEEDED(re))
-			{
-				return {std::move(que_ptr)};
-			}
-		}
-		return {};
-	}
-
-	SoftwareDevice SoftwareDevice::Create(Adapter adapter)
-	{
-		if(adapter)
-		{
-
-			auto feature_level = std::array{
-				D3D_FEATURE_LEVEL_12_2,
-				D3D_FEATURE_LEVEL_12_1,
-				D3D_FEATURE_LEVEL_12_0
-			};
-
-			ComPtr<ID3D12Device> dev_ptr;
-
-			for(auto ite : feature_level)
-			{
-				auto re = D3D12CreateDevice(adapter.Get(), ite, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
-				if(SUCCEEDED(re))
-				{
-					return {std::move(dev_ptr)};
-				}
-			}
-		}
-		return {};
-	}
-
-	void SwapChain::Release()
-	{
-		auto re = record;
-		this->~SwapChain();
-		re.Deallocate();
-	}
-
-	/*
-	auto CommandQueue::Create(Potato::Pointer::IntrusivePtr<Device> dev, ComPtr<ID3D12CommandQueue> command_queue, std::pmr::memory_resource* resource) -> Ptr
-	{
-		if (dev && command_queue)
-		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<CommandQueue>(resource);
-			if (record)
-			{
-				Ptr ptr{ new (record.Get()) CommandQueue{} };
-				ptr->record = record;
-				ptr->owner = std::move(dev);
-				ptr->command_queue = std::move(command_queue);
-				return ptr;
-			}
-		}
-		return {};
-	}
-
-	void CommandQueue::Release()
-	{
-		auto re = record;
-		this->~CommandQueue();
-		re.Deallocate();
-	}
-
-	auto SwapChain::Create(CommandQueue::Ptr queue, Factory::Ptr context, std::pmr::memory_resource* resource) -> Ptr
-	{
-		if(queue && context)
-		{
-			auto record = Potato::IR::MemoryResourceRecord::Allocate<SwapChain>(resource);
-			if(record)
-			{
-				Ptr ptr {
-					new (record.Get()) SwapChain{}
 				};
-				ptr->record = record;
-				ptr->context = std::move(context);
-				ptr->queue = std::move(queue);
-				return ptr;
+				++render_target_barriers_count;
 			}
-		}
-		return {};
-	}
 
-	void SwapChain::OnInit(HWND hwnd)
-	{
+			auto rt_span = std::span(render_targets.target_data).subspan(1, render_targets.render_target_count);
 
-		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-		swapChainDesc.BufferCount = 2;
-		swapChainDesc.Width = 1024;
-		swapChainDesc.Height = 768;
-		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		swapChainDesc.SampleDesc.Count = 1;
-
-		ComPtr<IDXGISwapChain1> swapChain;
-		auto re = context->dxgi_factory->CreateSwapChainForHwnd(
-			queue->command_queue.Get(), hwnd, &swapChainDesc, nullptr, nullptr,
-			swapChain.GetAddressOf()
-		);
-	}
-
-	void SwapChain::OnRelease(HWND)
-	{
-		
-	}
-
-	void SwapChain::OnUpdate()
-	{
-		
-	}
-
-	void SwapChain::ControllerRelease()
-	{
-		
-	}
-
-	void SwapChain::ViewerRelease()
-	{
-		auto re = record;
-		this->~SwapChain();
-		re.Deallocate();
-	}
-
-	CommandQueue::Ptr Device::CreateCommandQueue(std::pmr::memory_resource* resource)
-	{
-		if(resource != nullptr)
-		{
-			D3D12_COMMAND_QUEUE_DESC desc{
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-				D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-				D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-				0
-			};
-			ComPtr<ID3D12CommandQueue> ptr;
-			HRESULT Re = device->CreateCommandQueue(
-				&desc, __uuidof(decltype(ptr)::InterfaceType), reinterpret_cast<void**>(ptr.GetAddressOf())
+			for(auto& ite : rt_span)
+			{
+				render_target_barriers[render_target_barriers_count] = D3D12_RESOURCE_BARRIER{
+					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					D3D12_RESOURCE_TRANSITION_BARRIER{
+						ite.reference_resource.Get(),
+						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						ite.default_state,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET
+					}
+				};
+				++render_target_barriers_count;
+			}
+			if(render_target_barriers_count != 0)
+				command->ResourceBarrier(render_target_barriers_count, render_target_barriers.data());
+			command->OMSetRenderTargets(
+				render_targets.render_target_count,
+				render_targets.target.data() + 1,
+				FALSE,
+				render_targets.has_depth_stencil ? render_targets.target.data() : nullptr
 			);
-			if(SUCCEEDED(Re))
+
+			render_target_barriers_count = 0;
+
+			if(render_targets.has_depth_stencil)
 			{
-				return CommandQueue::Create(this, std::move(ptr), resource);
+				auto& ref = render_targets.target_data[0];
+				render_target_barriers[render_target_barriers_count] = D3D12_RESOURCE_BARRIER{
+					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					D3D12_RESOURCE_TRANSITION_BARRIER{
+						ref.reference_resource.Get(),
+						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_WRITE,
+						ref.default_state
+					}
+				};
+				++render_target_barriers_count;
+			}
+
+			for(auto& ite : rt_span)
+			{
+				render_target_barriers[render_target_barriers_count] = D3D12_RESOURCE_BARRIER{
+					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					D3D12_RESOURCE_TRANSITION_BARRIER{
+						ite.reference_resource.Get(),
+						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET,
+						ite.default_state
+					}
+				};
+				++render_target_barriers_count;
 			}
 		}
-		return {};
 	}
 
-	auto Device::Create(AdapterPtr adapter, std::pmr::memory_resource* resource)
-		-> Ptr
+	void PassRenderer::PreFinishRender()
 	{
-		if(adapter && resource != nullptr)
+		if(render_target_barriers_count != 0)
 		{
-			ComPtr<ID3D12Device> dev_ptr;
-			auto RE = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
-			if(SUCCEEDED(RE))
-			{
-				auto record = Potato::IR::MemoryResourceRecord::Allocate<Device>(resource);
-				if(record)
-				{
-					auto ptr = new (record.Get()) Device{ record, std::move(dev_ptr) };
-					Device::Ptr p { ptr };
-					return p;
-				}
-			}
-			//dev_ptr->
+			command->ResourceBarrier(render_target_barriers_count, render_target_barriers.data());
+			render_target_barriers_count = 0;
+			command->OMSetRenderTargets(
+				0,
+				nullptr,
+				FALSE,
+				nullptr
+			);
 		}
-		return {};
 	}
 
-	void Device::Release()
+	bool PassRenderer::ClearRendererTarget(RendererTargetCarrier const& render_target, std::size_t index, Color color)
 	{
-		auto re = record;
-		this->~Device();
-		re.Deallocate();
+		if(index < render_target.render_target_count)
+		{
+			std::array<float, 4> co =  {color.R, color.G, color.B, color.A};
+			command->ClearRenderTargetView(
+				render_target.target_data[index + 1].handle, co.data(), 0, nullptr);
+			return true;
+		}
+		return false;
+		
 	}
-	*/
 }

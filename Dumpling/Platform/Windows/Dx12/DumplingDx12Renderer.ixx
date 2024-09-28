@@ -98,13 +98,38 @@ export namespace Dumpling
 	};
 
 	export struct FrameRenderer;
+	export struct PassRenderer;
 
-	struct PassRenderer
+	struct RendererTargetCarrier
+	{
+
+		static constexpr std::size_t max_render_target_count = 8;
+
+		void Clear();
+		std::optional<std::size_t> AddRenderTarget(RendererResource const& resource);
+		bool SetDepthStencil(RendererResource const& resource);
+
+	protected:
+
+		struct ResourceRecord
+		{
+			ResourcePtr reference_resource;
+			D3D12_CPU_DESCRIPTOR_HANDLE handle;
+			D3D12_RESOURCE_STATES default_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+		};
+
+		std::array<ResourceRecord, max_render_target_count + 1> target_data;
+		std::array<D3D12_CPU_DESCRIPTOR_HANDLE, max_render_target_count + 1> target;
+		std::size_t render_target_count = 0;
+		bool has_depth_stencil = false;
+
+		friend struct PassRenderer;
+	};
+
+	export struct PassRenderer
 	{
 		PassRenderer() = default;
 		ID3D12GraphicsCommandList* operator->() const { return command.Get(); }
-		bool ClearRendererTarget(RendererResource& render_target, Color color = Color::black, std::size_t index = 0);
-
 		~PassRenderer()
 		{
 			assert(!command);
@@ -112,11 +137,21 @@ export namespace Dumpling
 
 		GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
 
+
+		void SetRenderTargets(RendererTargetCarrier const& render_targets);
+		bool ClearRendererTarget(RendererTargetCarrier const& render_target, std::size_t index, Color color = Color::black);
+		//bool ClearDepthStencil(RendererTargetCarrier const& render_target, float depth, uint8_t stencil);
+
 	protected:
 
 		GraphicCommandListPtr command;
 		std::size_t reference_allocator_index = std::numeric_limits<std::size_t>::max();
 		std::size_t frame = 0;
+
+		std::array<D3D12_RESOURCE_BARRIER, (RendererTargetCarrier::max_render_target_count + 1) * 2> render_target_barriers;
+		std::size_t render_target_barriers_count = 0;
+
+		void PreFinishRender();
 
 		friend struct FrameRenderer;
 	};
@@ -136,8 +171,6 @@ export namespace Dumpling
 		std::size_t GetCurrentFrame() const { std::shared_lock sl(frame_mutex); return current_frame; }
 		std::size_t TryFlushFrame();
 		bool FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
-		bool FlushToCurrentFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
-
 	protected:
 
 		virtual ~FrameRenderer();
