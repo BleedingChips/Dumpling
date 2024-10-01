@@ -21,6 +21,7 @@ target("Dumpling")
 target_end()
 
 includes("Dumpling/ThirdParty/ImGui/")
+includes("Dumpling/ThirdParty/HLSLComplier/")
 
 if os.scriptdir() == os.projectdir() then
     set_project("Dumpling")
