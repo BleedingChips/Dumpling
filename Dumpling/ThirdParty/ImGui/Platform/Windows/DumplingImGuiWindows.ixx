@@ -15,13 +15,13 @@ import PotatoPointer;
 
 export namespace Dumpling
 {
-	struct ImGuiFormEventCapture : public FormEventCapture
+	struct ImGuiFormEventCapture : public Win32::FormEventCapture
 	{
 		static Ptr GetInstance();
 
 	protected:
 
-		HRESULT ReceiveRaw(Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) override;
+		HRESULT ReceiveRaw(Win32::Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) override;
 
 		ImGuiFormEventCapture() : FormEventCapture(FormEvent::Category::RAW) {}
 

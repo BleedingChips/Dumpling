@@ -13,11 +13,11 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 namespace Dumpling
 {
 
-	HRESULT ImGuiFormEventCapture::ReceiveRaw(Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	HRESULT ImGuiFormEventCapture::ReceiveRaw(Win32::Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-			return MarkMessageProcessed(msg);
-		return MarkMessageSkip(msg);
+			return Win32::MarkMessageProcessed(msg);
+		return Win32::MarkMessageSkip(msg);
 	}
 
 	auto ImGuiFormEventCapture::GetInstance() -> Ptr

@@ -8,14 +8,14 @@ module DumplingImGuiContext;
 
 namespace Dumpling::Gui
 {
-	struct DemoWidgetT : public Widget
+	struct DemoWidgetT: public Widget
 	{
 		void AddWeightRef() const override {}
 		void SubWeightRef() const override {}
 		void DrawUI() override { ImGui::ShowDemoWindow(); }
 	};
 
-	auto Widget::DemoWidget() ->Ptr
+	auto Widget::GetDemoWidget() ->Ptr
 	{
 		static DemoWidgetT widget;
 		return &widget;
@@ -23,7 +23,7 @@ namespace Dumpling::Gui
 
 	static std::mutex ImGuiContextMutex;
 
-	bool HeadUpDisplay::Commited(PassRenderer& renderer)
+	bool HeadUpDisplay::Commited(Dx12::PassRenderer& renderer)
 	{
 		std::lock_guard lg(ImGuiContextMutex);
 		StartFrame();

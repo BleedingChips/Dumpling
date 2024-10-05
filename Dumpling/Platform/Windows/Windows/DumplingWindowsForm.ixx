@@ -15,7 +15,7 @@ import PotatoTaskSystem;
 export import DumplingFormEvent;
 
 
-export namespace Dumpling
+export namespace Dumpling::Win32
 {
 
 
@@ -150,7 +150,7 @@ export namespace Dumpling
 
 
 
-export namespace Dumpling::Windows
+export namespace Dumpling::Win32
 {
 
 	template<typename PtrT>

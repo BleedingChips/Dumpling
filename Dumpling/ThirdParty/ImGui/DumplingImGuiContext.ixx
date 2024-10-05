@@ -24,7 +24,7 @@ export namespace Dumpling::Gui
 			void SubRef(Widget const* ptr)  { ptr->SubWeightRef(); }
 		};
 		using Ptr = Potato::Pointer::IntrusivePtr<Widget, Wrapper>;
-		static Ptr DemoWidget();
+		static Ptr GetDemoWidget();
 	protected:
 		virtual void AddWeightRef() const = 0;
 		virtual void SubWeightRef() const = 0;
@@ -41,13 +41,13 @@ export namespace Dumpling::Gui
 			void SubRef(HeadUpDisplay const* ptr)  { ptr->SubHeadUpDisplayRef(); }
 		};
 		using Ptr = Potato::Pointer::IntrusivePtr<HeadUpDisplay, Wrapper>;
-		bool Commited(PassRenderer& renderer);
+		bool Commited(Dx12::PassRenderer& renderer);
 	protected:
 		HeadUpDisplay(Widget::Ptr top_widget, ImGuiContext* context) : top_widget(std::move(top_widget)), context(context) {assert(context != nullptr);}
 		virtual ~HeadUpDisplay();
 		virtual void AddHeadUpDisplayRef() const = 0;
 		virtual void SubHeadUpDisplayRef() const = 0;
-		virtual void CommitedToRenderer(PassRenderer& renderer) = 0;
+		virtual void CommitedToRenderer(Dx12::PassRenderer& renderer) = 0;
 		virtual void StartFrame() = 0;
 		virtual void EndFrame() = 0;
 

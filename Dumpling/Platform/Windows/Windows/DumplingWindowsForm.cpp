@@ -39,7 +39,7 @@ namespace
 		const WNDCLASSEXW static_class = {
 			sizeof(WNDCLASSEXW),
 			CS_HREDRAW | CS_VREDRAW,
-			&Dumpling::Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, back_ground_brush, NULL, form_class_style_name, NULL };
+			&Dumpling::Win32::Form::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, back_ground_brush, NULL, form_class_style_name, NULL };
 
 		ATOM res = RegisterClassExW(&static_class);
 		assert(res != 0);
@@ -51,7 +51,7 @@ namespace
 	}
 }
 
-namespace Dumpling
+namespace Dumpling::Win32
 {
 	Dumpling::FormEvent::Category TranslateCategory(UINT msg)
 	{
@@ -153,7 +153,10 @@ namespace Dumpling
 			);
 			static FormClassStyle class_style;
 
-			RECT adject_rect {0, 0, property.form_size.width, property.form_size.height };
+			RECT adject_rect {0, 0,
+				static_cast<LONG>(property.form_size.width),
+				static_cast<LONG>(property.form_size.height)
+			};
 
 			AdjustWindowRect(
 				&adject_rect,

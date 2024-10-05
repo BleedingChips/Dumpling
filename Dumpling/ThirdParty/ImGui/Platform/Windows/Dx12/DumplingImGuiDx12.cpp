@@ -10,7 +10,7 @@ module DumplingImGuiDx12;
 
 namespace Dumpling::Gui
 {
-	auto HeadUpDisplayWin32Dx12::Create(Form& form, Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
+	auto HeadUpDisplayWin32Dx12::Create(Win32::Form& form, Dx12::Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
 	{
 		IMGUI_CHECKVERSION();
 
@@ -28,7 +28,7 @@ namespace Dumpling::Gui
 				0
 			};
 			
-			DescriptorHeapPtr heap;
+			Dx12::DescriptorHeapPtr heap;
 			auto re = device.GetDevice()->CreateDescriptorHeap(
 				&desc, IID_PPV_ARGS(heap.GetAddressOf())
 			);
@@ -79,7 +79,7 @@ namespace Dumpling::Gui
 		ImGui::NewFrame();
 	}
 
-	void HeadUpDisplayWin32Dx12::CommitedToRenderer(PassRenderer& renderer)
+	void HeadUpDisplayWin32Dx12::CommitedToRenderer(Dx12::PassRenderer& renderer)
 	{
 		renderer->SetDescriptorHeaps(1, heap.GetAddressOf());
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandList());

@@ -11,12 +11,12 @@ module;
 module DumplingDx12Renderer;
 
 
-namespace Dumpling
+namespace Dumpling::Dx12
 {
 	bool Device::InitDebugLayer()
 	{
 		static std::mutex debug_mutex;
-		static Windows::ComPtr<ID3D12Debug> debug_layout;
+		static ComPtr<ID3D12Debug> debug_layout;
 		std::lock_guard lg(debug_mutex);
 		if(!debug_layout)
 		{
@@ -86,7 +86,7 @@ namespace Dumpling
 		void SubRendererResourceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 	};
 
-	FormWrapper::Ptr Device::CreateFormWrapper(Form& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
+	FormWrapper::Ptr Device::CreateFormWrapper(Win32::Form& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
 	{
 		assert(factory);
 
