@@ -17,11 +17,19 @@ export namespace Dumpling::HLSLCompiler::Dx12
 
 	using BlobPtr = Win32::ComPtr<ID3DBlob>;
 
+	struct CompileResult
+	{
+		BlobPtr code;
+		BlobPtr error;
+		operator bool() const { return code; }
+		std::u8string_view GetErrorMessage() const;
+	};
+
 	struct Context : public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
 		using Ptr = Potato::Pointer::IntrusivePtr<Context>;
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		BlobPtr Compiler(std::u8string_view code, Target const& compiler_target);
+		CompileResult Compile(std::u8string_view code, Target const& compiler_target);
 	protected:
 		Context(Potato::IR::MemoryResourceRecord record) : MemoryResourceRecordIntrusiveInterface(record) {}
 	};

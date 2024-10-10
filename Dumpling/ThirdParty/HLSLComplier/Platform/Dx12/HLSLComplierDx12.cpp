@@ -8,6 +8,22 @@ module DumplingHLSLCompilerDx12;
 
 namespace Dumpling::HLSLCompiler::Dx12
 {
+
+	constexpr char const* Translate(Target::Category category)
+	{
+		switch(category)
+		{
+		case Target::Category::VS:
+			return "vs_5_1";
+		case Target::Category::CS:
+			return "cs_5_1";
+		case Target::Category::PS:
+			return "ps_5_1";
+		}
+		return nullptr;
+	}
+
+
 	auto Context::Create(std::pmr::memory_resource* resource)
 		-> Ptr
 	{
@@ -19,24 +35,33 @@ namespace Dumpling::HLSLCompiler::Dx12
 		return {};
 	}
 
+	std::u8string_view CompileResult::GetErrorMessage() const
+	{
+		if(error)
+		{
+			return std::u8string_view{
+				static_cast<char8_t const*>(error->GetBufferPointer()),
+				error->GetBufferSize()
+			};
+		}
+		return {};
+	}
 
-	BlobPtr Context::Compiler(std::u8string_view code, Target const& compiler_target)
+
+	CompileResult Context::Compile(std::u8string_view code, Target const& compiler_target)
 	{
 		BlobPtr target_blob;
+		BlobPtr error;
 		auto re = D3DCompile2(
 			reinterpret_cast<LPCVOID>(code.data()),
 			code.size() * sizeof(decltype(code)::value_type),
-			nullptr,
+			reinterpret_cast<LPCSTR>(compiler_target.source_name),
 			nullptr,
 			nullptr,
 			reinterpret_cast<LPCSTR>(compiler_target.entry_point),
-			"vs_5_1",
-			0, 0, 0, nullptr, 0, target_blob.GetAddressOf(), nullptr
+			Translate(compiler_target.category),
+			0, 0, 0, nullptr, 0, target_blob.GetAddressOf(), error.GetAddressOf()
 		);
-		if(SUCCEEDED(re))
-		{
-			return target_blob;
-		}
-		return {};
+		return {std::move(target_blob), std::move(error)};
 	}
 }
