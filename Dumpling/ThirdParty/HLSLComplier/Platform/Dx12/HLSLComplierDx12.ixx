@@ -29,7 +29,7 @@ export namespace Dumpling::HLSLCompiler::Dx12
 	{
 		using Ptr = Potato::Pointer::IntrusivePtr<Context>;
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		CompileResult Compile(std::u8string_view code, Target const& compiler_target);
+		CompileResult Compile(std::u8string_view code, Target const& compiler_target, char8_t const* source_name = nullptr);
 	protected:
 		Context(Potato::IR::MemoryResourceRecord record) : MemoryResourceRecordIntrusiveInterface(record) {}
 	};

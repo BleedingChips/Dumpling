@@ -48,14 +48,14 @@ namespace Dumpling::HLSLCompiler::Dx12
 	}
 
 
-	CompileResult Context::Compile(std::u8string_view code, Target const& compiler_target)
+	CompileResult Context::Compile(std::u8string_view code, Target const& compiler_target, char8_t const* source_name)
 	{
 		BlobPtr target_blob;
 		BlobPtr error;
 		auto re = D3DCompile2(
 			reinterpret_cast<LPCVOID>(code.data()),
 			code.size() * sizeof(decltype(code)::value_type),
-			reinterpret_cast<LPCSTR>(compiler_target.source_name),
+			reinterpret_cast<LPCSTR>(source_name),
 			nullptr,
 			nullptr,
 			reinterpret_cast<LPCSTR>(compiler_target.entry_point),

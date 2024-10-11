@@ -20,7 +20,6 @@ export namespace Dumpling::HLSLCompiler
 
 		Category category = Category::UnKnow;
 		char8_t const* entry_point = nullptr;
-		char8_t const* source_name = nullptr;
 	};
 
 }
