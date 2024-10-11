@@ -417,7 +417,7 @@ namespace Dumpling::Dx12
 		return {};
 	}
 
-	void RendererTargetCarrier::Clear()
+	void RenderTargetSet::Clear()
 	{
 		for(auto& ite : target_data)
 		{
@@ -426,7 +426,18 @@ namespace Dumpling::Dx12
 		render_target_count = 0;
 		has_depth_stencil = false;
 	}
-	std::optional<std::size_t> RendererTargetCarrier::AddRenderTarget(RendererResource const& resource)
+
+	RenderTargetSet::RenderTargetSet(RenderTargetSet&& set)
+	{
+		target_data = std::move(set.target_data);
+		target = std::move(set.target);
+		render_target_count = set.render_target_count;
+		set.render_target_count = 0;
+		has_depth_stencil = set.has_depth_stencil;
+		set.has_depth_stencil = false;
+	}
+
+	std::optional<std::size_t> RenderTargetSet::AddRenderTarget(RendererResource const& resource)
 	{
 		if(render_target_count < max_render_target_count)
 		{
@@ -444,7 +455,7 @@ namespace Dumpling::Dx12
 		}
 		return std::nullopt;
 	}
-	bool RendererTargetCarrier::SetDepthStencil(RendererResource const& resource)
+	bool RenderTargetSet::SetDepthStencil(RendererResource const& resource)
 	{
 		auto desc = resource.GetDescription(D3D12_RESOURCE_STATE_DEPTH_WRITE);
 		if(desc.resource_ptr)
@@ -460,9 +471,8 @@ namespace Dumpling::Dx12
 		return false;
 	}
 
-	void PassRenderer::SetRenderTargets(RendererTargetCarrier const& render_targets)
+	void PassRenderer::SetRenderTargets(RenderTargetSet const& render_targets)
 	{
-
 		if(render_targets.render_target_count != 0 || render_targets.has_depth_stencil)
 		{
 			if(render_targets.has_depth_stencil)
@@ -506,6 +516,11 @@ namespace Dumpling::Dx12
 				render_targets.has_depth_stencil ? render_targets.target.data() : nullptr
 			);
 
+			for(auto& ite : cache_render_target)
+			{
+				ite = D3D12_CPU_DESCRIPTOR_HANDLE{0};
+			}
+
 			render_target_barriers_count = 0;
 
 			if(render_targets.has_depth_stencil)
@@ -522,8 +537,10 @@ namespace Dumpling::Dx12
 					}
 				};
 				++render_target_barriers_count;
+				cache_render_target[0] = ref.handle;
 			}
 
+			std::size_t ite_index = 1;
 			for(auto& ite : rt_span)
 			{
 				render_target_barriers[render_target_barriers_count] = D3D12_RESOURCE_BARRIER{
@@ -537,6 +554,8 @@ namespace Dumpling::Dx12
 					}
 				};
 				++render_target_barriers_count;
+				cache_render_target[ite_index] = ite.handle;
+				++ite_index;
 			}
 		}
 	}
@@ -554,18 +573,25 @@ namespace Dumpling::Dx12
 				nullptr
 			);
 		}
+		for(auto& ite : cache_render_target)
+		{
+			ite = D3D12_CPU_DESCRIPTOR_HANDLE{0};
+		}
 	}
 
-	bool PassRenderer::ClearRendererTarget(RendererTargetCarrier const& render_target, std::size_t index, Color color)
+	bool PassRenderer::ClearRendererTarget(std::size_t index, Color color)
 	{
-		if(index < render_target.render_target_count)
+		if(index < cache_render_target.size())
 		{
-			std::array<float, 4> co =  {color.R, color.G, color.B, color.A};
-			command->ClearRenderTargetView(
-				render_target.target_data[index + 1].handle, co.data(), 0, nullptr);
-			return true;
+			auto ref = cache_render_target[index];
+			if(ref.ptr == 0)
+			{
+				std::array<float, 4> co =  {color.R, color.G, color.B, color.A};
+				command->ClearRenderTargetView(
+					cache_render_target[index + 1], co.data(), 0, nullptr);
+				return true;
+			}
 		}
 		return false;
-		
 	}
 }

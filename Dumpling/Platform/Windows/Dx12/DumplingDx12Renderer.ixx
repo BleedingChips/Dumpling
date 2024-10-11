@@ -100,7 +100,7 @@ export namespace Dumpling::Dx12
 	export struct FrameRenderer;
 	export struct PassRenderer;
 
-	struct RendererTargetCarrier
+	struct RenderTargetSet
 	{
 
 		static constexpr std::size_t max_render_target_count = 8;
@@ -108,6 +108,9 @@ export namespace Dumpling::Dx12
 		void Clear();
 		std::optional<std::size_t> AddRenderTarget(RendererResource const& resource);
 		bool SetDepthStencil(RendererResource const& resource);
+		RenderTargetSet() = default;
+		RenderTargetSet(RenderTargetSet const&) = default;
+		RenderTargetSet(RenderTargetSet&& set);
 
 	protected:
 
@@ -138,8 +141,8 @@ export namespace Dumpling::Dx12
 		GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
 
 
-		void SetRenderTargets(RendererTargetCarrier const& render_targets);
-		bool ClearRendererTarget(RendererTargetCarrier const& render_target, std::size_t index, Color color = Color::black);
+		void SetRenderTargets(RenderTargetSet const& render_targets);
+		bool ClearRendererTarget(std::size_t index, Color color = Color::black);
 		//bool ClearDepthStencil(RendererTargetCarrier const& render_target, float depth, uint8_t stencil);
 
 	protected:
@@ -148,7 +151,8 @@ export namespace Dumpling::Dx12
 		std::size_t reference_allocator_index = std::numeric_limits<std::size_t>::max();
 		std::size_t frame = 0;
 
-		std::array<D3D12_RESOURCE_BARRIER, (RendererTargetCarrier::max_render_target_count + 1) * 2> render_target_barriers;
+		std::array<D3D12_RESOURCE_BARRIER, (RenderTargetSet::max_render_target_count + 1) * 2> render_target_barriers;
+		std::array<D3D12_CPU_DESCRIPTOR_HANDLE, RenderTargetSet::max_render_target_count + 1> cache_render_target;
 		std::size_t render_target_barriers_count = 0;
 
 		void PreFinishRender();

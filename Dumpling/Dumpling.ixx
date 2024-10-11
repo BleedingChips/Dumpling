@@ -22,7 +22,7 @@ export namespace Dumpling
 
 	using Dumpling::Dx12::RendererResource;
 	using Dumpling::Dx12::FormWrapper;
-	using Dumpling::Dx12::RendererTargetCarrier;
+	using Dumpling::Dx12::RenderTargetSet;
 	using Dumpling::Dx12::PassRenderer;
 	using Dumpling::Dx12::FrameRenderer;
 	using Dumpling::Dx12::Device;
