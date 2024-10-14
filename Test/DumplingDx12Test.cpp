@@ -4,8 +4,6 @@
 
 import Dumpling;
 import std;
-import DumplingDx12Renderer;
-import DumplingWindowsForm;
 
 using namespace Dumpling;
 
@@ -85,32 +83,18 @@ int main()
 		PassRenderer ren;
 
 		form_renderer->PopPassRenderer(ren);
-		auto rs = output->GetAvailableRenderResource();
-			ren.ClearRendererTarget(*rs,
-					{
-						R,
-						G,
-						B,
-						1.0f
-					}
-			);
+
+		RenderTargetSet sets;
+		sets.AddRenderTarget(*output);
+		ren.SetRenderTargets(sets);
+		ren.ClearRendererTarget(0, {R, G, B, 1.0f});
 		form_renderer->FinishPassRenderer(ren);
 
 		auto tar = form_renderer->CommitFrame();
+		form_renderer->FlushToLastFrame();
 
-		while(tar.has_value())
-		{
-			auto cur = form_renderer->TryFlushFrame();
-			if(cur != *tar)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds{10});
-			}else
-			{
-				tar.reset();
-			}
-		}
-
-		output->Flush();
+		output->LogicPresent();
+		output->Present();
 		
 
 		R += 0.03f;

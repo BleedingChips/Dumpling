@@ -8,9 +8,9 @@ end
 target("Dumpling")
     set_kind("static")
     add_files("Dumpling/*.cpp")
-    add_files("Dumpling/*.ixx")
+    add_files("Dumpling/*.ixx", {public=true})
     if is_plat("windows") then
-        add_files("Dumpling/Platform/Windows/*/*.ixx")
+        add_files("Dumpling/Platform/Windows/*/*.ixx", {public=true})
         add_files("Dumpling/Platform/Windows/*/*.cpp")
         add_links("user32.lib")
         add_links("d3d12.lib")
