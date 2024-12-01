@@ -67,13 +67,12 @@ namespace Dumpling
 		{
 			str_count += ite.pass_name.size();
 		}
-		auto layout = Potato::IR::Layout::Get<DefaultPipelineInstanceT>();
-		auto pass_require_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<PipelineInstance::PassReference>(str_count));
-		auto direct_to_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<std::size_t>(require.direct_to.size()));
+		auto layout_cpp = Potato::MemLayout::MemLayoutCPP::Get<DefaultPipelineInstanceT>();
+		auto pass_require_offset = layout_cpp.Insert(Potato::IR::Layout::GetArray<PipelineInstance::PassReference>(str_count));
+		auto direct_to_offset = layout_cpp.Insert(Potato::IR::Layout::GetArray<std::size_t>(require.direct_to.size()));
 		//auto value_mapping_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<PipelineInstance::ValueMapping>(str_count));
-		auto str_offset = Potato::IR::InsertLayoutCPP(layout, Potato::IR::Layout::GetArray<char8_t>(str_count));
-		Potato::IR::FixLayoutCPP(layout);
-
+		auto str_offset = layout_cpp.Insert(Potato::IR::Layout::GetArray<char8_t>(str_count));
+		auto layout = layout_cpp.Get();
 		auto re = Potato::IR::MemoryResourceRecord::Allocate(resource, layout);
 
 		if(re)
