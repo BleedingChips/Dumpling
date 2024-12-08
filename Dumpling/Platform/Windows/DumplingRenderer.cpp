@@ -8,10 +8,10 @@ module;
 
 #undef interface
 
-module DumplingDx12Renderer;
+module DumplingRenderer;
 
 
-namespace Dumpling::Dx12
+namespace Dumpling
 {
 	bool Device::InitDebugLayer()
 	{
@@ -86,15 +86,14 @@ namespace Dumpling::Dx12
 		void SubRendererResourceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 	};
 
-	FormWrapper::Ptr Device::CreateFormWrapper(Win32::Form& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
+	FormWrapper::Ptr Device::CreateFormWrapper(Form form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
 	{
 		assert(factory);
 
-		auto Hwnd = form.GetWnd();
-		if(Hwnd != nullptr)
+		if(form)
 		{
 			RECT rect;
-			if(GetClientRect(Hwnd, &rect))
+			if(GetClientRect(form.GetPlatformValue(), &rect))
 			{
 				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 				swapChainDesc.BufferCount = fig.swap_buffer_count;
@@ -107,7 +106,7 @@ namespace Dumpling::Dx12
 
 				ComPtr<IDXGISwapChain1> swapChain;
 				auto re = factory->CreateSwapChainForHwnd(
-					queue.Get(), Hwnd, &swapChainDesc, nullptr, nullptr,
+					queue.Get(), form.GetPlatformValue(), &swapChainDesc, nullptr, nullptr,
 					swapChain.GetAddressOf()
 				);
 				if(SUCCEEDED(re))

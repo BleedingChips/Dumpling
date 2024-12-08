@@ -7,16 +7,22 @@ import std;
 using namespace Dumpling;
 
 
+bool need_quit = false;
+
 struct TopEventCapture: public Dumpling::FormEventCapture
 {
 	void AddFormEventCaptureRef() const override {}
 	void SubFormEventCaptureRef() const override {}
-	TopEventCapture() : FormEventCapture(FormEvent::Category::MODIFY) {}
-	FormEvent::Respond Receive(Form& interface, FormEvent::Modify event) override
+	FormEvent::Respond RespondEvent(FormEvent event) override
 	{
-		if(event.message == FormEvent::Modify::Message::DESTROY)
+		if(event.IsSystem())
 		{
-			Form::PostQuitEvent();
+			auto systm = event.GetSystem();
+			if(systm.message == FormEventSystem::Message::QUIT)
+			{
+				need_quit = true;
+				return FormEvent::Respond::PASS;
+			}
 		}
 		return FormEvent::Respond::PASS;
 	}
@@ -26,32 +32,17 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 int main()
 {
 	TopEventCapture responder;
-	auto form = Form::Create();
 
-	form->InsertCapture(&responder);
+	Form::Config config;
 
-	FormProperty pro;
-	pro.title = u8"DumplingFormTest";
+	config.title = L"Fuck You Dumpling!";
 
-	form->Init(pro);
+	auto form = Form::Create(config);
 
-	while(true)
+	while(!need_quit)
 	{
-		bool need_quit = false;
-		while(
-			Form::PeekMessageEventOnce([&](FormEvent::System event)
-		{
-			if(event.message == decltype(event.message)::QUIT)
-			{
-				need_quit = true;
-			}
-		})
-			)
-		{
-			
-		}
-		if(need_quit)
-			break;
+		Form::PeekMessageEvent(responder);
+		std::this_thread::yield();
 	}
 	
 

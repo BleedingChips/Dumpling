@@ -1,5 +1,6 @@
 module;
 
+#include <assert.h>
 
 export module DumplingFormEvent;
 
@@ -11,84 +12,50 @@ import PotatoTaskSystem;
 export namespace Dumpling
 {
 
-	export namespace FormEvent
+	struct FormEventSystem
 	{
-		enum class Category
+		enum class Message
 		{
-			UNACCEPTABLE = 0,
+			QUIT,
+		};
+		Message message;
+	};
+
+	struct FormEventModify
+	{
+		enum class Message
+		{
+			DESTROY
+		};
+		Message message;
+	};
+
+
+	struct FormEvent
+	{
+		enum class Type
+		{
 			SYSTEM = 0x01,
 			MODIFY = 0x02,
 			INPUT = 0x04,
-			RAW = 0xFF,
 		};
 
-		struct System
+		Type type;
+
+		union 
 		{
-			enum class Message
-			{
-				QUIT
-			};
-			Message message;
+			FormEventSystem system;
+			FormEventModify modify;
 		};
 
-		struct Modify
-		{
-			enum class Message
-			{
-				DESTROY
-			};
-			Message message;
-		};
-
-		struct Input
-		{
-			/*
-			enum class Message
-			{
-				DESTROY
-			};
-			Message message;
-			*/
-		};
+		bool IsSystem() const { return type == Type::SYSTEM; }
+		FormEventSystem GetSystem() const { assert(IsSystem());  return system; }
 
 		enum class Respond
 		{
 			PASS,
 			CAPTURED,
 		};
-
-	}
-
-	enum class FormStyle
-	{
-		FixedSizeWindow,
 	};
 
-	struct FormSize
-	{
-		std::size_t width = 1024;
-		std::size_t height = 768;
-	};
-
-	struct FormProperty
-	{
-		FormStyle style = FormStyle::FixedSizeWindow;
-		FormSize form_size;
-		std::u8string_view title = u8"Default Dumping Form";
-	};
-
-}
-
-export constexpr Dumpling::FormEvent::Category operator& (Dumpling::FormEvent::Category c1, Dumpling::FormEvent::Category c2)
-{
-	return static_cast<Dumpling::FormEvent::Category>(
-		static_cast<std::size_t>(c1) & static_cast<std::size_t>(c2)
-	);
-}
-
-export constexpr Dumpling::FormEvent::Category operator| (Dumpling::FormEvent::Category c1, Dumpling::FormEvent::Category c2)
-{
-	return static_cast<Dumpling::FormEvent::Category>(
-		static_cast<std::size_t>(c1) | static_cast<std::size_t>(c2)
-	);
 }

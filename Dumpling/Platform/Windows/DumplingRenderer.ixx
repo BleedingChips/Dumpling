@@ -4,23 +4,23 @@ module;
 #include "dxgi1_6.h"
 #include "wrl.h"
 #include <cassert>
+#include "wrl.h"
 
 #undef interface
 #undef max
 
-export module DumplingDx12Renderer;
+export module DumplingRenderer;
 
 import std;
 import PotatoPointer;
 import PotatoIR;
-import DumplingWindowsForm;
+import DumplingForm;
 import DumplingPipeline;
 export import DumplingRendererTypes;
 
-export namespace Dumpling::Dx12
+export namespace Dumpling
 {
-
-	using Dumpling::Win32::ComPtr;
+	using Microsoft::WRL::ComPtr;
 
 	using DevicePtr = ComPtr<ID3D12Device>;
 	using CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
@@ -236,7 +236,7 @@ export namespace Dumpling::Dx12
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		FormWrapper::Ptr CreateFormWrapper(Win32::Form& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		FormWrapper::Ptr CreateFormWrapper(Form form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		static bool InitDebugLayer();
 

@@ -9,13 +9,191 @@ module;
 
 #define DUMPLING_WM_GLOBAL_MESSAGE static_cast<UINT>(WM_USER + 100)
 
-module DumplingWindowsForm;
+module DumplingForm;
 
 import std;
 import PotatoIR;
 import PotatoEncode;
 import DumplingFormEvent;
 
+
+namespace Dumpling
+{
+	bool IsMessageMarkAsSkip(UINT msg, HRESULT result)
+	{
+		return true;
+	}
+
+
+	struct FixedFormStyle : public FormStyle
+	{
+		virtual void AddFormStyleRef() const override {}
+		virtual void SubFormStyleRef() const override {}
+		static wchar_t const* style_name;
+		wchar_t const* PlatformStyleName() const override { return style_name; }
+		FixedFormStyle()
+		{
+			HBRUSH back_ground_brush = ::CreateSolidBrush(BLACK_BRUSH);
+			const WNDCLASSEXW static_class = {
+				sizeof(WNDCLASSEXW),
+				CS_HREDRAW | CS_VREDRAW,
+				&FixedFormStyle::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, back_ground_brush, NULL, style_name, NULL};
+
+			ATOM res = RegisterClassExW(&static_class);
+			assert(res != 0);
+		}
+		~FixedFormStyle()
+		{
+			UnregisterClassW(style_name, GetModuleHandle(0));
+		}
+		DWORD PlatformWSStyle() const override { return WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX; }
+		static LRESULT CALLBACK DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	};
+
+	wchar_t const* FixedFormStyle::style_name = L"dumpling_build_in_fixed";
+
+	FormStyle::Ptr FormStyle::GetFixedStyle()
+	{
+		static FixedFormStyle instance;
+		return FormStyle::Ptr{ &instance };
+	}
+
+
+	std::optional<FormEvent> Translate(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		return std::nullopt;
+	}
+
+	HRESULT TranslateRespond(FormEvent::Respond respond, UINT msg)
+	{
+		return S_OK;
+		switch(respond)
+		{
+		case FormEvent::Respond::CAPTURED:
+			return S_OK;
+		}
+	}
+
+	HRESULT MarkMessageAsSkip(UINT msg)
+	{
+		return S_OK;
+	}
+
+	HRESULT FormEventCapture::RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, std::optional<FormEvent> const& event)
+	{
+		if(event.has_value())
+		{
+			return TranslateRespond(RespondEvent(*event), msg);
+		}
+		return MarkMessageAsSkip(msg);
+	}
+
+	Form Form::Create(Config fig)
+	{
+		RECT adject_rect{ 0, 0,
+				static_cast<LONG>(fig.rectangle.x_size),
+				static_cast<LONG>(fig.rectangle.y_size)
+		};
+
+		AdjustWindowRect(
+			&adject_rect,
+			fig.style->PlatformWSStyle(),
+			FALSE
+		);
+
+		HWND hwnd = CreateWindowExW(
+			0,
+			fig.style->PlatformStyleName(),
+			fig.title,
+			fig.style->PlatformWSStyle(),
+			fig.rectangle.x_offset, fig.rectangle.y_offset, adject_rect.right - adject_rect.left, adject_rect.bottom - adject_rect.top,
+			NULL,
+			NULL,
+			GetModuleHandle(0),
+			fig.event_capture.GetPointer()
+		);
+		return Form{hwnd};
+	}
+
+	LRESULT CALLBACK FixedFormStyle::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		assert(hWnd != nullptr);
+		switch (msg)
+		{
+		case WM_CREATE:
+			{
+				CREATESTRUCTA* Struct = reinterpret_cast<CREATESTRUCTA*>(lParam);
+				assert(Struct != nullptr);
+				auto inter = static_cast<FormEventCapturePlatform*>(Struct->lpCreateParams);
+				if(inter != nullptr)
+				{
+					FormEventCapturePlatform::Wrapper wrap;
+					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
+					wrap.AddRef(inter);
+					auto event = Translate(hWnd, msg, wParam, lParam);
+					inter->RespondEvent(hWnd, msg, wParam, lParam, event);
+				}
+				break;
+			}
+		case WM_NCDESTROY:
+			{
+				LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+				auto ptr = reinterpret_cast<FormEventCapturePlatform*>(data);
+				if (ptr != nullptr)
+				{
+					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+					FormEventCapturePlatform::Wrapper wrap;
+					wrap.SubRef(ptr);
+				}
+				break;
+			}
+		default:
+		{
+			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+			auto ptr = reinterpret_cast<FormEventCapturePlatform*>(data);
+			if (ptr != nullptr)
+			{
+				auto event = Translate(hWnd, msg, wParam, lParam);
+				return ptr->RespondEvent(hWnd, msg, wParam, lParam, event);
+			}
+			break;
+		}
+		}
+		return DefWindowProcW(hWnd, msg, wParam, lParam);
+	}
+
+	bool Form::PeekMessageEventOnce(FormEventCapturePlatform& event_capture)
+	{
+		MSG msg;
+		auto re = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+		if (re)
+		{
+			auto Category = Translate(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+			auto re = event_capture.RespondEvent(msg.hwnd, msg.message, msg.wParam, msg.lParam, Category);
+			if (IsMessageMarkAsSkip(msg.message, re))
+			{
+				DispatchMessageW(&msg);
+			}
+		}
+		return re;
+	}
+
+	std::size_t Form::PeekMessageEvent(FormEventCapturePlatform& event_capture)
+	{
+		std::size_t count = 0;
+		while(PeekMessageEventOnce(event_capture))
+		{
+			count += 1;
+		}
+		return count;
+	}
+
+}
+
+
+
+
+/*
 namespace
 {
 	struct FormClassStyle
@@ -24,12 +202,15 @@ namespace
 		~FormClassStyle();
 	};
 
+
 	DWORD GetWSStyle(Dumpling::FormStyle style)
 	{
 		return WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 	}
 
 	wchar_t const* form_class_style_name = L"Dumpling_Default_GameStyle";
+
+	struct FixedWindows : public Dumpling
 
 	
 
@@ -217,48 +398,7 @@ namespace Dumpling::Win32
 		return re;
 	}
 
-	LRESULT CALLBACK Form::DefaultWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		assert(hWnd != nullptr);
-		switch (msg)
-		{
-		case WM_CREATE:
-			{
-				CREATESTRUCTA* Struct = reinterpret_cast<CREATESTRUCTA*>(lParam);
-				assert(Struct != nullptr);
-				Form* inter = static_cast<Form*>(Struct->lpCreateParams);
-				assert(inter != nullptr);
-				inter->hwnd = hWnd;
-				SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
-				inter->AddRef();
-				return inter->HandleEvent(hWnd, msg, wParam, lParam);
-			}
-		case WM_NCDESTROY:
-		{
-			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Form* ptr = reinterpret_cast<Form*>(data);
-			if (ptr != nullptr)
-			{
-				auto re = ptr->HandleEvent(hWnd, msg, wParam, lParam);
-				SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
-				ptr->SubRef();
-				return re;
-			}
-			break;
-		}
-		default:
-		{
-			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			Form* ptr = reinterpret_cast<Form*>(data);
-			if (ptr != nullptr)
-			{
-				return ptr->HandleEvent(hWnd, msg, wParam, lParam);
-			}
-			break;
-		}
-		}
-		return DefWindowProcW(hWnd, msg, wParam, lParam);
-	}
+	
 
 	void Form::Release()
 	{
@@ -349,3 +489,4 @@ namespace Dumpling::Win32
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 }
+*/
