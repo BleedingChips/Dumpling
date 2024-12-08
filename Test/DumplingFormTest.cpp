@@ -7,21 +7,18 @@ import std;
 using namespace Dumpling;
 
 
-bool need_quit = false;
-
 struct TopEventCapture: public Dumpling::FormEventCapture
 {
 	void AddFormEventCaptureRef() const override {}
 	void SubFormEventCaptureRef() const override {}
 	FormEvent::Respond RespondEvent(FormEvent event) override
 	{
-		if(event.IsSystem())
+		if(event.IsModify())
 		{
-			auto systm = event.GetSystem();
-			if(systm.message == FormEventSystem::Message::QUIT)
+			auto systm = event.GetModify();
+			if(systm.message == FormEventModify::Message::DESTROY)
 			{
-				need_quit = true;
-				return FormEvent::Respond::PASS;
+				Form::PostQuitEvent();
 			}
 		}
 		return FormEvent::Respond::PASS;
@@ -36,12 +33,24 @@ int main()
 	Form::Config config;
 
 	config.title = L"Fuck You Dumpling!";
+	config.event_capture = &responder;
 
 	auto form = Form::Create(config);
 
-	while(!need_quit)
+	bool MessageLoop = true;
+	while (MessageLoop)
 	{
-		Form::PeekMessageEvent(responder);
+		while (true)
+		{
+			auto re = Form::PeekMessageEventOnce();
+			if (!re.has_value())
+			{
+				MessageLoop = false;
+			}else if (!*re)
+			{
+				break;
+			}
+		}
 		std::this_thread::yield();
 	}
 	

@@ -25,7 +25,8 @@ export namespace Dumpling
 	{
 		enum class Message
 		{
-			DESTROY
+			DESTROY,
+			CLOSE
 		};
 		Message message;
 	};
@@ -49,7 +50,9 @@ export namespace Dumpling
 		};
 
 		bool IsSystem() const { return type == Type::SYSTEM; }
+		bool IsModify() const { return type == Type::MODIFY; }
 		FormEventSystem GetSystem() const { assert(IsSystem());  return system; }
+		FormEventModify GetModify() const { assert(IsModify());  return modify; }
 
 		enum class Respond
 		{

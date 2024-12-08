@@ -122,9 +122,30 @@ export namespace Dumpling
 		Form(Form&& form);
 		Form() = default;
 		Form(Form const&) = default;
-		static bool PeekMessageEventOnce(FormEventCapturePlatform& event_capture);
-		static std::size_t PeekMessageEvent(FormEventCapturePlatform& event_capture);
 
+		static std::optional<bool> PeekMessageEventOnce()
+		{
+			HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = nullptr;
+			return PeekMessageEventOnce(function, nullptr);
+		}
+		static std::optional<bool> PeekMessageEventOnce(HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam), void* data);
+		static std::optional<bool> PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data);
+		template<typename Func>
+		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<HRESULT, Func, HWND, UINT, WPARAM, LPARAM>)
+		{
+			return Form::PeekMessageEventOnce([](void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)->HRESULT
+			{
+					return (*static_cast<Func*>(data))(hWnd, msg, wParam, lParam);
+			}, &func);
+		}
+		template<typename Func>
+		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<FormEvent::Respond, Func, FormEvent>)
+		{
+			return Form::PeekMessageEventOnce([](void* data, FormEvent event)->FormEvent::Respond
+				{
+					return (*static_cast<Func*>(data))(event);
+				}, &func);
+		}
 
 	protected:
 

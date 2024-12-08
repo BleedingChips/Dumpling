@@ -19,11 +19,6 @@ import DumplingFormEvent;
 
 namespace Dumpling
 {
-	bool IsMessageMarkAsSkip(UINT msg, HRESULT result)
-	{
-		return true;
-	}
-
 
 	struct FixedFormStyle : public FormStyle
 	{
@@ -58,9 +53,31 @@ namespace Dumpling
 		return FormStyle::Ptr{ &instance };
 	}
 
+	bool IsMessageMarkAsSkip(UINT msg, HRESULT result)
+	{
+		return true;
+	}
+
+	bool IsMessageMarkAsCapture(UINT msg, HRESULT result)
+	{
+		return false;
+	}
+
 
 	std::optional<FormEvent> Translate(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+		FormEvent event;
+		switch (msg)
+		{
+		case WM_QUIT:
+			event.type = FormEvent::Type::SYSTEM;
+			event.system = FormEventSystem{ FormEventSystem::Message::QUIT };
+			return event;
+		case WM_DESTROY:
+			event.type = FormEvent::Type::MODIFY;
+			event.modify = FormEventModify{ FormEventModify::Message::DESTROY };
+			return event;
+		}
 		return std::nullopt;
 	}
 
@@ -131,7 +148,11 @@ namespace Dumpling
 					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
 					wrap.AddRef(inter);
 					auto event = Translate(hWnd, msg, wParam, lParam);
-					inter->RespondEvent(hWnd, msg, wParam, lParam, event);
+					auto re = inter->RespondEvent(hWnd, msg, wParam, lParam, event);
+					if (!IsMessageMarkAsSkip(msg, re))
+					{
+						return re;
+					}
 				}
 				break;
 			}
@@ -154,7 +175,11 @@ namespace Dumpling
 			if (ptr != nullptr)
 			{
 				auto event = Translate(hWnd, msg, wParam, lParam);
-				return ptr->RespondEvent(hWnd, msg, wParam, lParam, event);
+				auto re = ptr->RespondEvent(hWnd, msg, wParam, lParam, event);
+				if (!IsMessageMarkAsSkip(msg, re))
+				{
+					return re;
+				}
 			}
 			break;
 		}
@@ -162,30 +187,67 @@ namespace Dumpling
 		return DefWindowProcW(hWnd, msg, wParam, lParam);
 	}
 
-	bool Form::PeekMessageEventOnce(FormEventCapturePlatform& event_capture)
+	std::optional<bool> Form::PeekMessageEventOnce(HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam), void* data)
 	{
 		MSG msg;
 		auto re = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
 		if (re)
 		{
-			auto Category = Translate(msg.hwnd, msg.message, msg.wParam, msg.lParam);
-			auto re = event_capture.RespondEvent(msg.hwnd, msg.message, msg.wParam, msg.lParam, Category);
-			if (IsMessageMarkAsSkip(msg.message, re))
+			if (function != nullptr)
 			{
-				DispatchMessageW(&msg);
+				auto res = (*function)(data, msg.hwnd, msg.message, msg.wParam, msg.lParam);
+				if (!IsMessageMarkAsSkip(msg.message, res))
+				{
+					return true;
+				}
 			}
+
+			if (msg.message == WM_QUIT)
+			{
+				return std::nullopt;
+			}
+
+			DispatchMessageW(&msg);
+
+			return true;
 		}
 		return re;
 	}
 
-	std::size_t Form::PeekMessageEvent(FormEventCapturePlatform& event_capture)
+	std::optional<bool> Form::PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data)
 	{
-		std::size_t count = 0;
-		while(PeekMessageEventOnce(event_capture))
+		MSG msg;
+		auto re = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+		if (re)
 		{
-			count += 1;
+			if (function != nullptr)
+			{
+				auto res_event = Translate(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+				if (res_event.has_value())
+				{
+					auto res = (*function)(data, *res_event);
+					if (res == FormEvent::Respond::CAPTURED)
+					{
+						return TranslateRespond(res, msg.message);
+					}
+				}
+			}
+
+			if (msg.message == WM_QUIT)
+			{
+				return std::nullopt;
+			}
+
+			DispatchMessageW(&msg);
+
+			return true;
 		}
-		return count;
+		return re;
+	}
+
+	void Form::PostQuitEvent()
+	{
+		::PostQuitMessage(0);
 	}
 
 }
