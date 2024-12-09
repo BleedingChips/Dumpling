@@ -4,9 +4,7 @@ module;
 export module DumplingRendererTypes;
 
 import std;
-import PotatoMisc;
-import PotatoPointer;
-import PotatoIR;
+import Potato;
 import DumplingPipeline;
 
 export namespace Dumpling

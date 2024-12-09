@@ -58,7 +58,7 @@ namespace Dumpling
 	{
 		if(require_state == D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
 		{
-			ResourcePtr resource;
+			Dx12ResourcePtr resource;
 			std::size_t index = 0;
 			{
 				std::shared_lock sl(logic_mutex);
@@ -76,7 +76,7 @@ namespace Dumpling
 
 	struct FormWrapperImp : public FormWrapper, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		FormWrapperImp(Potato::IR::MemoryResourceRecord record, SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
+		FormWrapperImp(Potato::IR::MemoryResourceRecord record, Dx12SwapChainPtr swap_chain, Dx12DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
 			: MemoryResourceRecordIntrusiveInterface(record), FormWrapper(std::move(swap_chain), std::move(m_rtvHeap), config, offset)
 		{
 			
@@ -111,10 +111,10 @@ namespace Dumpling
 				);
 				if(SUCCEEDED(re))
 				{
-					SwapChainPtr swap_chain;
+					Dx12SwapChainPtr swap_chain;
 					if(SUCCEEDED(swapChain.As(&swap_chain)))
 					{
-						DescriptorHeapPtr m_rtvHeap;
+						Dx12DescriptorHeapPtr m_rtvHeap;
 						D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
 				        rtvHeapDesc.NumDescriptors = swapChainDesc.BufferCount;
 				        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -130,7 +130,7 @@ namespace Dumpling
 					        // Create a RTV and a command allocator for each frame.
 					        for (UINT n = 0; n < swapChainDesc.BufferCount; n++)
 					        {
-								ResourcePtr resource;
+								Dx12ResourcePtr resource;
 					            swap_chain->GetBuffer(n, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
 					            device->CreateRenderTargetView(resource.Get(), nullptr, rtvHandle);
 								rtvHandle.ptr += m_rtvDescriptorSize;
@@ -184,7 +184,7 @@ namespace Dumpling
 			}
 			if(index == total_allocator.size())
 			{
-				CommandAllocatorPtr new_allocator;
+				Dx12CommandAllocatorPtr new_allocator;
 				auto re = device->CreateCommandAllocator(
 					D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT, 
 					__uuidof(decltype(new_allocator)::InterfaceType), reinterpret_cast<void**>(new_allocator.GetAddressOf())
@@ -196,7 +196,7 @@ namespace Dumpling
 					return false;
 			}
 			auto& ref = total_allocator[index];
-			GraphicCommandListPtr target_command_list;
+			Dx12GraphicCommandListPtr target_command_list;
 			if(!free_command_list.empty())
 			{
 				target_command_list = std::move(free_command_list.back());
@@ -284,7 +284,7 @@ namespace Dumpling
 			
 			for(auto ite : need_commited_command)
 			{
-				GraphicCommandListPtr temp;
+				Dx12GraphicCommandListPtr temp;
 				auto re = ite->QueryInterface(
 					__uuidof(decltype(temp)::InterfaceType), reinterpret_cast<void**>(temp.GetAddressOf())
 				);
@@ -350,7 +350,7 @@ namespace Dumpling
 
 	struct FrameRendererImp : public FrameRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		FrameRendererImp(Potato::IR::MemoryResourceRecord record, DevicePtr device, CommandQueuePtr ptr, FencePtr fence)
+		FrameRendererImp(Potato::IR::MemoryResourceRecord record, Dx12DevicePtr device, Dx12CommandQueuePtr ptr, Dx12FencePtr fence)
 			: MemoryResourceRecordIntrusiveInterface(record), FrameRenderer(std::move(device), std::move(ptr), std::move(fence), record.GetMemoryResource())
 		{
 
@@ -361,7 +361,7 @@ namespace Dumpling
 
 	FrameRenderer::Ptr Device::CreateFrameRenderer(std::pmr::memory_resource* resource)
 	{
-		FencePtr fence;
+		Dx12FencePtr fence;
 		auto re = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::InterfaceType), reinterpret_cast<void**>(fence.GetAddressOf()));
 		if(SUCCEEDED(re))
 		{
@@ -373,7 +373,7 @@ namespace Dumpling
 
 	struct DeviceImp : public Device, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		DeviceImp(Potato::IR::MemoryResourceRecord record, FactoryPtr factory, DevicePtr device, CommandQueuePtr queue)
+		DeviceImp(Potato::IR::MemoryResourceRecord record, Dx12FactoryPtr factory, Dx12DevicePtr device, Dx12CommandQueuePtr queue)
 			: MemoryResourceRecordIntrusiveInterface(record), Device(std::move(factory), std::move(device), std::move(queue))
 		{}
 	protected:
@@ -383,17 +383,17 @@ namespace Dumpling
 
 	auto Device::Create(std::pmr::memory_resource* resource)-> Ptr
 	{
-		FactoryPtr rptr;
+		Dx12FactoryPtr rptr;
 		UINT Flags = 0;
 		Flags |= DXGI_CREATE_FACTORY_DEBUG;
 		HRESULT result = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
 		if(SUCCEEDED(result))
 		{
-			DevicePtr dev_ptr;
+			Dx12DevicePtr dev_ptr;
 			result = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
 			if(SUCCEEDED(result))
 			{
-				CommandQueuePtr command_queue;
+				Dx12CommandQueuePtr command_queue;
 				D3D12_COMMAND_QUEUE_DESC desc{
 					D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
 					D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,

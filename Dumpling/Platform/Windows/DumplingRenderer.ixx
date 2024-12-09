@@ -2,9 +2,7 @@ module;
 
 #include "d3d12.h"
 #include "dxgi1_6.h"
-#include "wrl.h"
 #include <cassert>
-#include "wrl.h"
 
 #undef interface
 #undef max
@@ -12,28 +10,14 @@ module;
 export module DumplingRenderer;
 
 import std;
-import PotatoPointer;
-import PotatoIR;
+import Potato;
 import DumplingForm;
 import DumplingPipeline;
-export import DumplingRendererTypes;
+import DumplingRendererTypes;
+import DumplingDX12;
 
 export namespace Dumpling
 {
-	using Microsoft::WRL::ComPtr;
-
-	using DevicePtr = ComPtr<ID3D12Device>;
-	using CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
-	using CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
-	using CommandListPtr = ComPtr<ID3D12CommandList>;
-	using GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
-	using FencePtr = ComPtr<ID3D12Fence>;
-	using ResourcePtr = ComPtr<ID3D12Resource>;
-	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
-	using FactoryPtr = ComPtr<IDXGIFactory2>;
-	using SwapChainPtr = ComPtr<IDXGISwapChain3>;
-	using DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
-
 	export struct Renderer;
 
 	struct RendererResource
@@ -48,7 +32,7 @@ export namespace Dumpling
 
 		struct Description
 		{
-			ResourcePtr resource_ptr;
+			Dx12ResourcePtr resource_ptr;
 			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
 			D3D12_RESOURCE_STATES default_state;
 		};
@@ -79,15 +63,15 @@ export namespace Dumpling
 
 	protected:
 
-		FormWrapper(SwapChainPtr swap_chain, DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
+		FormWrapper(Dx12SwapChainPtr swap_chain, Dx12DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
 			: swap_chain(std::move(swap_chain)), m_rtvHeap(std::move(m_rtvHeap)), config(config), offset(offset)
 		{
 			current_index = this->swap_chain->GetCurrentBackBufferIndex();
 			logic_current_index = current_index;
 		}
 
-		SwapChainPtr swap_chain;
-		DescriptorHeapPtr m_rtvHeap;
+		Dx12SwapChainPtr swap_chain;
+		Dx12DescriptorHeapPtr m_rtvHeap;
 		const std::size_t offset;
 		const Config config;
 		mutable std::shared_mutex logic_mutex;
@@ -116,7 +100,7 @@ export namespace Dumpling
 
 		struct ResourceRecord
 		{
-			ResourcePtr reference_resource;
+			Dx12ResourcePtr reference_resource;
 			D3D12_CPU_DESCRIPTOR_HANDLE handle;
 			D3D12_RESOURCE_STATES default_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
 		};
@@ -138,7 +122,7 @@ export namespace Dumpling
 			assert(!command);
 		}
 
-		GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
+		Dx12GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
 
 
 		void SetRenderTargets(RenderTargetSet const& render_targets);
@@ -147,7 +131,7 @@ export namespace Dumpling
 
 	protected:
 
-		GraphicCommandListPtr command;
+		Dx12GraphicCommandListPtr command;
 		std::size_t reference_allocator_index = std::numeric_limits<std::size_t>::max();
 		std::size_t frame = 0;
 
@@ -182,7 +166,7 @@ export namespace Dumpling
 		bool PopPassRenderer_AssumedLocked(PassRenderer& output);
 		bool FinishPassRenderer_AssumedLocked(PassRenderer& output);
 
-		FrameRenderer(DevicePtr device, CommandQueuePtr queue, FencePtr fence, std::pmr::memory_resource* resource)
+		FrameRenderer(Dx12DevicePtr device, Dx12CommandQueuePtr queue, Dx12FencePtr fence, std::pmr::memory_resource* resource)
 			: device(std::move(device)), queue(std::move(queue)), fence(std::move(fence)), total_allocator(resource), free_command_list(resource), need_commited_command(resource)
 		{
 			
@@ -200,18 +184,18 @@ export namespace Dumpling
 
 		struct AllocateTuple
 		{
-			CommandAllocatorPtr allocator;
+			Dx12CommandAllocatorPtr allocator;
 			State state = State::Idle;
 			std::size_t frame;
 		};
 
-		DevicePtr device;
-		CommandQueuePtr queue;
-		FencePtr fence;
+		Dx12DevicePtr device;
+		Dx12CommandQueuePtr queue;
+		Dx12FencePtr fence;
 
 		std::mutex renderer_mutex;
 		std::pmr::vector<AllocateTuple> total_allocator;
-		std::pmr::deque<GraphicCommandListPtr> free_command_list;
+		std::pmr::deque<Dx12GraphicCommandListPtr> free_command_list;
 		std::pmr::vector<ID3D12CommandList*> need_commited_command;
 		std::size_t last_flush_frame = 0;
 		std::size_t running_count = 0;
@@ -240,19 +224,19 @@ export namespace Dumpling
 		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		static bool InitDebugLayer();
 
-		DevicePtr::InterfaceType* GetDevice() { return device.Get(); }
+		Dx12DevicePtr::InterfaceType* GetDevice() { return device.Get(); }
 
 	protected:
 
-		Device(FactoryPtr factory, DevicePtr device, CommandQueuePtr queue)
+		Device(Dx12FactoryPtr factory, Dx12DevicePtr device, Dx12CommandQueuePtr queue)
 			:factory(std::move(factory)),  device(std::move(device)), queue(std::move(queue))
 		{
 			
 		}
 
-		FactoryPtr factory;
-		DevicePtr device;
-		CommandQueuePtr queue;
+		Dx12FactoryPtr factory;
+		Dx12DevicePtr device;
+		Dx12CommandQueuePtr queue;
 
 		virtual void AddDeviceRef() const = 0;
 		virtual void SubDeviceRef() const = 0;

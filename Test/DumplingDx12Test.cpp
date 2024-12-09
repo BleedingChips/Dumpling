@@ -11,15 +11,15 @@ struct TopEventCapture: public Dumpling::FormEventCapture
 {
 	void AddFormEventCaptureRef() const override {}
 	void SubFormEventCaptureRef() const override {}
-	TopEventCapture() : FormEventCapture(FormEvent::Category::MODIFY)
+	FormEvent::Respond RespondEvent(FormEvent event) override
 	{
-		volatile int i = 0;
-	}
-	FormEvent::Respond Receive(Form& form, FormEvent::Modify event) override
-	{
-		if(event.message == FormEvent::Modify::Message::DESTROY)
+		if (event.IsModify())
 		{
-			Form::PostQuitEvent();
+			auto modify = event.GetModify();
+			if (modify.message == decltype(modify.message)::DESTROY)
+			{
+				Form::PostQuitEvent();
+			}
 		}
 		return FormEvent::Respond::PASS;
 	}
@@ -49,17 +49,13 @@ int main()
 
 	auto device = Device::Create();
 
-	auto form = Form::Create();
+	Form::Config config;
+	config.title = L"FuckYou";
+	config.event_capture = &top;
 
-	FormProperty pro;
-	pro.title = u8"DumplingDx12Test";
-	pro.form_size = {1024, 600};
+	auto form = Form::Create(config);
 
-	form->InsertCapture(&top);
-
-	form->Init(pro);
-
-	auto output = device->CreateFormWrapper(*form);
+	auto output = device->CreateFormWrapper(form);
 
 	auto form_renderer = device->CreateFrameRenderer();
 
@@ -67,18 +63,22 @@ int main()
 	float G = 0.0f;
 	float B = 0.0f;
 
-	while(true)
+	bool need_loop = true;
+	while(need_loop)
 	{
-		bool need_quit = false;
 
-
-		Form::PeekMessageEvent([&](FormEvent::System event)
+		while (true)
 		{
-			if (event.message == FormEvent::System::Message::QUIT)
+			auto re = Form::PeekMessageEventOnce();
+			if (re.has_value())
 			{
-				need_quit = true;
+				if (!*re)
+					break;
+			}else
+			{
+				need_loop = false;
 			}
-		});
+		}
 
 		PassRenderer ren;
 
@@ -107,9 +107,6 @@ int main()
 			G -= 1.0f;
 		if(B >= 1.0f)
 			B -= 1.0f;
-
-		if(need_quit)
-			break;
 	}
 	
 

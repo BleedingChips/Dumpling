@@ -9,9 +9,7 @@ module;
 export module DumplingForm;
 
 import std;
-import PotatoPointer;
-import PotatoIR;
-import PotatoTaskSystem;
+import Potato;
 export import DumplingFormEvent;
 
 
