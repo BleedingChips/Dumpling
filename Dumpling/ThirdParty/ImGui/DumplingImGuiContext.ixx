@@ -7,9 +7,7 @@ export module DumplingImGuiContext;
 import std;
 import PotatoPointer;
 
-#ifdef _WIN32
-import DumplingDx12Renderer;
-#endif
+import Dumpling;
 
 export namespace Dumpling::Gui
 {
@@ -41,13 +39,13 @@ export namespace Dumpling::Gui
 			void SubRef(HeadUpDisplay const* ptr)  { ptr->SubHeadUpDisplayRef(); }
 		};
 		using Ptr = Potato::Pointer::IntrusivePtr<HeadUpDisplay, Wrapper>;
-		bool Commited(Dx12::PassRenderer& renderer);
+		bool Commited(Dumpling::PassRenderer& renderer);
 	protected:
 		HeadUpDisplay(Widget::Ptr top_widget, ImGuiContext* context) : top_widget(std::move(top_widget)), context(context) {assert(context != nullptr);}
 		virtual ~HeadUpDisplay();
 		virtual void AddHeadUpDisplayRef() const = 0;
 		virtual void SubHeadUpDisplayRef() const = 0;
-		virtual void CommitedToRenderer(Dx12::PassRenderer& renderer) = 0;
+		virtual void CommitedToRenderer(Dumpling::PassRenderer& renderer) = 0;
 		virtual void StartFrame() = 0;
 		virtual void EndFrame() = 0;
 

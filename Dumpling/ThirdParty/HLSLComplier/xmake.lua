@@ -7,8 +7,8 @@ target("DumplingHLSLComplier")
     add_files("*.ixx", {public=true})
     add_files("*.cpp")
     if is_plat("windows") then
-        add_files("Platform/Dx12/*.ixx", {public=true})
-        add_files("Platform/Dx12/*.cpp")
+        add_files("Platform/*.ixx", {public=true})
+        add_files("Platform/*.cpp")
     end
     add_deps("Dumpling")
     add_packages("directxshadercomplier")

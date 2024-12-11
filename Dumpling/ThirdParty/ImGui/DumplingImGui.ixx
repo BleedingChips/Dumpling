@@ -5,9 +5,8 @@ export module DumplingImGui;
 
 import std;
 export import DumplingImGuiContext;
+import Dumpling;
 #ifdef _WIN32
-import DumplingWindowsForm;
-import DumplingDx12Renderer;
 import DumplingImGuiWindows;
 import DumplingImGuiDx12;
 #endif
@@ -15,6 +14,7 @@ import DumplingImGuiDx12;
 
 export namespace Dumpling::Gui
 {
+	/*
 	inline HeadUpDisplay::Ptr CreateHUD(Win32::Form& form, Dx12::Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource())
 	{
 #ifdef _WIN32
@@ -23,4 +23,5 @@ export namespace Dumpling::Gui
 		return {};
 #endif
 	}
+	*/
 }

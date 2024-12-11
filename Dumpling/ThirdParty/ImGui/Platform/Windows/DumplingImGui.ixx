@@ -9,12 +9,13 @@ export module DumplingImGuiWindows;
 #undef interface
 
 import std;
-import DumplingWindowsForm;
+import Dumpling;
 import PotatoPointer;
 
 
 export namespace Dumpling
 {
+	/*
 	struct ImGuiFormEventCapture : public Win32::FormEventCapture
 	{
 		static Ptr GetInstance();
@@ -28,4 +29,5 @@ export namespace Dumpling
 		void AddFormEventCaptureRef() const override {}
 		void SubFormEventCaptureRef() const override {}
 	};
+	*/
 }

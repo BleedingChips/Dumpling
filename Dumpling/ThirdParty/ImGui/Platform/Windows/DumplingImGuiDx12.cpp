@@ -10,6 +10,7 @@ module DumplingImGuiDx12;
 
 namespace Dumpling::Gui
 {
+	/*
 	auto HeadUpDisplayWin32Dx12::Create(Win32::Form& form, Dx12::Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
 	{
 		IMGUI_CHECKVERSION();
@@ -89,4 +90,5 @@ namespace Dumpling::Gui
 	{
 		ImGui::Render();
 	}
+	*/
 }

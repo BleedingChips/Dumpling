@@ -1,6 +1,7 @@
 
 module;
 
+#include <wrl/client.h>
 #include "d3d12.h"
 
 export module DumplingHLSLCompilerDx12;
@@ -8,14 +9,13 @@ export module DumplingHLSLCompilerDx12;
 import std;
 import PotatoIR;
 import PotatoPointer;
-import DumplingWindowsForm;
-import DumplingDx12Renderer;
+import Dumpling;
 import DumplingHLSLComplierContext;
 
 export namespace Dumpling::HLSLCompiler::Dx12
 {
-
-	using BlobPtr = Win32::ComPtr<ID3DBlob>;
+	using Microsoft::WRL::ComPtr;
+	using BlobPtr = ComPtr<ID3DBlob>;
 
 	struct CompileResult
 	{

@@ -9,16 +9,13 @@ module;
 export module DumplingImGuiDx12;
 
 import std;
-import PotatoIR;
-import PotatoPointer;
+import Dumpling;
 import DumplingImGuiContext;
-import DumplingWindowsForm;
-import DumplingDx12Renderer;
 import DumplingImGuiWindows;
 
 export namespace Dumpling::Gui
 {
-
+	/*
 	struct HeadUpDisplayWin32Dx12 : public HeadUpDisplay, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
 		static Ptr Create(Win32::Form& form, Dx12::Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
@@ -38,4 +35,5 @@ export namespace Dumpling::Gui
 		~HeadUpDisplayWin32Dx12();
 		Dx12::DescriptorHeapPtr heap;
 	};
+	*/
 }

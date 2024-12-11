@@ -23,7 +23,7 @@ namespace Dumpling::Gui
 
 	static std::mutex ImGuiContextMutex;
 
-	bool HeadUpDisplay::Commited(Dx12::PassRenderer& renderer)
+	bool HeadUpDisplay::Commited(Dumpling::PassRenderer& renderer)
 	{
 		std::lock_guard lg(ImGuiContextMutex);
 		StartFrame();

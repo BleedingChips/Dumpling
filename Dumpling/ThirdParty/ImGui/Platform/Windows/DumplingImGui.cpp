@@ -12,7 +12,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 namespace Dumpling
 {
-
+	/*
 	HRESULT ImGuiFormEventCapture::ReceiveRaw(Win32::Form& interface, FormEvent::Category category, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
@@ -25,4 +25,5 @@ namespace Dumpling
 		static ImGuiFormEventCapture temp_capture;
 		return &temp_capture;
 	}
+	*/
 }

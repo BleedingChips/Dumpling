@@ -9,8 +9,6 @@ target("DumplingImGui")
     if is_plat("windows") then
         add_files("Platform/Windows/*.ixx", {public=true})
         add_files("Platform/Windows/*.cpp")
-        add_files("Platform/Windows/Dx12/*.ixx", {public=true})
-        add_files("Platform/Windows/Dx12/*.cpp")
     end
     add_deps("Dumpling")
     add_packages("imgui", {public=true})
