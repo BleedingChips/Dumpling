@@ -29,7 +29,7 @@ export namespace Dumpling
 
 		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapturePlatform, Wrapper>;
 
-		virtual HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, std::optional<FormEvent> const& event) = 0;
+		virtual HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
 		virtual ~FormEventCapturePlatform() = default;
 
 	protected:
@@ -64,7 +64,7 @@ export namespace Dumpling
 
 	private:
 
-		HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, std::optional<FormEvent> const& event) override final;
+		HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) override final;
 	};
 
 	struct FormStyle
@@ -126,8 +126,10 @@ export namespace Dumpling
 			HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = nullptr;
 			return PeekMessageEventOnce(function, nullptr);
 		}
+
 		static std::optional<bool> PeekMessageEventOnce(HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam), void* data);
 		static std::optional<bool> PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data);
+
 		template<typename Func>
 		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<HRESULT, Func, HWND, UINT, WPARAM, LPARAM>)
 		{

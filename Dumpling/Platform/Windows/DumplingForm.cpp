@@ -64,7 +64,7 @@ namespace Dumpling
 	}
 
 
-	std::optional<FormEvent> Translate(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	std::optional<FormEvent> TranslateEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		FormEvent event;
 		switch (msg)
@@ -96,8 +96,9 @@ namespace Dumpling
 		return S_OK;
 	}
 
-	HRESULT FormEventCapture::RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, std::optional<FormEvent> const& event)
+	HRESULT FormEventCapture::RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+		auto event = TranslateEvent(hWnd, msg, wParam, lParam);
 		if(event.has_value())
 		{
 			return TranslateRespond(RespondEvent(*event), msg);
@@ -147,8 +148,7 @@ namespace Dumpling
 					FormEventCapturePlatform::Wrapper wrap;
 					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
 					wrap.AddRef(inter);
-					auto event = Translate(hWnd, msg, wParam, lParam);
-					auto re = inter->RespondEvent(hWnd, msg, wParam, lParam, event);
+					auto re = inter->RespondEvent(hWnd, msg, wParam, lParam);
 					if (!IsMessageMarkAsSkip(msg, re))
 					{
 						return re;
@@ -174,8 +174,7 @@ namespace Dumpling
 			auto ptr = reinterpret_cast<FormEventCapturePlatform*>(data);
 			if (ptr != nullptr)
 			{
-				auto event = Translate(hWnd, msg, wParam, lParam);
-				auto re = ptr->RespondEvent(hWnd, msg, wParam, lParam, event);
+				auto re = ptr->RespondEvent(hWnd, msg, wParam, lParam);
 				if (!IsMessageMarkAsSkip(msg, re))
 				{
 					return re;
@@ -222,7 +221,7 @@ namespace Dumpling
 		{
 			if (function != nullptr)
 			{
-				auto res_event = Translate(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+				auto res_event = TranslateEvent(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 				if (res_event.has_value())
 				{
 					auto res = (*function)(data, *res_event);
