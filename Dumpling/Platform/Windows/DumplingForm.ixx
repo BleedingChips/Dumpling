@@ -120,6 +120,8 @@ export namespace Dumpling
 		Form(Form&& form);
 		Form() = default;
 		Form(Form const&) = default;
+		Form& operator=(Form const&) = default;
+		Form& operator=(Form&&);
 
 		static std::optional<bool> PeekMessageEventOnce()
 		{

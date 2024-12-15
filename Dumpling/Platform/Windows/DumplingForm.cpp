@@ -244,6 +244,20 @@ namespace Dumpling
 		return re;
 	}
 
+	Form::Form(Form&& form)
+		: handle(form.handle)
+	{
+		form.handle = nullptr;
+	}
+
+
+	Form& Form::operator=(Form&& form)
+	{
+		handle = form.handle;
+		form.handle = nullptr;
+		return *this;
+	}
+
 	void Form::PostQuitEvent()
 	{
 		::PostQuitMessage(0);
