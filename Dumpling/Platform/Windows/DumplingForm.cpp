@@ -263,6 +263,27 @@ namespace Dumpling
 		::PostQuitMessage(0);
 	}
 
+	bool Form::DestroyForm()
+	{
+		auto re = DestroyWindow(handle);
+		handle = nullptr;
+		return re;
+	}
+
+	Form::~Form()
+	{
+		DestroyForm();
+	}
+
+	bool Form::ShowForm(bool show)
+	{
+		if (!show)
+			return ::ShowWindow(handle, SW_HIDE);
+		else
+			return ::ShowWindow(handle, SW_SHOW);
+	}
+
+
 }
 
 

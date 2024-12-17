@@ -222,7 +222,7 @@ export namespace Dumpling
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		FormWrapper::Ptr CreateFormWrapper(Form form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		FormWrapper::Ptr CreateFormWrapper(Form const& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		static bool InitDebugLayer();
 

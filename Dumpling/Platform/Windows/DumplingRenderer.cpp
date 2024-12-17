@@ -86,7 +86,7 @@ namespace Dumpling
 		void SubRendererResourceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 	};
 
-	FormWrapper::Ptr Device::CreateFormWrapper(Form form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
+	FormWrapper::Ptr Device::CreateFormWrapper(Form const& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
 	{
 		assert(factory);
 

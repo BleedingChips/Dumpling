@@ -41,13 +41,8 @@ export namespace Dumpling
 
 	struct FormEventCapture : public FormEventCapturePlatform
 	{
-		struct Wrapper
-		{
-			void AddRef(FormEventCapture const* ptr) const { ptr->AddFormEventCaptureRef(); }
-			void SubRef(FormEventCapture const* ptr) const { ptr->SubFormEventCaptureRef(); }
-		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapture, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapture, FormEventCapturePlatform::Wrapper>;
 
 		
 		virtual FormEvent::Respond RespondEvent(FormEvent event) = 0;
@@ -119,9 +114,12 @@ export namespace Dumpling
 
 		Form(Form&& form);
 		Form() = default;
-		Form(Form const&) = default;
-		Form& operator=(Form const&) = default;
+		Form(Form const&) = delete;
+		Form& operator=(Form const&) = delete;
 		Form& operator=(Form&&);
+		~Form();
+		bool DestroyForm();
+		bool ShowForm(bool show);
 
 		static std::optional<bool> PeekMessageEventOnce()
 		{
