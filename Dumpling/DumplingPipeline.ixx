@@ -24,6 +24,29 @@ export namespace Dumpling
 		virtual void SubRendererRequesterRef() const = 0;
 	};
 
+	template<typename StorageT>
+	struct PipelineRequesterDefault : public PipelineRequester, public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	{
+		StorageT storage;
+		static Ptr Create(StorageT&& storage, std::pmr::memory_resource* resource = get_default_resource());
+		PipelineRequesterDefault(Potato::IR::MemoryResourceRecord record, StorageT&& storage) : MemoryResourceRecordIntrusiveInterface(record), storage(std::move(storage)) {}
+	protected:
+		virtual void AddRendererRequesterRef() const { Potato::IR::MemoryResourceRecordIntrusiveInterface::AddRef(); };
+		virtual void SubRendererRequesterRef() const { Potato::IR::MemoryResourceRecordIntrusiveInterface::SubRef(); }
+	};
+
+	template<typename StorageT>
+	auto PipelineRequesterDefault<StorageT>::Create(StorageT&& storage, std::pmr::memory_resource* resource)
+		-> Ptr
+	{
+		auto re = Potato::IR::MemoryResourceRecord::Allocate<PipelineRequesterDefault<StorageT>>(resource);
+		if (re)
+		{
+			return new(re.Get()) PipelineRequesterDefault<StorageT>{re, std::move(storage)};
+		}
+		return {};
+	}
+
 	struct PassProperty
 	{
 		enum class Category

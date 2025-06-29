@@ -8,7 +8,7 @@ import std;
 
 export namespace Dumpling
 {
-
+	/*
 	struct FormEventSystem
 	{
 		enum class Message
@@ -57,5 +57,5 @@ export namespace Dumpling
 			CAPTURED,
 		};
 	};
-
+	*/
 }

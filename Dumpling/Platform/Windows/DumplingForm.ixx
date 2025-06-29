@@ -16,50 +16,31 @@ export import DumplingFormEvent;
 export namespace Dumpling
 {
 
-
 	export struct Form;
 
-	struct FormEventCapturePlatform
+	struct FormEventCapture
 	{
 		struct Wrapper
 		{
-			void AddRef(FormEventCapturePlatform const* ptr) const { ptr->AddFormEventCapturePlatformRef(); }
-			void SubRef(FormEventCapturePlatform const* ptr) const { ptr->SubFormEventCapturePlatformRef(); }
+			void AddRef(FormEventCapture const* ptr) const { ptr->AddFormEventCaptureRef(); }
+			void SubRef(FormEventCapture const* ptr) const { ptr->SubFormEventCaptureRef(); }
 		};
 
-		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapturePlatform, Wrapper>;
+		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapture, Wrapper>;
 
 		virtual HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
-		virtual ~FormEventCapturePlatform() = default;
+		virtual ~FormEventCapture() = default;
+
+		static HRESULT RespondMarkAsCapture(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+		static HRESULT RespondMarkAsSkip(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+		static bool IsRespondMarkAsCaptured(HRESULT result, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 
 	protected:
-
-		virtual void AddFormEventCapturePlatformRef() const = 0;
-		virtual void SubFormEventCapturePlatformRef() const = 0;
-		
-	};
-
-	struct FormEventCapture : public FormEventCapturePlatform
-	{
-
-		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapture, FormEventCapturePlatform::Wrapper>;
-
-		
-		virtual FormEvent::Respond RespondEvent(FormEvent event) = 0;
-
-	protected:
-
-		void AddFormEventCapturePlatformRef() const override final { AddFormEventCaptureRef(); }
-		void SubFormEventCapturePlatformRef() const override final { SubFormEventCaptureRef(); }
 
 		virtual void AddFormEventCaptureRef() const = 0;
 		virtual void SubFormEventCaptureRef() const = 0;
-
-		friend struct Form;
-
-	private:
-
-		HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) override final;
+		
 	};
 
 	struct FormStyle
@@ -100,7 +81,7 @@ export namespace Dumpling
 		{
 			Rectangle rectangle;
 			FormStyle::Ptr style = FormStyle::GetFixedStyle();
-			FormEventCapturePlatform::Ptr event_capture;
+			FormEventCapture::Ptr event_capture;
 			wchar_t const* title = L"Dumpling Form";
 		};
 
@@ -128,7 +109,7 @@ export namespace Dumpling
 		}
 
 		static std::optional<bool> PeekMessageEventOnce(HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam), void* data);
-		static std::optional<bool> PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data);
+		//static std::optional<bool> PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data);
 
 		template<typename Func>
 		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<HRESULT, Func, HWND, UINT, WPARAM, LPARAM>)
@@ -138,21 +119,13 @@ export namespace Dumpling
 					return (*static_cast<Func*>(data))(hWnd, msg, wParam, lParam);
 			}, &func);
 		}
-		template<typename Func>
-		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<FormEvent::Respond, Func, FormEvent>)
-		{
-			return Form::PeekMessageEventOnce([](void* data, FormEvent event)->FormEvent::Respond
-				{
-					return (*static_cast<Func*>(data))(event);
-				}, &func);
-		}
 
 	protected:
 
 		Form(HWND handle) : handle(handle) {}
 
 		HWND handle = nullptr;
-
-		
 	};
+
+	bool RespondResultMarkAsCaptured(HRESULT result, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 }

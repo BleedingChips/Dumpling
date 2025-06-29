@@ -53,57 +53,20 @@ namespace Dumpling
 		return FormStyle::Ptr{ &instance };
 	}
 
-	bool IsMessageMarkAsSkip(UINT msg, HRESULT result)
-	{
-		return true;
-	}
 
-	bool IsMessageMarkAsCapture(UINT msg, HRESULT result)
-	{
-		return false;
-	}
-
-
-	std::optional<FormEvent> TranslateEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-	{
-		FormEvent event;
-		switch (msg)
-		{
-		case WM_QUIT:
-			event.type = FormEvent::Type::SYSTEM;
-			event.system = FormEventSystem{ FormEventSystem::Message::QUIT };
-			return event;
-		case WM_DESTROY:
-			event.type = FormEvent::Type::MODIFY;
-			event.modify = FormEventModify{ FormEventModify::Message::DESTROY };
-			return event;
-		}
-		return std::nullopt;
-	}
-
-	HRESULT TranslateRespond(FormEvent::Respond respond, UINT msg)
-	{
-		return S_OK;
-		switch(respond)
-		{
-		case FormEvent::Respond::CAPTURED:
-			return S_OK;
-		}
-	}
-
-	HRESULT MarkMessageAsSkip(UINT msg)
+	HRESULT FormEventCapture::RespondMarkAsCapture(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		return S_OK;
 	}
 
-	HRESULT FormEventCapture::RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	HRESULT FormEventCapture::RespondMarkAsSkip(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		auto event = TranslateEvent(hWnd, msg, wParam, lParam);
-		if(event.has_value())
-		{
-			return TranslateRespond(RespondEvent(*event), msg);
-		}
-		return MarkMessageAsSkip(msg);
+		return -1;
+	}
+
+	bool FormEventCapture::IsRespondMarkAsCaptured(HRESULT result, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		return SUCCEEDED(result);
 	}
 
 	Form Form::Create(Config fig)
@@ -142,14 +105,14 @@ namespace Dumpling
 			{
 				CREATESTRUCTA* Struct = reinterpret_cast<CREATESTRUCTA*>(lParam);
 				assert(Struct != nullptr);
-				auto inter = static_cast<FormEventCapturePlatform*>(Struct->lpCreateParams);
+				auto inter = static_cast<FormEventCapture*>(Struct->lpCreateParams);
 				if(inter != nullptr)
 				{
-					FormEventCapturePlatform::Wrapper wrap;
+					FormEventCapture::Wrapper wrap;
 					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(inter));
 					wrap.AddRef(inter);
 					auto re = inter->RespondEvent(hWnd, msg, wParam, lParam);
-					if (!IsMessageMarkAsSkip(msg, re))
+					if (FormEventCapture::IsRespondMarkAsCaptured(re, hWnd, msg, wParam, lParam))
 					{
 						return re;
 					}
@@ -159,11 +122,11 @@ namespace Dumpling
 		case WM_NCDESTROY:
 			{
 				LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-				auto ptr = reinterpret_cast<FormEventCapturePlatform*>(data);
+				auto ptr = reinterpret_cast<FormEventCapture*>(data);
 				if (ptr != nullptr)
 				{
 					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
-					FormEventCapturePlatform::Wrapper wrap;
+					FormEventCapture::Wrapper wrap;
 					wrap.SubRef(ptr);
 				}
 				break;
@@ -171,11 +134,11 @@ namespace Dumpling
 		default:
 		{
 			LONG_PTR data = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-			auto ptr = reinterpret_cast<FormEventCapturePlatform*>(data);
+			auto ptr = reinterpret_cast<FormEventCapture*>(data);
 			if (ptr != nullptr)
 			{
 				auto re = ptr->RespondEvent(hWnd, msg, wParam, lParam);
-				if (!IsMessageMarkAsSkip(msg, re))
+				if (FormEventCapture::IsRespondMarkAsCaptured(re, hWnd, msg, wParam, lParam))
 				{
 					return re;
 				}
@@ -195,40 +158,9 @@ namespace Dumpling
 			if (function != nullptr)
 			{
 				auto res = (*function)(data, msg.hwnd, msg.message, msg.wParam, msg.lParam);
-				if (!IsMessageMarkAsSkip(msg.message, res))
+				if (FormEventCapture::IsRespondMarkAsCaptured(res, msg.hwnd, msg.message, msg.wParam, msg.lParam))
 				{
-					return true;
-				}
-			}
-
-			if (msg.message == WM_QUIT)
-			{
-				return std::nullopt;
-			}
-
-			DispatchMessageW(&msg);
-
-			return true;
-		}
-		return re;
-	}
-
-	std::optional<bool> Form::PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data)
-	{
-		MSG msg;
-		auto re = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
-		if (re)
-		{
-			if (function != nullptr)
-			{
-				auto res_event = TranslateEvent(msg.hwnd, msg.message, msg.wParam, msg.lParam);
-				if (res_event.has_value())
-				{
-					auto res = (*function)(data, *res_event);
-					if (res == FormEvent::Respond::CAPTURED)
-					{
-						return TranslateRespond(res, msg.message);
-					}
+					return re;
 				}
 			}
 
