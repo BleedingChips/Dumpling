@@ -5,8 +5,11 @@ module;
 #include <dxgi1_6.h>
 #include <intsafe.h>
 #include <OCIdl.h>
+#include <d3d12sdklayers.h>
+#include "wrl.h"
 
 #undef interface
+#undef max
 
 module DumplingRenderer;
 
@@ -151,25 +154,17 @@ namespace Dumpling
 		return {};
 	}
 
-	bool FrameRenderer::PopPassRenderer(PassRenderer& output)
+	bool FrameRenderer::PopPassRenderer(PassRenderer& output, PassRequest const& request)
 	{
 		std::lock_guard lg(renderer_mutex);
-		return PopPassRenderer_AssumedLocked(output);
+		return PopPassRenderer_AssumedLocked(output, request);
 	}
 
 	FrameRenderer::~FrameRenderer()
 	{
-		{
-			std::lock_guard lg(renderer_mutex);
-			for(auto& ite : need_commited_command)
-			{
-				ite->Release();
-			}
-			need_commited_command.clear();
-		}
 	}
 
-	bool FrameRenderer::PopPassRenderer_AssumedLocked(PassRenderer& output)
+	bool FrameRenderer::PopPassRenderer_AssumedLocked(PassRenderer& output, PassRequest const& request)
 	{
 		if(!output.command)
 		{
@@ -223,6 +218,7 @@ namespace Dumpling
 			output.command = std::move(target_command_list);
 			output.frame = current_frame;
 			output.reference_allocator_index = index;
+			output.order = request.order;
 			++running_count;
 			return true;
 		}
@@ -243,10 +239,10 @@ namespace Dumpling
 			auto re = output.command->Close();
 			if(SUCCEEDED(re))
 			{
-				auto ptr = output.command.Get();
-				ptr->AddRef();
-				output.command.Reset();
-				need_commited_command.emplace_back(ptr);
+				finished_command_list.emplace_back(
+					output.order.value_or(std::numeric_limits<std::size_t>::max()),
+					std::move(output.command)
+				);
 				assert(total_allocator.size() > output.reference_allocator_index);
 				auto& ref = total_allocator[output.reference_allocator_index];
 				assert(ref.state == State::Using && ref.frame == current_frame);
@@ -275,24 +271,34 @@ namespace Dumpling
 			std::size_t old_frame;
 			{
 				std::lock_guard lg(frame_mutex);
-				queue->ExecuteCommandLists(need_commited_command.size(), need_commited_command.data());
+				std::sort(
+					finished_command_list.begin(),
+					finished_command_list.end(),
+					[](CommandList const& i1, CommandList const& i2) {
+						return i1.order < i2.order;
+					}
+				);
+
+				std::pmr::vector<ID3D12CommandList*> command_list;
+				command_list.reserve(finished_command_list.size());
+
+				for (auto& ite : finished_command_list)
+				{
+					command_list.push_back(ite.command_list.Get());
+				}
+
+				queue->ExecuteCommandLists(command_list.size(), command_list.data());
 				auto re = queue->Signal(fence.Get(), current_frame);
 				assert(SUCCEEDED(re));
 				old_frame = current_frame;
 				++current_frame;
 			}
 			
-			for(auto ite : need_commited_command)
+			for(auto ite : finished_command_list)
 			{
-				Dx12GraphicCommandListPtr temp;
-				auto re = ite->QueryInterface(
-					__uuidof(decltype(temp)::InterfaceType), reinterpret_cast<void**>(temp.GetAddressOf())
-				);
-				assert(SUCCEEDED(re));
-				free_command_list.push_back(std::move(temp));
-				ite->Release();
+				free_command_list.emplace_back(std::move(ite.command_list));
 			}
-			need_commited_command.clear();
+			finished_command_list.clear();
 			return old_frame;
 		}
 		return std::nullopt;

@@ -9,6 +9,7 @@ import DumplingPipeline;
 
 using namespace Dumpling;
 
+/*
 struct PipeI : public Dumpling::Pipeline
 {
 
@@ -34,37 +35,12 @@ struct PipeI : public Dumpling::Pipeline
 
 	PipeI()  {}
 };
+*/
 
 int main()
 {
-	PipeI pipe;
 
-	Dumpling::PassTable table;
-	auto in1 = table.CreatePipelineInstance(pipe);
-	auto p2 = table.RegisterPass(u8"Func2", {});
-
-	auto in2 = table.CreatePipelineInstance(pipe);
-
-	auto p1 = table.RegisterPass(u8"Func1", {});
-
-	auto in3 = table.CreatePipelineInstance(pipe);
-
-	Dumpling::PipelineRecorder recorder;
-
-	recorder.CommitPipeline(table, *in3, {});
-	recorder.CommitPipeline(table, *in3, {});
-
-	recorder.PushFrame();
-
-	recorder.CommitPipeline(table, *in3, {});
-	recorder.CommitPipeline(table, *in3, {});
-
-	recorder.PushFrame();
-
-	recorder.PopFrame();
-
-	std::array<Dumpling::PipelineRecorder::PassRequest, 10> storage;
-
+	/*
 	while(true)
 	{
 		bool Done = false;
@@ -84,6 +60,7 @@ int main()
 	}
 
 	recorder.PopFrame();
+	*/
 
 	return 0;
 }

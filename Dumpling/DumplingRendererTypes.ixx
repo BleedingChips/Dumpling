@@ -5,7 +5,6 @@ export module DumplingRendererTypes;
 
 import std;
 import Potato;
-import DumplingPipeline;
 
 export namespace Dumpling
 {

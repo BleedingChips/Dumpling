@@ -135,6 +135,7 @@ export namespace Dumpling
 		Dx12GraphicCommandListPtr command;
 		std::size_t reference_allocator_index = std::numeric_limits<std::size_t>::max();
 		std::size_t frame = 0;
+		std::optional<std::size_t> order;
 
 		std::array<D3D12_RESOURCE_BARRIER, (RenderTargetSet::max_render_target_count + 1) * 2> render_target_barriers;
 		std::array<D3D12_CPU_DESCRIPTOR_HANDLE, RenderTargetSet::max_render_target_count + 1> cache_render_target;
@@ -154,7 +155,7 @@ export namespace Dumpling
 		};
 		using Ptr = Potato::Pointer::IntrusivePtr<FrameRenderer, Wrapper>;
 
-		bool PopPassRenderer(PassRenderer& output);
+		bool PopPassRenderer(PassRenderer& output, PassRequest const& request);
 		bool FinishPassRenderer(PassRenderer& output);
 		std::optional<std::size_t> CommitFrame();
 		std::size_t GetCurrentFrame() const { std::shared_lock sl(frame_mutex); return current_frame; }
@@ -166,11 +167,11 @@ export namespace Dumpling
 
 		virtual ~FrameRenderer();
 
-		bool PopPassRenderer_AssumedLocked(PassRenderer& output);
+		bool PopPassRenderer_AssumedLocked(PassRenderer& output, PassRequest const& request);
 		bool FinishPassRenderer_AssumedLocked(PassRenderer& output);
 
 		FrameRenderer(Dx12DevicePtr device, Dx12CommandQueuePtr queue, Dx12FencePtr fence, std::pmr::memory_resource* resource)
-			: device(std::move(device)), queue(std::move(queue)), fence(std::move(fence)), total_allocator(resource), free_command_list(resource), need_commited_command(resource)
+			: device(std::move(device)), queue(std::move(queue)), fence(std::move(fence)), total_allocator(resource), free_command_list(resource), finished_command_list(resource)
 		{
 			
 		}
@@ -199,7 +200,14 @@ export namespace Dumpling
 		std::mutex renderer_mutex;
 		std::pmr::vector<AllocateTuple> total_allocator;
 		std::pmr::deque<Dx12GraphicCommandListPtr> free_command_list;
-		std::pmr::vector<ID3D12CommandList*> need_commited_command;
+
+		struct CommandList
+		{
+			std::size_t order = std::numeric_limits<std::size_t>::max();
+			Dx12GraphicCommandListPtr command_list;
+		};
+
+		std::pmr::vector<CommandList> finished_command_list;
 		std::size_t last_flush_frame = 0;
 		std::size_t running_count = 0;
 

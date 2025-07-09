@@ -10,7 +10,6 @@ export module DumplingForm;
 
 import std;
 import Potato;
-export import DumplingFormEvent;
 
 
 export namespace Dumpling
@@ -126,6 +125,4 @@ export namespace Dumpling
 
 		HWND handle = nullptr;
 	};
-
-	bool RespondResultMarkAsCaptured(HRESULT result, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 }

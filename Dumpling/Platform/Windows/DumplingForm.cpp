@@ -12,9 +12,6 @@ module;
 module DumplingForm;
 
 import std;
-import PotatoIR;
-import PotatoEncode;
-import DumplingFormEvent;
 
 
 namespace Dumpling
