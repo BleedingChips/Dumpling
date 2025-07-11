@@ -12,7 +12,7 @@ namespace Dumpling
 		return { infos.size() - 1, 1 };
 	}
 
-	PassIndex PassDistributor::GetPassIndex(std::wstring_view pass_name)
+	PassIndex PassDistributor::GetPassIndex(std::wstring_view pass_name) const
 	{
 		for (std::size_t index = 0; index < infos.size(); ++index)
 		{
@@ -40,31 +40,21 @@ namespace Dumpling
 		return {};
 	}
 
-	std::optional<std::size_t> PassDistributor::PopRequest(PassIndex pass_index, std::span<PassRequest> output, std::size_t offset) const
+	bool PassDistributor::PopRequest(PassIndex pass_index, PassRequest& output, std::size_t offset) const
 	{
 		if (pass_index.index < infos.size())
 		{
 			auto& ref = infos[pass_index.index];
-			if (ref.version == pass_index.version)
+			if (ref.version == pass_index.version && offset < ref.request.Size())
 			{
-				auto span = ref.request.Slice(std::span<Request const>{pass_request});
-				if (offset >= span.size())
-				{
-					return 0;
-				}
-				span = span.subspan(offset);
-				std::size_t index = 0;
-				std::size_t max_index = std::min(output.size(), span.size());
-				for (; index < max_index; ++index)
-				{
-					output[index].order = span[index].order;
-					output[index].property = ref.scription.property;
-					output[index].parameter = span[index].parameter;
-				}
-				return index;
+				auto& tar = pass_request[ref.request.Begin() + offset];
+				output.order = tar.order;
+				output.property = ref.scription.property;
+				output.parameter = tar.parameter;
+				return true;
 			}
 		}
-		return std::nullopt;
+		return false;
 	}
 
 	std::size_t PassDistributor::SendRequest(PassSequencer const& sequencer)

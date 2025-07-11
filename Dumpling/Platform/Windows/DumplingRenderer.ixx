@@ -114,7 +114,7 @@ export namespace Dumpling
 		friend struct PassRenderer;
 	};
 
-	export struct PassRenderer
+	struct PassRenderer
 	{
 		PassRenderer() = default;
 		ID3D12GraphicsCommandList* operator->() const { return command.Get(); }
@@ -146,7 +146,7 @@ export namespace Dumpling
 		friend struct FrameRenderer;
 	};
 
-	export struct FrameRenderer
+	struct FrameRenderer
 	{
 		struct Wrapper
 		{

@@ -41,9 +41,9 @@ export namespace Dumpling
 
 		PassIndex RegisterPass(PassScription scription);
 
-		PassIndex GetPassIndex(std::wstring_view pass_name);
+		PassIndex GetPassIndex(std::wstring_view pass_name) const;
 		Potato::IR::StructLayoutObject::Ptr CopyParameter(PassIndex pass_index) const;
-		std::optional<std::size_t> PopRequest(PassIndex pass_index, std::span<PassRequest> output, std::size_t offset = 0) const;
+		bool PopRequest(PassIndex pass_index, PassRequest& output, std::size_t offset = 0) const;
 		std::size_t SendRequest(PassSequencer const& sequencer);
 		void CleanRequest();
 
