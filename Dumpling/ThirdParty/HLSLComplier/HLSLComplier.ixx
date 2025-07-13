@@ -5,8 +5,9 @@ export module DumplingHLSLComplier;
 
 import std;
 export import DumplingHLSLComplierContext;
+
 #ifdef _WIN32
-import DumplingHLSLCompilerDx12;
+export import DumplingHLSLCompilerDx12;
 #endif
 
 

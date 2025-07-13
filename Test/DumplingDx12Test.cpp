@@ -1,11 +1,14 @@
-#include "d3d12.h"
-#include "dxgi1_6.h"
-
-
 import Dumpling;
 import std;
 
 using namespace Dumpling;
+
+
+struct ToFormEventCapture : public FormEventCapture
+{
+};
+
+
 
 struct TopEventCapture: public Dumpling::FormEventCapture
 {

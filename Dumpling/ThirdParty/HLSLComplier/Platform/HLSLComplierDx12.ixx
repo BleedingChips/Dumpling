@@ -7,9 +7,7 @@ module;
 export module DumplingHLSLCompilerDx12;
 
 import std;
-import PotatoIR;
-import PotatoPointer;
-import Dumpling;
+import Potato;
 import DumplingHLSLComplierContext;
 
 export namespace Dumpling::HLSLCompiler::Dx12

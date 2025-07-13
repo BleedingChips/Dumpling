@@ -1,5 +1,5 @@
 import std;
-import PotatoTaskSystem;
+import Potato;
 
 import Dumpling;
 import std;

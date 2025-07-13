@@ -5,10 +5,9 @@ export module DumplingImGui;
 
 import std;
 export import DumplingImGuiContext;
-import Dumpling;
 #ifdef _WIN32
-import DumplingImGuiWindows;
-import DumplingImGuiDx12;
+export import DumplingImGuiWindows;
+export import DumplingImGuiDx12;
 #endif
 
 

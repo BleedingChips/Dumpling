@@ -5,9 +5,8 @@ module;
 export module DumplingImGuiContext;
 
 import std;
-import PotatoPointer;
-
-import Dumpling;
+import Potato;
+import DumplingRenderer;
 
 export namespace Dumpling::Gui
 {

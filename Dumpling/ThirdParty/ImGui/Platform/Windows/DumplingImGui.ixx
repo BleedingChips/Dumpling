@@ -9,8 +9,7 @@ export module DumplingImGuiWindows;
 #undef interface
 
 import std;
-import Dumpling;
-import PotatoPointer;
+import Potato;
 
 
 export namespace Dumpling

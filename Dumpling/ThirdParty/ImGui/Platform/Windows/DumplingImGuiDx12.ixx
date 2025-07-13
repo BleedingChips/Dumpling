@@ -9,7 +9,6 @@ module;
 export module DumplingImGuiDx12;
 
 import std;
-import Dumpling;
 import DumplingImGuiContext;
 import DumplingImGuiWindows;
 
