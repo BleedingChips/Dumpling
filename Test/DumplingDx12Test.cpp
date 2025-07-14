@@ -4,57 +4,29 @@ import std;
 using namespace Dumpling;
 
 
-struct ToFormEventCapture : public FormEventCapture
+struct TopHook : public Dumpling::FormEventHook
 {
-};
-
-
-
-struct TopEventCapture: public Dumpling::FormEventCapture
-{
-	void AddFormEventCaptureRef() const override {}
-	void SubFormEventCaptureRef() const override {}
-	FormEvent::Respond RespondEvent(FormEvent event) override
+	virtual FormEvent::Respond Hook(FormEvent& event) override
 	{
-		if (event.IsModify())
+		if (event.IsFormDestory())
 		{
-			auto modify = event.GetModify();
-			if (modify.message == decltype(modify.message)::DESTROY)
-			{
-				Form::PostQuitEvent();
-			}
+			FormEvent::PostQuitEvent();
 		}
-		return FormEvent::Respond::PASS;
+		return event.RespondMarkAsSkip();
 	}
-};
-
-/*
-struct PipeI : public Dumpling::Pipeline
-{
-
-	virtual std::span<PassInfo> GetPassInfo() const { return {}; }
-	virtual std::span<std::size_t> GetDependence() const  { return {}; }
-	virtual Potato::IR::StructLayout::Ptr GetStruct() const  { return {}; }
-	virtual void AddPipelineRef() const {}
-	virtual void SubPipelineRef() const {}
-
-	PipeI()  {}
-};
-
-*/
-
+	virtual void AddFormEventHookRef() const {};
+	virtual void SubFormEventHookRef() const {};
+} hook;
 
 int main()
 {
 	Device::InitDebugLayer();
 
-	TopEventCapture top;
-
 	auto device = Device::Create();
 
 	Form::Config config;
 	config.title = L"FuckYou";
-	config.event_capture = &top;
+	config.event_hook = &hook;
 
 	auto form = Form::Create(config);
 
@@ -84,14 +56,16 @@ int main()
 		}
 
 		PassRenderer ren;
+		PassRequest request;
 
-		form_renderer->PopPassRenderer(ren);
-
-		RenderTargetSet sets;
-		sets.AddRenderTarget(*output);
-		ren.SetRenderTargets(sets);
-		ren.ClearRendererTarget(0, {R, G, B, 1.0f});
-		form_renderer->FinishPassRenderer(ren);
+		if (form_renderer->PopPassRenderer(ren, request))
+		{
+			RenderTargetSet sets;
+			sets.AddRenderTarget(*output);
+			ren.SetRenderTargets(sets);
+			ren.ClearRendererTarget(0, { R, G, B, 1.0f });
+			form_renderer->FinishPassRenderer(ren);
+		}
 
 		auto tar = form_renderer->CommitFrame();
 		form_renderer->FlushToLastFrame();

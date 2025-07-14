@@ -6,54 +6,47 @@ import std;
 
 using namespace Dumpling;
 
-
-struct TopEventCapture: public Dumpling::FormEventCapture
+struct TopHook : public Dumpling::FormEventHook
 {
-	void AddFormEventCaptureRef() const override {}
-	void SubFormEventCaptureRef() const override {}
-	FormEvent::Respond RespondEvent(FormEvent event) override
+	virtual FormEvent::Respond Hook(FormEvent& event) override
 	{
-		if(event.IsModify())
+		if (event.IsFormDestory())
 		{
-			auto systm = event.GetModify();
-			if(systm.message == FormEventModify::Message::DESTROY)
-			{
-				Form::PostQuitEvent();
-			}
+			FormEvent::PostQuitEvent();
 		}
-		return FormEvent::Respond::PASS;
+		return event.RespondMarkAsSkip();
 	}
-};
-
+	virtual void AddFormEventHookRef() const {};
+	virtual void SubFormEventHookRef() const {};
+} hook;
 
 int main()
 {
-	TopEventCapture responder;
 
 	Form::Config config;
 
 	config.title = L"Fuck You Dumpling!";
-	config.event_capture = &responder;
+	config.event_hook = &hook;
 
 	auto form = Form::Create(config);
 
-	bool MessageLoop = true;
-	while (MessageLoop)
+
+	while (true)
 	{
-		while (true)
+		auto has_event = Form::PeekMessageEventOnce([](FormEvent const& event) ->FormEvent::Respond {
+			if (event.IsFormDestory())
+				FormEvent::PostQuitEvent();
+			return event.RespondMarkAsSkip();
+		});
+
+		if (!has_event.has_value())
 		{
-			auto re = Form::PeekMessageEventOnce();
-			if (!re.has_value())
-			{
-				MessageLoop = false;
-			}else if (!*re)
-			{
-				break;
-			}
+			break;
 		}
-		std::this_thread::yield();
+		else {
+			std::this_thread::yield();
+		}
 	}
-	
 
 	return 0;
 }

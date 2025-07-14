@@ -58,7 +58,7 @@ target("Dumpling")
     
 target_end()
 
---[[
+
 if os.scriptdir() == os.projectdir() then
     set_project("Dumpling")
     for _, file in ipairs(os.files("Test/*.cpp")) do
@@ -70,4 +70,3 @@ if os.scriptdir() == os.projectdir() then
         target_end()
     end
 end 
-]]

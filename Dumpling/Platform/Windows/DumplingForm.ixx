@@ -10,37 +10,13 @@ export module DumplingForm;
 
 import std;
 import Potato;
+import DumplingFormEvent;
 
 
 export namespace Dumpling
 {
 
 	export struct Form;
-
-	struct FormEventCapture
-	{
-		struct Wrapper
-		{
-			void AddRef(FormEventCapture const* ptr) const { ptr->AddFormEventCaptureRef(); }
-			void SubRef(FormEventCapture const* ptr) const { ptr->SubFormEventCaptureRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<FormEventCapture, Wrapper>;
-
-		virtual HRESULT RespondEvent(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
-		virtual ~FormEventCapture() = default;
-
-		static HRESULT RespondMarkAsCapture(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-		static HRESULT RespondMarkAsSkip(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-		static bool IsRespondMarkAsCaptured(HRESULT result, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-
-	protected:
-
-		virtual void AddFormEventCaptureRef() const = 0;
-		virtual void SubFormEventCaptureRef() const = 0;
-		
-	};
 
 	struct FormStyle
 	{
@@ -80,7 +56,7 @@ export namespace Dumpling
 		{
 			Rectangle rectangle;
 			FormStyle::Ptr style = FormStyle::GetFixedStyle();
-			FormEventCapture::Ptr event_capture;
+			FormEventHook::Ptr event_hook;
 			wchar_t const* title = L"Dumpling Form";
 		};
 
@@ -89,8 +65,6 @@ export namespace Dumpling
 		static Form Create(Config fig);
 
 		operator bool() const { return handle != nullptr; }
-
-		static void PostQuitEvent();
 
 		Form(Form&& form);
 		Form() = default;
@@ -103,19 +77,18 @@ export namespace Dumpling
 
 		static std::optional<bool> PeekMessageEventOnce()
 		{
-			HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = nullptr;
+			HRESULT(*function)(void* data, FormEvent& event) = nullptr;
 			return PeekMessageEventOnce(function, nullptr);
 		}
 
-		static std::optional<bool> PeekMessageEventOnce(HRESULT(*function)(void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam), void* data);
-		//static std::optional<bool> PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent), void* data);
+		static std::optional<bool> PeekMessageEventOnce(FormEvent::Respond(*function)(void* data, FormEvent& event), void* data);
 
 		template<typename Func>
-		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<HRESULT, Func, HWND, UINT, WPARAM, LPARAM>)
+		static std::optional<bool> PeekMessageEventOnce(Func&& func) requires(std::is_invocable_r_v<FormEvent::Respond, Func, FormEvent&>)
 		{
-			return Form::PeekMessageEventOnce([](void* data, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)->HRESULT
+			return Form::PeekMessageEventOnce([](void* data, FormEvent& event)->FormEvent::Respond
 			{
-					return (*static_cast<Func*>(data))(hWnd, msg, wParam, lParam);
+					return (*static_cast<Func*>(data))(event);
 			}, &func);
 		}
 
