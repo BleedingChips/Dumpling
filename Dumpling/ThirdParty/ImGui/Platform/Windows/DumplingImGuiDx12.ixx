@@ -2,37 +2,39 @@
 module;
 
 #include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
-
+#include "wrl.h"
 
 export module DumplingImGuiDx12;
 
-import std;
-import DumplingImGuiContext;
-import DumplingImGuiWindows;
+import Potato;
+import DumplingFormEvent;
+import DumplingImGuiHUD;
+import DumplingDX12;
 
-export namespace Dumpling::Gui
+export namespace Dumpling
 {
-	/*
-	struct HeadUpDisplayWin32Dx12 : public HeadUpDisplay, public Potato::IR::MemoryResourceRecordIntrusiveInterface
+	struct ImGuiHeadUpDisplayWin32Dx12 : public IGHeadUpDisplay, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		static Ptr Create(Win32::Form& form, Dx12::Device& device, Widget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		virtual void StartFrame();
-		virtual void EndFrame();
-		virtual void CommitedToRenderer(Dx12::PassRenderer& renderer) override;
+		static Ptr Create(Form& form, FrameRenderer& device, IGWidget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		static FormEvent::Respond FormEventHook(FormEvent& event);
+
 	protected:
-		void AddHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
-		void SubHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
-		HeadUpDisplayWin32Dx12(
+
+		virtual bool DrawTo(PassRenderer& renderer) override;
+
+		void AddIGHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
+		void SubIGHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
+		
+		ImGuiHeadUpDisplayWin32Dx12(
 			Potato::IR::MemoryResourceRecord record, 
-			Dx12::DescriptorHeapPtr heap,
-			Widget::Ptr top_widget,
+			Dx12DescriptorHeapPtr heap,
+			IGWidget::Ptr top_widget,
 			ImGuiContext* context
 		)
-			: HeadUpDisplay(std::move(top_widget), context), MemoryResourceRecordIntrusiveInterface(record), heap(std::move(heap)) {}
-		~HeadUpDisplayWin32Dx12();
-		Dx12::DescriptorHeapPtr heap;
+			: IGHeadUpDisplay(std::move(top_widget)), MemoryResourceRecordIntrusiveInterface(record), heap(std::move(heap)), io_context(context){}
+		~ImGuiHeadUpDisplayWin32Dx12();
+
+		ImGuiContext* io_context = nullptr;
+		Dx12DescriptorHeapPtr heap;
 	};
-	*/
 }

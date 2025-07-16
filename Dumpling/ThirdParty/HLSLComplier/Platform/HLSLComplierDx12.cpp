@@ -19,6 +19,8 @@ namespace Dumpling::HLSLCompiler::Dx12
 			return "cs_5_1";
 		case Target::Category::PS:
 			return "ps_5_1";
+		case Target::Category::MS:
+			return "ps_5_1";
 		}
 		return nullptr;
 	}

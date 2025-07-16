@@ -69,4 +69,27 @@ if os.scriptdir() == os.projectdir() then
             add_deps("Dumpling")
         target_end()
     end
+
+    if require_imgui then
+        for _, file in ipairs(os.files("Test/DumplingImGui/*.cpp")) do
+            local var name = "ZTest_" .. path.basename(file)
+            target(name)
+                set_kind("binary")
+                add_files(file)
+                add_deps("Dumpling")
+            target_end()
+        end
+    end
+
+    if require_hlsl_complier then
+        for _, file in ipairs(os.files("Test/DumplingHLSLComplier/*.cpp")) do
+            local var name = "ZTest_" .. path.basename(file)
+            target(name)
+                set_kind("binary")
+                add_files(file)
+                add_deps("Dumpling")
+            target_end()
+        end
+    end
+
 end 

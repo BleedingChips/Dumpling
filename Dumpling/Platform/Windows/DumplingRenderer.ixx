@@ -161,7 +161,7 @@ export namespace Dumpling
 		std::size_t GetCurrentFrame() const { std::shared_lock sl(frame_mutex); return current_frame; }
 		std::size_t TryFlushFrame();
 		bool FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
-
+		Dx12DevicePtr GetRawDevice() const { return device; }
 	
 	protected:
 

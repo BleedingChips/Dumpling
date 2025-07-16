@@ -15,11 +15,11 @@ export namespace Dumpling::HLSLCompiler
 			VS,
 			PS,
 			CS,
+			MS,
 			UnKnow
 		};
 
 		Category category = Category::UnKnow;
 		char8_t const* entry_point = nullptr;
 	};
-
 }
