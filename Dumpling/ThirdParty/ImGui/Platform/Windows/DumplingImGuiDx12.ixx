@@ -26,15 +26,17 @@ export namespace Dumpling
 		void SubIGHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 		
 		ImGuiHeadUpDisplayWin32Dx12(
-			Potato::IR::MemoryResourceRecord record, 
+			Potato::IR::MemoryResourceRecord record,
 			Dx12DescriptorHeapPtr heap,
 			IGWidget::Ptr top_widget,
+			std::size_t heap_handle_increment_size,
 			ImGuiContext* context
-		)
-			: IGHeadUpDisplay(std::move(top_widget)), MemoryResourceRecordIntrusiveInterface(record), heap(std::move(heap)), io_context(context){}
+		);
 		~ImGuiHeadUpDisplayWin32Dx12();
 
 		ImGuiContext* io_context = nullptr;
 		Dx12DescriptorHeapPtr heap;
+		std::uint64_t available_heap_mark = 0;
+		std::size_t heap_handle_increment_size = 0;
 	};
 }

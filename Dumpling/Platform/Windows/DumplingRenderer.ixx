@@ -162,6 +162,7 @@ export namespace Dumpling
 		std::size_t TryFlushFrame();
 		bool FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
 		Dx12DevicePtr GetRawDevice() const { return device; }
+		Dx12CommandQueuePtr GetRawCommandQuery() const { return queue; }
 	
 	protected:
 

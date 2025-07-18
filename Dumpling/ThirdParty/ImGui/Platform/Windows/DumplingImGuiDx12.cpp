@@ -12,9 +12,22 @@ module DumplingImGuiDx12;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+
 namespace Dumpling
 {
+	ImGuiHeadUpDisplayWin32Dx12::ImGuiHeadUpDisplayWin32Dx12(
+		Potato::IR::MemoryResourceRecord record,
+		Dx12DescriptorHeapPtr heap,
+		IGWidget::Ptr top_widget,
+		std::size_t heap_handle_increment_size,
+		ImGuiContext* context
+	) : IGHeadUpDisplay(std::move(top_widget)), MemoryResourceRecordIntrusiveInterface(record),
+		heap(std::move(heap)),
+		heap_handle_increment_size(heap_handle_increment_size),
+		io_context(context)
+	{
 
+	}
 	auto ImGuiHeadUpDisplayWin32Dx12::Create(Form& form, FrameRenderer& renderer, IGWidget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
 	{
 		IMGUI_CHECKVERSION();
@@ -28,7 +41,7 @@ namespace Dumpling
 
 			D3D12_DESCRIPTOR_HEAP_DESC desc{
 				D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-				2,
+				64,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0
 			};
@@ -40,26 +53,60 @@ namespace Dumpling
 
 			if(SUCCEEDED(re))
 			{
-				if(ImGui_ImplWin32_Init(form.GetPlatformValue()))
-				{
-					if(ImGui_ImplDX12_Init(
-						renderer.GetRawDevice().Get(),
-						2, 
-						DXGI_FORMAT_R8G8B8A8_UNORM, 
-						heap.Get(), 
-						heap->GetCPUDescriptorHandleForHeapStart(), 
-						heap->GetGPUDescriptorHandleForHeapStart()
-					))
-					{
-						auto re = Potato::IR::MemoryResourceRecord::Allocate<ImGuiHeadUpDisplayWin32Dx12>(resource);
-						if(re)
-						{
-							return new(re.Get()) ImGuiHeadUpDisplayWin32Dx12{re, std::move(heap), std::move(top_widget), context};
-						}
-						ImGui_ImplDX12_Shutdown();
-					}
+				std::size_t heap_handle_increment_size = renderer.GetRawDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-					ImGui_ImplWin32_Shutdown();
+
+				auto re = Potato::IR::MemoryResourceRecord::Allocate<ImGuiHeadUpDisplayWin32Dx12>(resource);
+				if (re)
+				{
+					ImGuiHeadUpDisplayWin32Dx12* ptr = new(re.Get()) ImGuiHeadUpDisplayWin32Dx12{ re, std::move(heap), std::move(top_widget), heap_handle_increment_size, context };
+					
+					assert(ptr != nullptr);
+					Ptr real_ptr{ ptr };
+					if (ImGui_ImplWin32_Init(form.GetPlatformValue()))
+					{
+						ImGui_ImplDX12_InitInfo init_info = {};
+						init_info.Device = renderer.GetRawDevice().Get();
+						init_info.CommandQueue = renderer.GetRawCommandQuery().Get();
+						init_info.NumFramesInFlight = 2;
+						init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM; // Or your render target format.
+						init_info.UserData = ptr;
+						init_info.SrvDescriptorHeap = heap.Get();
+						init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) {
+							ImGuiHeadUpDisplayWin32Dx12* ptr = reinterpret_cast<ImGuiHeadUpDisplayWin32Dx12*>(info->UserData);
+							std::uint64_t iterator = 1;
+							for (std::size_t i = 0; i < 64; ++i)
+							{
+								if ((ptr->available_heap_mark & iterator) == 0)
+								{
+									ptr->available_heap_mark |= iterator;
+									out_cpu_handle->ptr = ptr->heap->GetCPUDescriptorHandleForHeapStart().ptr + ptr->heap_handle_increment_size;
+									out_gpu_handle->ptr = ptr->heap->GetGPUDescriptorHandleForHeapStart().ptr + ptr->heap_handle_increment_size;
+									return;
+								}
+								else {
+									iterator = (iterator << 1);
+								}
+							}
+							
+							*out_cpu_handle = ptr->heap->GetCPUDescriptorHandleForHeapStart();
+							*out_gpu_handle = ptr->heap->GetGPUDescriptorHandleForHeapStart();
+						};
+						init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) {
+							ImGuiHeadUpDisplayWin32Dx12* ptr = reinterpret_cast<ImGuiHeadUpDisplayWin32Dx12*>(info->UserData);
+							assert((cpu_handle.ptr - ptr->heap->GetCPUDescriptorHandleForHeapStart().ptr) % ptr->heap_handle_increment_size == 0);
+							assert((gpu_handle.ptr - ptr->heap->GetGPUDescriptorHandleForHeapStart().ptr) % ptr->heap_handle_increment_size == 0);
+							std::size_t index = (cpu_handle.ptr - ptr->heap->GetCPUDescriptorHandleForHeapStart().ptr) / ptr->heap_handle_increment_size;
+							std::uint64_t mask = (static_cast<std::uint64_t>(1) << index);
+							assert((ptr->available_heap_mark & mask) != 0);
+							ptr->available_heap_mark &= ~mask;
+						};
+
+						if (ImGui_ImplDX12_Init(&init_info))
+						{
+							return real_ptr;
+						}
+					}
 				}
 			}
 			ImGui::DestroyContext(context);

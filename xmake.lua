@@ -10,7 +10,7 @@ local var require_hlsl_complier = true
 
 if is_plat("windows") then
     if require_imgui then
-        add_requires("imgui", {configs={win32=true, dx12=true}})
+        add_requires("imgui v1.92.0", {configs={win32=true, dx12=true}})
     end
     if require_hlsl_complier then
         add_requires("directxshadercompiler")
