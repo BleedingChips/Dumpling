@@ -80,8 +80,8 @@ namespace Dumpling
 								if ((ptr->available_heap_mark & iterator) == 0)
 								{
 									ptr->available_heap_mark |= iterator;
-									out_cpu_handle->ptr = ptr->heap->GetCPUDescriptorHandleForHeapStart().ptr + ptr->heap_handle_increment_size;
-									out_gpu_handle->ptr = ptr->heap->GetGPUDescriptorHandleForHeapStart().ptr + ptr->heap_handle_increment_size;
+									out_cpu_handle->ptr = ptr->heap->GetCPUDescriptorHandleForHeapStart().ptr + ptr->heap_handle_increment_size * i;
+									out_gpu_handle->ptr = ptr->heap->GetGPUDescriptorHandleForHeapStart().ptr + ptr->heap_handle_increment_size * i;
 									return;
 								}
 								else {
