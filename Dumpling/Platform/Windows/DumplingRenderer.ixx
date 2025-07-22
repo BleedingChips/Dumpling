@@ -96,6 +96,8 @@ export namespace Dumpling
 		RenderTargetSet() = default;
 		RenderTargetSet(RenderTargetSet const&) = default;
 		RenderTargetSet(RenderTargetSet&& set);
+		std::size_t GetRenderTargetCount() const { return render_target_count; }
+		bool HasDepthStencil() const { return has_depth_stencil; }
 
 	protected:
 
