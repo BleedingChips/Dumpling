@@ -133,12 +133,10 @@ namespace Dumpling
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
-			//ImGui::Begin("");
 			if (top_widget)
 			{
 				top_widget->Draw(renderer);
 			}
-			//ImGui::End();
 			ImGui::Render();
 			renderer->SetDescriptorHeaps(1, heap.GetAddressOf());
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandList());
