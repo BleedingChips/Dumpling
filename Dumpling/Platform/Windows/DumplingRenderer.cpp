@@ -335,6 +335,9 @@ namespace Dumpling
 		while(true)
 		{
 			auto cur = fence->GetCompletedValue();
+			assert(cur != UINT64_MAX);
+			if (cur == UINT64_MAX)
+				return false;
 			{
 				std::lock_guard lg(renderer_mutex);
 				ResetAllocator_AssumedLocked(cur);

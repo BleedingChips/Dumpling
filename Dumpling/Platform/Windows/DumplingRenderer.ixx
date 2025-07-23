@@ -215,7 +215,7 @@ export namespace Dumpling
 		std::size_t running_count = 0;
 
 		mutable std::shared_mutex frame_mutex;
-		std::size_t current_frame = 0;
+		std::uint64_t current_frame = 1;
 
 		//struct Allocator
 

@@ -24,17 +24,14 @@ namespace Dumpling
 		return {};
 	}
 
-	Potato::IR::StructLayoutObject::Ptr PassDistributor::CopyParameter(PassIndex pass_index) const
+	Potato::IR::StructLayoutObject::ConstPtr PassDistributor::GetParameter(PassIndex pass_index) const
 	{
 		if (pass_index.index < infos.size())
 		{
 			auto& ref = infos[pass_index.index];
 			if (ref.version == pass_index.version && ref.scription.default_parameter)
 			{
-				return Potato::IR::StructLayoutObject::CopyConstruct(
-					ref.scription.default_parameter->GetStructLayout(),
-					*ref.scription.default_parameter
-				);
+				return ref.scription.default_parameter;
 			}
 		}
 		return {};
