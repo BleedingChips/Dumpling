@@ -29,19 +29,10 @@ export namespace Dumpling
 			{
 				if (parameter_meber_view.has_value())
 				{
-					if (auto mv = parameter->GetStructLayout()->FindMemberView(*parameter_meber_view); mv.has_value())
-					{
-						if (mv->struct_layout->IsStatic<Type>())
-						{
-							return parameter->GetStaticCastMemberData<Type>(*mv);
-						}
-					}
+					return parameter->TryGetArrayMemberDataWithStaticCast<Type>(*parameter_meber_view);
 				}
 				else {
-					if (parameter->GetStructLayout()->IsStatic<Type>())
-					{
-						return parameter->GetStaticCastData<Type>();
-					}
+					return parameter->TryGetArrayDataWithStaticCast<Type>();
 				}
 			}
 			return nullptr;
@@ -86,6 +77,7 @@ export namespace Dumpling
 		{
 			std::size_t order;
 			Potato::IR::StructLayoutObject::Ptr parameter;
+			std::optional<std::size_t> member_view;
 		};
 
 		std::pmr::vector<Info> infos;

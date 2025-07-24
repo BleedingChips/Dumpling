@@ -48,6 +48,7 @@ namespace Dumpling
 				output.order = tar.order;
 				output.property = ref.scription.property;
 				output.parameter = tar.parameter;
+				output.parameter_meber_view = tar.member_view;
 				return true;
 			}
 		}
@@ -65,7 +66,7 @@ namespace Dumpling
 				if (ref.version == ite.pass_index.version)
 				{
 					count += 1;
-					Request request{ pass_request.size(), ite.parameter };
+					Request request{ pass_request.size(), ite.parameter, ite.parameter_member_index };
 					pass_request.insert(pass_request.begin() + ref.request.Begin(), std::move(request));
 					ref.request.BackwardEnd(1);
 					for (std::size_t i = ite.pass_index.index + 1; i < infos.size(); ++i)
