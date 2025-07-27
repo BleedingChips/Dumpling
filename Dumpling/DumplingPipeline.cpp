@@ -37,6 +37,74 @@ namespace Dumpling
 		return {};
 	}
 
+	std::optional<Potato::IR::StructLayoutObject::Ptr> PassDistributor::CreatePassRequest(std::wstring_view name, std::span<std::wstring_view const> require_pass, PassSequencer& output_sequence, std::pmr::memory_resource* resource, std::pmr::memory_resource* temporary_resource)
+	{
+		std::size_t old_require_size = output_sequence.elements.size();
+		if (require_pass.size() >= 1)
+		{
+			std::pmr::vector<Potato::IR::StructLayout::Member> members{ temporary_resource };
+			std::pmr::vector<Potato::IR::StructLayoutObject::MemberConstruct> member_construct{ temporary_resource };
+			members.reserve(require_pass.size());
+			member_construct.reserve(require_pass.size());
+			std::size_t index = 0;
+			for (auto pass_name : require_pass)
+			{
+				auto pass_index = GetPassIndex(pass_name);
+				if (pass_index)
+				{
+					auto parameter = GetParameter(pass_index);
+					if (parameter)
+					{
+						output_sequence.elements.emplace_back(PassSequencer::Element{ pass_index, {}, index });
+						Potato::IR::StructLayout::Member new_meber;
+						new_meber.name = pass_name;
+						new_meber.struct_layout = parameter->GetStructLayout();
+						new_meber.array_count = 1;
+						members.emplace_back(std::move(new_meber));
+						Potato::IR::StructLayoutObject::MemberConstruct new_construct;
+						new_construct.construct_operator = decltype(new_construct.construct_operator)::Copy;
+						new_construct.construct_parameter_object = const_cast<void*>(parameter->GetArrayData());
+						member_construct.emplace_back(std::move(new_construct));
+						++index;
+					}
+					else {
+						output_sequence.elements.emplace_back(PassSequencer::Element{ pass_index, {}, std::nullopt });
+					}
+				}
+				else {
+					output_sequence.elements.resize(old_require_size);
+					return std::nullopt;
+				}
+			}
+
+			auto new_struct_layout = Potato::IR::DynamicStructLayout::Create(name, std::span(members.data(), members.size()), resource);
+
+			if (new_struct_layout)
+			{
+				auto new_parameter = Potato::IR::StructLayoutObject::Construct(
+					std::move(new_struct_layout),
+					std::span(member_construct.data(), member_construct.size()),
+					resource
+				);
+
+				if (new_parameter)
+				{
+					auto new_add = std::span(output_sequence.elements.data(), output_sequence.elements.size()).subspan(old_require_size);
+					for (auto& ite : new_add)
+					{
+						if (ite.parameter_member_index.has_value())
+						{
+							ite.parameter = new_parameter;
+						}
+					}
+					return new_parameter;
+				}
+			}
+		}
+		output_sequence.elements.resize(old_require_size);
+		return std::nullopt;
+	}
+
 	bool PassDistributor::PopRequest(PassIndex pass_index, PassRequest& output, std::size_t offset) const
 	{
 		if (pass_index.index < infos.size())

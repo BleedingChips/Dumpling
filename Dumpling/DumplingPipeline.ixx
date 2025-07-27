@@ -9,6 +9,9 @@ import Potato;
 
 export namespace Dumpling
 {
+	struct PassDistributor;
+
+
 	struct PassScription
 	{
 		std::wstring_view pass_name;
@@ -23,20 +26,7 @@ export namespace Dumpling
 		Potato::IR::StructLayoutObject::Ptr parameter;
 		std::optional<std::size_t> parameter_meber_view;
 		template<typename Type>
-		Type* TryGetParameter()
-		{
-			if (parameter)
-			{
-				if (parameter_meber_view.has_value())
-				{
-					return parameter->TryGetArrayMemberDataWithStaticCast<Type>(*parameter_meber_view);
-				}
-				else {
-					return parameter->TryGetArrayDataWithStaticCast<Type>();
-				}
-			}
-			return nullptr;
-		}
+		Type* TryGetParameter();
 	};
 
 	using PassIndex = Potato::Misc::VersionIndex;
@@ -49,8 +39,10 @@ export namespace Dumpling
 			Potato::IR::StructLayoutObject::Ptr parameter;
 			std::optional<std::size_t> parameter_member_index;
 		};
-
+		std::size_t GetRequireCount() const { return elements.size(); }
+	protected:
 		std::pmr::vector<Element> elements;
+		friend struct PassDistributor;
 	};
 
 	struct PassDistributor
@@ -63,6 +55,7 @@ export namespace Dumpling
 		bool PopRequest(PassIndex pass_index, PassRequest& output, std::size_t offset = 0) const;
 		std::size_t SendRequest(PassSequencer const& sequencer);
 		void CleanRequest();
+		std::optional<Potato::IR::StructLayoutObject::Ptr> CreatePassRequest(std::wstring_view name, std::span<std::wstring_view const> require_pass, PassSequencer& output_sequence, std::pmr::memory_resource* resource = std::pmr::get_default_resource(), std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource());
 
 	protected:
 
@@ -83,4 +76,20 @@ export namespace Dumpling
 		std::pmr::vector<Info> infos;
 		std::pmr::vector<Request> pass_request;
 	};
+
+	template<typename Type>
+	Type* PassRequest::TryGetParameter()
+	{
+		if (parameter)
+		{
+			if (parameter_meber_view.has_value())
+			{
+				return parameter->TryGetArrayMemberDataWithStaticCast<Type>(*parameter_meber_view);
+			}
+			else {
+				return parameter->TryGetArrayDataWithStaticCast<Type>();
+			}
+		}
+		return nullptr;
+	}
 }
