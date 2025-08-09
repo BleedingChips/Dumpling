@@ -51,6 +51,7 @@ target("Dumpling")
         if is_plat("windows") then
             add_files("Dumpling/ThirdParty/HLSLComplier/Platform/*.ixx", {public=true})
             add_files("Dumpling/ThirdParty/HLSLComplier/Platform/*.cpp")
+            add_links("D3DCompiler.lib")
         end
         add_packages("directxshadercomplier")
     end
