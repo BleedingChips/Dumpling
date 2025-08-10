@@ -18,6 +18,11 @@ namespace Dumpling
 {
 	FormEvent::Respond FormEvent::RespondMarkAsHooked() const
 	{
+		switch (message)
+		{
+		case WM_CLOSE:
+			return -1;
+		}
 		return S_OK;
 	}
 
@@ -28,12 +33,7 @@ namespace Dumpling
 
 	bool FormEvent::IsRespondMarkAsHooked(Respond respond) const
 	{
-		return SUCCEEDED(respond);
-	}
-
-	bool FormEvent::IsFormDestory() const
-	{
-		return message == WM_DESTROY;
+		return RespondMarkAsHooked() == respond;
 	}
 
 	void FormEvent::PostQuitEvent()

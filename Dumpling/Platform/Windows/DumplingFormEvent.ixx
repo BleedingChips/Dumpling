@@ -14,6 +14,15 @@ import Potato;
 
 export namespace Dumpling
 {
+	enum class FormMessage : UINT
+	{
+		None = 0,
+		CLOSE = WM_CLOSE,
+		DESTORY = WM_DESTROY
+	};
+
+
+
 	struct FormEvent : public MSG
 	{
 		FormEvent(FormEvent const&) = default;
@@ -28,7 +37,7 @@ export namespace Dumpling
 		Respond RespondMarkAsHooked() const;
 		Respond RespondMarkAsSkip() const;
 		bool IsRespondMarkAsHooked(Respond respond) const;
-		bool IsFormDestory() const;
+		bool IsMessage(FormMessage in_message) const { return message == static_cast<UINT>(in_message); }
 		static void PostQuitEvent();
 	};
 
