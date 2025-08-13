@@ -21,7 +21,7 @@ namespace Dumpling
 		switch (message)
 		{
 		case WM_CLOSE:
-			return -1;
+			return 1;
 		}
 		return S_OK;
 	}
