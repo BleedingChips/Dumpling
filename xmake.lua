@@ -47,11 +47,10 @@ target("Dumpling")
     if require_hlsl_complier then
         add_defines("DUMPLING_WITH_HLSL_COMPLIER")
         add_files("Dumpling/ThirdParty/HLSLComplier/*.ixx", {public=true})
-        add_files("Dumpling/ThirdParty/HLSLComplier/*.cpp")
         if is_plat("windows") then
-            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/*.ixx", {public=true})
-            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/*.cpp")
-            add_links("D3DCompiler.lib")
+            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/Win32/*.ixx", {public=true})
+            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/Win32/*.cpp")
+            add_links("dxcompiler.lib")
         end
         add_packages("directxshadercomplier")
     end

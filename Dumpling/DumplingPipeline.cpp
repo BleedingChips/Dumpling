@@ -77,7 +77,7 @@ namespace Dumpling
 				}
 			}
 
-			auto new_struct_layout = Potato::IR::DynamicStructLayout::Create(name, std::span(members.data(), members.size()), resource);
+			auto new_struct_layout = Potato::IR::StructLayout::CreateDynamic(name, std::span(members.data(), members.size()), Potato::MemLayout::LayoutCategory::CLike, resource);
 
 			if (new_struct_layout)
 			{

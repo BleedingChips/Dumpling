@@ -10,7 +10,7 @@ struct TopHook : public Dumpling::FormEventHook
 {
 	virtual FormEvent::Respond Hook(FormEvent& event) override
 	{
-		if (event.IsFormDestory())
+		if (event.IsMessage(FormMessage::DESTORY))
 		{
 			FormEvent::PostQuitEvent();
 		}
