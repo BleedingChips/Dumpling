@@ -48,8 +48,8 @@ target("Dumpling")
         add_defines("DUMPLING_WITH_HLSL_COMPLIER")
         add_files("Dumpling/ThirdParty/HLSLComplier/*.ixx", {public=true})
         if is_plat("windows") then
-            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/Win32/*.ixx", {public=true})
-            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/Win32/*.cpp")
+            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/Windows/*.ixx", {public=true})
+            add_files("Dumpling/ThirdParty/HLSLComplier/Platform/Windows/*.cpp")
             add_links("dxcompiler.lib")
         end
         add_packages("directxshadercomplier")
