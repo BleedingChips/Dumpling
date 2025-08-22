@@ -25,12 +25,12 @@ cbuffer cbPerObject
 	float4x4 gWorldViewProj;
 }
 
-void VS(float3 iPoL : POSITION, float4 iColor : COLOR,
+void main(float3 iPoL : POSITION, float4 iColor : COLOR,
 	out float4 oPosH : SV_POSITION,
 	out float4 oColor : COLOR
 )
 {
-	oPosH = mul(float4(iPol, 1.0f), gWorldViewProj);
+	oPosH = mul(float4(iPoL, 1.0f), gWorldViewProj);
 	oColor = iColor;
 }
 )";
@@ -40,6 +40,8 @@ void VS(float3 iPoL : POSITION, float4 iColor : COLOR,
 int main()
 {
 	auto instance = HLSLCompiler::Instance::Create();
+
+	//instance->Compile(shader, {});
 	
 
 	return 0;

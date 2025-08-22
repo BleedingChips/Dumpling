@@ -14,53 +14,61 @@ export namespace Dumpling::HLSLCompiler
 {
 	using Microsoft::WRL::ComPtr;
 
-	struct Target
+	enum class ShaderTarget
 	{
-		enum Category
-		{
-			VS,
-			PS,
-			CS,
-			MS,
-			UnKnow
-		};
-
-		Category category = Category::UnKnow;
-		char8_t const* entry_point = nullptr;
+		VS_6_0,
+		VS_Lastest,
 	};
 
-
-
-
-
-
-	struct Shader
+	enum class ComplierFlag
 	{
-
+		None
 	};
 
-	struct CompileResult
+	struct ShaderComplierArguments
 	{
-		ComPtr<ID3DBlob> blob;
-		ComPtr<ID3DBlob> error_message;
+		ShaderComplierArguments(ShaderComplierArguments const&);
+		ShaderComplierArguments(ShaderComplierArguments&&);
+		ShaderComplierArguments& operator=(ShaderComplierArguments&& arguments);
+		ShaderComplierArguments& operator=(ShaderComplierArguments const& arguments);
+		ShaderComplierArguments() = default;
+		operator bool() const { return argument != nullptr; }
+		~ShaderComplierArguments();
+	protected:
+		void* argument = nullptr;
+		friend struct Instance;
+	};
+
+	using ShaderBufferPtr = ComPtr<ID3DBlob>;
+
+	struct ShaderComplier
+	{
+		ShaderComplier(ShaderComplier const&);
+		ShaderComplier(ShaderComplier&&);
+		ShaderComplier& operator=(ShaderComplier&& in_complier);
+		ShaderComplier& operator=(ShaderComplier const& in_complier);
+		ShaderComplier() = default;
+		operator bool() const { return complier != nullptr; }
+		~ShaderComplier();
+	protected:
+		void* complier = nullptr;
+		friend struct Instance;
 	};
 
 	struct Instance
 	{
-		struct Wrapper
-		{
-			void AddRef(Instance const* ptr) { ptr->AddInstanceRef(); }
-			void SubRef(Instance const* ptr) { ptr->SubInstanceRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<Instance, Wrapper>;
-
-
-
-		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		virtual CompileResult Compile(std::u8string_view code, Target const& compiler_target, char8_t const* source_name = nullptr) = 0;
+		Instance(Instance const&);
+		Instance(Instance&&);
+		Instance& operator=(Instance&& in_complier);
+		Instance& operator=(Instance const& in_complier);
+		Instance() = default;
+		operator bool() const { return utils != nullptr; }
+		~Instance();
+		ShaderComplierArguments CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
+		ShaderComplier CreateComplier();
+		ShaderBufferPtr Complier(ShaderComplier& complier, std::wstring_view code, ShaderComplierArguments const& arguments, Potato::TMP::FunctionRef<void(std::wstring_view)> error = {});
+		static Instance Create();
 	protected:
-		virtual void AddInstanceRef() const = 0;
-		virtual void SubInstanceRef() const = 0;
+		void* utils = nullptr;
 	};
 }
