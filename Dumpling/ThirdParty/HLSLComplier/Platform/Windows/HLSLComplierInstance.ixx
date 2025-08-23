@@ -9,6 +9,43 @@ import std;
 import Potato;
 import DumplingRendererTypes;
 
+namespace Dumpling::HLSLCompiler
+{
+	struct EncodingBlobWrapper
+	{
+		void AddRef(void* ptr);
+		void SubRef(void* ptr);
+		using PotatoPointerEnablePointerAccess = void;
+	};
+
+	struct ArgumentWrapper
+	{
+		void AddRef(void* ptr);
+		void SubRef(void* ptr);
+		using PotatoPointerEnablePointerAccess = void;
+	};
+
+	struct CompilerWrapper
+	{
+		void AddRef(void* ptr);
+		void SubRef(void* ptr);
+		using PotatoPointerEnablePointerAccess = void;
+	};
+
+	struct ResultWrapper
+	{
+		void AddRef(void* ptr);
+		void SubRef(void* ptr);
+		using PotatoPointerEnablePointerAccess = void;
+	};
+
+	struct UtilsWrapper
+	{
+		void AddRef(void* ptr);
+		void SubRef(void* ptr);
+		using PotatoPointerEnablePointerAccess = void;
+	};
+}
 
 export namespace Dumpling::HLSLCompiler
 {
@@ -25,50 +62,30 @@ export namespace Dumpling::HLSLCompiler
 		None
 	};
 
-	struct ShaderComplierArguments
-	{
-		ShaderComplierArguments(ShaderComplierArguments const&);
-		ShaderComplierArguments(ShaderComplierArguments&&);
-		ShaderComplierArguments& operator=(ShaderComplierArguments&& arguments);
-		ShaderComplierArguments& operator=(ShaderComplierArguments const& arguments);
-		ShaderComplierArguments() = default;
-		operator bool() const { return argument != nullptr; }
-		~ShaderComplierArguments();
-	protected:
-		void* argument = nullptr;
-		friend struct Instance;
-	};
-
-	using ShaderBufferPtr = ComPtr<ID3DBlob>;
-
-	struct ShaderComplier
-	{
-		ShaderComplier(ShaderComplier const&);
-		ShaderComplier(ShaderComplier&&);
-		ShaderComplier& operator=(ShaderComplier&& in_complier);
-		ShaderComplier& operator=(ShaderComplier const& in_complier);
-		ShaderComplier() = default;
-		operator bool() const { return complier != nullptr; }
-		~ShaderComplier();
-	protected:
-		void* complier = nullptr;
-		friend struct Instance;
-	};
+	using EncodingBlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
+	using ArgumentPtr = Potato::Pointer::IntrusivePtr<void, ArgumentWrapper>;
+	using CompilerPtr = Potato::Pointer::IntrusivePtr<void, CompilerWrapper>;
+	using ResultPtr = Potato::Pointer::IntrusivePtr<void, ResultWrapper>;
 
 	struct Instance
 	{
-		Instance(Instance const&);
-		Instance(Instance&&);
-		Instance& operator=(Instance&& in_complier);
-		Instance& operator=(Instance const& in_complier);
+		Instance(Instance const&) = default;
+		Instance(Instance&&) = default;
+		Instance& operator=(Instance&& in_complier) = default;
+		Instance& operator=(Instance const& in_complier) = default;
 		Instance() = default;
-		operator bool() const { return utils != nullptr; }
-		~Instance();
-		ShaderComplierArguments CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
-		ShaderComplier CreateComplier();
-		ShaderBufferPtr Complier(ShaderComplier& complier, std::wstring_view code, ShaderComplierArguments const& arguments, Potato::TMP::FunctionRef<void(std::wstring_view)> error = {});
+		operator bool() const { return utils; }
+		bool CastToWCharString(EncodingBlobPtr const& blob, Potato::TMP::FunctionRef<void(std::wstring_view)>);
+		EncodingBlobPtr GetErrorMessage(ResultPtr const& result);
+		EncodingBlobPtr EncodeShader(std::wstring_view shader_code);
+		ArgumentPtr CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
+		CompilerPtr CreateCompiler();
+		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
 		static Instance Create();
 	protected:
-		void* utils = nullptr;
+
+		using Ptr = Potato::Pointer::IntrusivePtr<void, UtilsWrapper>;
+
+		Ptr utils;
 	};
 }

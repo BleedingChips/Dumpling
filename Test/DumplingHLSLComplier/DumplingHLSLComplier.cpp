@@ -19,7 +19,7 @@ struct TopHook : public Dumpling::FormEventHook
 } hook;
 
 
-std::u8string_view shader = u8R"(
+std::wstring_view shader = LR"(
 cbuffer cbPerObject
 {
 	float4x4 gWorldViewProj;
@@ -30,6 +30,7 @@ void main(float3 iPoL : POSITION, float4 iColor : COLOR,
 	out float4 oColor : COLOR
 )
 {
+asdasdasd
 	oPosH = mul(float4(iPoL, 1.0f), gWorldViewProj);
 	oColor = iColor;
 }
@@ -40,9 +41,14 @@ void main(float3 iPoL : POSITION, float4 iColor : COLOR,
 int main()
 {
 	auto instance = HLSLCompiler::Instance::Create();
-
-	//instance->Compile(shader, {});
-	
+	auto code = instance.EncodeShader(shader);
+	auto argues = instance.CreateArguments(HLSLCompiler::ShaderTarget::VS_Lastest, L"main", L"Funck.ixx");
+	auto compiler = instance.CreateCompiler();
+	auto result = instance.Compile(compiler, code, argues);
+	auto error_messahe = instance.GetErrorMessage(result);
+	instance.CastToWCharString(error_messahe, [](std::wstring_view error) {
+		volatile int o = 0;
+		});
 
 	return 0;
 }

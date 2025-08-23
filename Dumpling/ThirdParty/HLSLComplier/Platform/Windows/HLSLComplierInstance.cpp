@@ -25,174 +25,83 @@ namespace Dumpling::HLSLCompiler
 	wchar_t const* debug_argues = L"/Zi";
 	wchar_t const* shader_output = L"-T";
 
-	ShaderComplierArguments::ShaderComplierArguments(ShaderComplierArguments const& arguments)
+	void EncodingBlobWrapper::AddRef(void* ptr)
 	{
-		argument = arguments.argument;
-		if (argument != nullptr)
-		{
-			static_cast<IDxcCompilerArgs*>(argument)->AddRef();
-		}
+		static_cast<IDxcBlobEncoding*>(ptr)->AddRef();
 	}
 
-	ShaderComplierArguments::ShaderComplierArguments(ShaderComplierArguments&& arguments)
+	void EncodingBlobWrapper::SubRef(void* ptr)
 	{
-		argument = arguments.argument;
-		arguments.argument = nullptr;
+		static_cast<IDxcBlobEncoding*>(ptr)->Release();
 	}
 
-	ShaderComplierArguments& ShaderComplierArguments::operator=(ShaderComplierArguments&& arguments)
+	void ArgumentWrapper::AddRef(void* ptr)
 	{
-		auto temp = arguments.argument;
-		arguments.argument = nullptr;
-		argument = temp;
-		return *this;
+		static_cast<IDxcCompilerArgs*>(ptr)->AddRef();
 	}
 
-	ShaderComplierArguments& ShaderComplierArguments::operator=(ShaderComplierArguments const& arguments)
+	void ArgumentWrapper::SubRef(void* ptr)
 	{
-		auto temp = arguments.argument;
-		if (temp != nullptr)
-		{
-			static_cast<IDxcCompilerArgs*>(temp)->AddRef();
-		}
-		if (argument != nullptr)
-		{
-			static_cast<IDxcCompilerArgs*>(temp)->Release();
-		}
-		argument = temp;
-		return *this;
+		static_cast<IDxcCompilerArgs*>(ptr)->Release();
 	}
 
-	ShaderComplierArguments::~ShaderComplierArguments()
+	void CompilerWrapper::AddRef(void* ptr)
 	{
-		if (argument != nullptr)
-		{
-			static_cast<IDxcCompilerArgs*>(argument)->Release();
-			argument = nullptr;
-		}
+		static_cast<IDxcCompiler3*>(ptr)->AddRef();
 	}
 
-	ShaderComplier::ShaderComplier(ShaderComplier const& arguments)
+	void CompilerWrapper::SubRef(void* ptr)
 	{
-		complier = arguments.complier;
-		if (complier != nullptr)
-		{
-			static_cast<IDxcComplier3*>(complier)->AddRef();
-		}
+		static_cast<IDxcCompiler3*>(ptr)->Release();
 	}
 
-	ShaderComplier::ShaderComplier(ShaderComplier&& arguments)
+	void UtilsWrapper::AddRef(void* ptr)
 	{
-		complier = arguments.complier;
-		arguments.complier = nullptr;
+		static_cast<IDxcUtils*>(ptr)->AddRef();
 	}
 
-	ShaderComplier& ShaderComplier::operator=(ShaderComplier&& arguments)
+	void UtilsWrapper::SubRef(void* ptr)
 	{
-		auto temp = arguments.complier;
-		arguments.complier = nullptr;
-		complier = temp;
-		return *this;
-	}
-
-	ShaderComplier& ShaderComplier::operator=(ShaderComplier const& arguments)
-	{
-		auto temp = arguments.complier;
-		if (temp != nullptr)
-		{
-			static_cast<IDxcComplier3*>(temp)->AddRef();
-		}
-		if (complier != nullptr)
-		{
-			static_cast<IDxcComplier3*>(temp)->Release();
-		}
-		complier = temp;
-		return *this;
-	}
-
-	ShaderComplier::~ShaderComplier()
-	{
-		if (complier != nullptr)
-		{
-			static_cast<IDxcComplier3*>(complier)->Release();
-			complier = nullptr;
-		}
+		static_cast<IDxcUtils*>(ptr)->Release();
 	}
 
 
-	Instance::Instance(Instance const& arguments)
+	void ResultWrapper::AddRef(void* ptr)
 	{
-		utils = arguments.utils;
-		if (utils != nullptr)
-		{
-			static_cast<IDxcUtils*>(utils)->AddRef();
-		}
+		static_cast<IDxcResult*>(ptr)->AddRef();
 	}
 
-	Instance::Instance(Instance&& arguments)
+	void ResultWrapper::SubRef(void* ptr)
 	{
-		utils = arguments.utils;
-		arguments.utils = nullptr;
-	}
-
-	Instance& Instance::operator=(Instance&& arguments)
-	{
-		auto temp = arguments.utils;
-		arguments.utils = nullptr;
-		utils = temp;
-		return *this;
-	}
-
-	Instance& Instance::operator=(Instance const& arguments)
-	{
-		auto temp = arguments.utils;
-		if (temp != nullptr)
-		{
-			static_cast<IDxcUtils*>(temp)->AddRef();
-		}
-		if (utils != nullptr)
-		{
-			static_cast<IDxcUtils*>(temp)->Release();
-		}
-		utils = temp;
-		return *this;
-	}
-
-	Instance::~Instance()
-	{
-		if (utils != nullptr)
-		{
-			static_cast<IDxcUtils*>(utils)->Release();
-			utils = nullptr;
-		}
+		static_cast<IDxcResult*>(ptr)->Release();
 	}
 
 	Instance Instance::Create()
 	{
 		Instance result;
-		if (SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), &result.utils)))
+		if (SUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), &result.utils.GetPointerReference())))
 		{
 			return result;
 		}
 		return {};
 	}
 
-	ShaderComplier Instance::CreateComplier()
+	CompilerPtr Instance::CreateCompiler()
 	{
-		ShaderComplier result;
-		if (SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), &result.complier)))
+		CompilerPtr result;
+		if (SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), &result.GetPointerReference())))
 		{
 			return result;
 		}
 		return {};
 	}
 
-	ShaderComplierArguments Instance::CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag)
+	ArgumentPtr Instance::CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag)
 	{
 		if (*this)
 		{
-			ShaderComplierArguments result;
-			bool build_result = static_cast<IDxcUtils*>(utils)->BuildArguments(
+			ArgumentPtr result;
+			bool build_result = static_cast<IDxcUtils*>(utils.GetPointer())->BuildArguments(
 				file_path,
 				entry_point,
 				Translate(target),
@@ -200,7 +109,7 @@ namespace Dumpling::HLSLCompiler
 				0,
 				nullptr,
 				0,
-				reinterpret_cast<IDxcCompilerArgs**>(&result.argument)
+				reinterpret_cast<IDxcCompilerArgs**>(&result.GetPointerReference())
 			);
 
 			if (SUCCEEDED(build_result))
@@ -211,39 +120,37 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	ShaderBufferPtr Instance::Complier(ShaderComplier& complier, std::wstring_view code, ShaderComplierArguments const& arguments, Potato::TMP::FunctionRef<void(std::wstring_view)> error)
+	EncodingBlobPtr Instance::EncodeShader(std::wstring_view shader_code)
 	{
-		if (*this && complier && arguments)
+		if (*this)
 		{
-			ComPtr<IDxcBlobEncoding> encoding_shader;
-			auto ptr = static_cast<IDxcUtils*>(utils);
-			auto encodeing_result = ptr->CreateBlob(
-				code.data(),
-				code.size() * sizeof(decltype(code)::value_type),
+			EncodingBlobPtr blob;
+			auto ptr = static_cast<IDxcUtils*>(utils.GetPointer());
+			ptr->CreateBlob(
+				shader_code.data(),
+				shader_code.size() * sizeof(decltype(shader_code)::value_type),
 				CP_WINUNICODE,
-				encoding_shader.GetAddressOf()
+				reinterpret_cast<IDxcBlobEncoding**>(&blob.GetPointerReference())
 			);
+			return blob;
+		}
+		return {};
+	}
 
-			if (!SUCCEEDED(encodeing_result))
-			{
-				if (error)
-				{
-					error(L"source code encoding wrong");
-				}
-				return {};
-			}
+	ResultPtr Instance::Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments)
+	{
+		if (*this && compiler && arguments && code)
+		{
 
-			BOOL encoding_available;
+			BOOL encoding_available = false;
 			UINT32 encoding = 0;
 
-			if (!SUCCEEDED(encoding_shader->GetEncoding(&encoding_available, &encoding)))
-			{
-				if (error)
-				{
-					error(L"source code encoding wrong");
-				}
+			auto encoding_shader = static_cast<IDxcBlobEncoding*>(code.GetPointer());
+
+			encoding_shader->GetEncoding(&encoding_available, &encoding);
+
+			if (!encoding_available)
 				return {};
-			}
 
 			DxcBuffer scription{
 				encoding_shader->GetBufferPointer(),
@@ -251,203 +158,56 @@ namespace Dumpling::HLSLCompiler
 				encoding
 			};
 
-			ComPtr<IDxcResult> result;
+			ResultPtr result;
 
-			auto complier_result = static_cast<IDxcCompiler3*>(complier.complier)->Compile(
+			static_cast<IDxcCompiler3*>(compiler.GetPointer())->Compile(
 				&scription,
-				static_cast<IDxcCompilerArgs*>(arguments.argument)->GetArguments(),
-				static_cast<IDxcCompilerArgs*>(arguments.argument)->GetCount(),
+				static_cast<IDxcCompilerArgs*>(arguments.GetPointer())->GetArguments(),
+				static_cast<IDxcCompilerArgs*>(arguments.GetPointer())->GetCount(),
 				nullptr,
-				__uuidof(IDxcResult), reinterpret_cast<void**>(result.GetAddressOf())
+				__uuidof(IDxcResult), &result.GetPointerReference()
 			);
 
-			if (!result || !SUCCEEDED(complier_result))
+			return result;
+		}
+		return {};
+	}
+
+	EncodingBlobPtr Instance::GetErrorMessage(ResultPtr const& result)
+	{
+		if (result)
+		{
+			EncodingBlobPtr error;
+			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
+			real_result->GetErrorBuffer(reinterpret_cast<IDxcBlobEncoding**>(&error.GetPointerReference()));
+			return error;
+		}
+		return {};
+	}
+
+	bool Instance::CastToWCharString(EncodingBlobPtr const& blob, Potato::TMP::FunctionRef<void(std::wstring_view)> func)
+	{
+		if (*this && blob)
+		{
+			auto real_bloc = static_cast<IDxcBlobEncoding*>(blob.GetPointer());
+			auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
+			
+			ComPtr<IDxcBlobWide> output;
+			real_utils->GetBlobAsWide(
+				real_bloc,
+				output.GetAddressOf()
+			);
+
+			if (output)
 			{
-				if (error)
+				if (func)
 				{
-					error(L"unable to complier shader");
+					std::wstring_view view{output->GetStringPointer(), output->GetStringLength()};
+					func(view);
 				}
-				return {};
+				return true;
 			}
-
-			HRESULT state;
-			result->GetStatus(&state);
-
-			if (!SUCCEEDED(state))
-			{
-				ComPtr<IDxcBlobEncoding> error_buffer;
-				result->GetErrorBuffer(error_buffer.GetAddressOf());
-				ComPtr<IDxcBlobWide> wchar_error;
-				ptr->GetBlobAsWide(
-					error_buffer.Get(),
-					wchar_error.GetAddressOf()
-				);
-				if (wchar_error)
-				{
-					if (error)
-					{
-						error(std::wstring_view{ wchar_error->GetStringPointer(), wchar_error->GetStringLength()});
-					}
-					return {};
-				}
-			}
-
-			ShaderBufferPtr output_shader;
-
-			//result->Get(output_shader.GetAddressOf());
-			return output_shader;
 		}
-		return {};
+		return false;
 	}
-
-	//ShaderComplierArguments CreateArguments(ShaderTarget target, ShaderLevel level, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
-
-	/*
-	struct Win32Instance : public Instance, public Potato::IR::MemoryResourceRecordIntrusiveInterface
-	{
-		Win32Instance(Potato::IR::MemoryResourceRecord record)
-			:MemoryResourceRecordIntrusiveInterface(record) {
-		}
-		virtual ComPtr<ID3DBlob> Compile(std::wstring_view code, ShaderComplierProperty const& property, std::pmr::wstring* error_output)
-		{
-
-
-
-
-
-
-			ComPtr<IDxcBlobEncoding> encoding_shader;
-			if (!SUCCEEDED(utils->CreateBlob(
-				code.data(),
-				code.size() * sizeof(decltype(code)::value_type),
-				CP_UTF8,
-				encoding_shader.GetAddressOf()
-			)))
-			{
-				return {};
-			}
-
-
-
-
-			std::array<wchar_t const*, 2> argument_list
-				= {
-				L"-T",
-				L"/Zi"
-			};
-
-			wchar_t const** target_argume = argument_list.data();
-
-
-			ComPtr<IDxcCompilerArgs> argues;
-
-			utils->BuildArguments(
-				L"xxx.hlsl",
-				L"main",
-				L"vs_6_0",
-				argument_list.data(),
-				2,
-				nullptr,
-				0,
-				argues.GetAddressOf()
-			);
-
-			auto k = argues->GetArguments();
-			auto count = argues->GetCount();
-
-			for (std::size_t i = 0; i < count; ++i)
-			{
-				auto kcc = k[i];
-				volatile int i2 = 0;
-			}
-
-			BOOL EncodingAvailable;
-			UINT32 Encoding = 0;
-			encoding_shader->GetEncoding(&EncodingAvailable, &Encoding);
-
-			DxcBuffer scription{
-				encoding_shader->GetBufferPointer(),
-				encoding_shader->GetBufferSize(),
-				Encoding
-			};
-
-			ComPtr<IDxcResult> result;
-
-			complier->Compile(
-				&scription,
-				argues->GetArguments(),
-				argues->GetCount(),
-				nullptr,
-				__uuidof(IDxcResult), reinterpret_cast<void**>(result.GetAddressOf())
-			);
-
-			ComPtr<IDxcBlobEncoding> error;
-
-			result->GetErrorBuffer(error.GetAddressOf());
-			HRESULT state;
-			result->GetStatus(&state);
-
-			if (error)
-			{
-				ComPtr<IDxcBlobWide> wchar_error;
-				utils->GetBlobAsWide(
-					error.Get(),
-					wchar_error.GetAddressOf()
-				);
-				std::wstring_view error_str = {
-					wchar_error->GetStringPointer(),
-					wchar_error->GetStringLength()
-				};
-				volatile int o = 0;
-			}
-
-			return { };
-			return {};
-		}
-
-		ComPtr<IDxcCompiler3> complier;
-		ComPtr<IDxcUtils> utils;
-	protected:
-
-		
-		virtual void AddInstanceRef() const { MemoryResourceRecordIntrusiveInterface::AddRef(); }
-		virtual void SubInstanceRef() const { MemoryResourceRecordIntrusiveInterface::SubRef(); }
-	};
-
-
-	auto Instance::Create(std::pmr::memory_resource* resource)
-		-> Ptr
-	{
-		ComPtr<IDxcUtils> utils;
-		DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), reinterpret_cast<void**>(utils.GetAddressOf()));
-		ComPtr<IDxcCompiler3> complier;
-		DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), reinterpret_cast<void**>(complier.GetAddressOf()));
-		if (complier && utils)
-		{
-			auto re = Potato::IR::MemoryResourceRecord::Allocate<Win32Instance>(resource);
-			if (re)
-			{
-				Win32Instance* instance = new(re.Get()) Win32Instance{ re };
-				instance->complier = std::move(complier);
-				instance->utils = std::move(utils);
-				return instance;
-			}
-		}
-		return {};
-	}
-	*/
-
-	/*
-	std::u8string_view CompileResult::GetErrorMessage() const
-	{
-		if(error)
-		{
-			return std::u8string_view{
-				static_cast<char8_t const*>(error->GetBufferPointer()),
-				error->GetBufferSize()
-			};
-		}
-		return {};
-	}
-	*/
 }
