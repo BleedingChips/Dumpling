@@ -1,16 +1,27 @@
 
 module;
-#include <wrl/client.h>
+
 #include <d3dcommon.h>
+#include "d3d12shader.h"
 
 export module DumplingHLSLComplierInstance;
 
 import std;
 import Potato;
+import DumplingPlatform;
 import DumplingRendererTypes;
+
 
 namespace Dumpling::HLSLCompiler
 {
+
+	struct BlobWrapper
+	{
+		void AddRef(void* ptr);
+		void SubRef(void* ptr);
+		using PotatoPointerEnablePointerAccess = void;
+	};
+
 	struct EncodingBlobWrapper
 	{
 		void AddRef(void* ptr);
@@ -49,7 +60,6 @@ namespace Dumpling::HLSLCompiler
 
 export namespace Dumpling::HLSLCompiler
 {
-	using Microsoft::WRL::ComPtr;
 
 	enum class ShaderTarget
 	{
@@ -62,10 +72,12 @@ export namespace Dumpling::HLSLCompiler
 		None
 	};
 
+	using BlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
 	using EncodingBlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
 	using ArgumentPtr = Potato::Pointer::IntrusivePtr<void, ArgumentWrapper>;
 	using CompilerPtr = Potato::Pointer::IntrusivePtr<void, CompilerWrapper>;
 	using ResultPtr = Potato::Pointer::IntrusivePtr<void, ResultWrapper>;
+	using ShaderReflectionPtr = PlatformPtr<ID3D12ShaderReflection>;
 
 	struct Instance
 	{
@@ -75,12 +87,13 @@ export namespace Dumpling::HLSLCompiler
 		Instance& operator=(Instance const& in_complier) = default;
 		Instance() = default;
 		operator bool() const { return utils; }
-		bool CastToWCharString(EncodingBlobPtr const& blob, Potato::TMP::FunctionRef<void(std::wstring_view)>);
-		EncodingBlobPtr GetErrorMessage(ResultPtr const& result);
+		static BlobPtr GetShaderObject(ResultPtr const& result);
+		bool GetErrorMessage(ResultPtr const& result, Potato::TMP::FunctionRef<void(std::u8string_view)> receive_function = {});
 		EncodingBlobPtr EncodeShader(std::wstring_view shader_code);
 		ArgumentPtr CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
 		CompilerPtr CreateCompiler();
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
+		ShaderReflectionPtr GetReflection(BlobPtr const& shader_object);
 		static Instance Create();
 	protected:
 

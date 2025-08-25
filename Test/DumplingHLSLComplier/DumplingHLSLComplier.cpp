@@ -1,6 +1,6 @@
+#include "d3d12shader.h"
 import Dumpling;
 import std;
-
 using namespace Dumpling;
 
 
@@ -30,7 +30,7 @@ void main(float3 iPoL : POSITION, float4 iColor : COLOR,
 	out float4 oColor : COLOR
 )
 {
-asdasdasd
+sdasdasd
 	oPosH = mul(float4(iPoL, 1.0f), gWorldViewProj);
 	oColor = iColor;
 }
@@ -45,10 +45,20 @@ int main()
 	auto argues = instance.CreateArguments(HLSLCompiler::ShaderTarget::VS_Lastest, L"main", L"Funck.ixx");
 	auto compiler = instance.CreateCompiler();
 	auto result = instance.Compile(compiler, code, argues);
-	auto error_messahe = instance.GetErrorMessage(result);
-	instance.CastToWCharString(error_messahe, [](std::wstring_view error) {
-		volatile int o = 0;
-		});
+	auto error_messahe = instance.GetErrorMessage(result, [](std::u8string_view str_view) {
+		volatile int oi = 0;
+	});
 
+	auto shader_object = instance.GetShaderObject(result);
+	auto reflection = instance.GetReflection(shader_object);
+	if (reflection)
+	{
+		D3D12_SHADER_DESC desc;
+		reflection->GetDesc(
+			&desc
+		);
+
+		volatile int i = 0;
+	}
 	return 0;
 }

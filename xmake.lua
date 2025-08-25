@@ -23,7 +23,7 @@ target("Dumpling")
     add_files("Dumpling/*.cpp")
     add_files("Dumpling/*.ixx", {public=true})
     add_deps("Potato")
-
+    
     if is_plat("windows") then
         add_files("Dumpling/Platform/Windows/*.ixx", {public=true})
         add_files("Dumpling/Platform/Windows/*.cpp")

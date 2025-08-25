@@ -2,6 +2,7 @@ module;
 
 
 export module Dumpling;
+export import DumplingPlatform;
 export import DumplingFormEvent;
 export import DumplingForm;
 export import DumplingRendererTypes;

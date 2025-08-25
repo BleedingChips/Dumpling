@@ -3,10 +3,9 @@ module;
 #include <wrl/client.h>
 #include "d3dcommon.h"
 #include "dxcapi.h"
+#include "d3d12shader.h"
 
 module DumplingHLSLComplierInstance;
-
-using Microsoft::WRL::ComPtr;
 
 namespace Dumpling::HLSLCompiler
 {
@@ -24,6 +23,16 @@ namespace Dumpling::HLSLCompiler
 
 	wchar_t const* debug_argues = L"/Zi";
 	wchar_t const* shader_output = L"-T";
+
+	void BlobWrapper::AddRef(void* ptr)
+	{
+		static_cast<IDxcBlob*>(ptr)->AddRef();
+	}
+
+	void BlobWrapper::SubRef(void* ptr)
+	{
+		static_cast<IDxcBlob*>(ptr)->Release();
+	}
 
 	void EncodingBlobWrapper::AddRef(void* ptr)
 	{
@@ -129,7 +138,7 @@ namespace Dumpling::HLSLCompiler
 			ptr->CreateBlob(
 				shader_code.data(),
 				shader_code.size() * sizeof(decltype(shader_code)::value_type),
-				CP_WINUNICODE,
+				DXC_CP_WIDE,
 				reinterpret_cast<IDxcBlobEncoding**>(&blob.GetPointerReference())
 			);
 			return blob;
@@ -173,18 +182,47 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	EncodingBlobPtr Instance::GetErrorMessage(ResultPtr const& result)
+	bool Instance::GetErrorMessage(ResultPtr const& result, Potato::TMP::FunctionRef<void(std::u8string_view)> receive_function)
 	{
 		if (result)
 		{
-			EncodingBlobPtr error;
+			PlatformPtr<IDxcBlobUtf8> error_message;
 			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
-			real_result->GetErrorBuffer(reinterpret_cast<IDxcBlobEncoding**>(&error.GetPointerReference()));
-			return error;
+			auto re = real_result->GetOutput(
+				DXC_OUT_ERRORS,
+				__uuidof(IDxcBlobUtf8),
+				error_message.GetPointerVoidAdress(),
+				nullptr
+			);
+			if (error_message)
+			{
+				if (receive_function)
+				{
+					std::u8string_view error_message_view{
+						reinterpret_cast<char8_t const*>(error_message->GetStringPointer()),
+						error_message->GetStringLength()
+					};
+					receive_function(error_message_view);
+				}
+				return true;
+			}
 		}
 		return {};
 	}
 
+	BlobPtr Instance::GetShaderObject(ResultPtr const& result)
+	{
+		if (result)
+		{
+			BlobPtr blob;
+			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
+			real_result->GetOutput(DXC_OUT_REFLECTION, __uuidof(IDxcBlob), blob.GetPointerVoidAdress(), nullptr);
+			return blob;
+		}
+		return {};
+	}
+
+	/*
 	bool Instance::CastToWCharString(EncodingBlobPtr const& blob, Potato::TMP::FunctionRef<void(std::wstring_view)> func)
 	{
 		if (*this && blob)
@@ -209,5 +247,27 @@ namespace Dumpling::HLSLCompiler
 			}
 		}
 		return false;
+	}
+	*/
+
+	ShaderReflectionPtr Instance::GetReflection(BlobPtr const& shader_object)
+	{
+		if (*this && shader_object)
+		{
+			auto real_blob = static_cast<IDxcBlob*>(shader_object.GetPointer());
+			auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
+			ShaderReflectionPtr reflection;
+			DxcBuffer buffer;
+			buffer.Encoding = DXC_CP_ACP;
+			buffer.Ptr = real_blob->GetBufferPointer();
+			buffer.Size = real_blob->GetBufferSize();
+			auto result_kk = real_utils->CreateReflection(
+				&buffer,
+				__uuidof(ID3D12ShaderReflection),
+				reflection.GetPointerVoidAdress()
+			);
+			return reflection;
+		}
+		return {};
 	}
 }
