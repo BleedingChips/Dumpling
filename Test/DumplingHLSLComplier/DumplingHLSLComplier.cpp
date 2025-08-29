@@ -20,17 +20,26 @@ struct TopHook : public Dumpling::FormEventHook
 
 
 std::wstring_view shader = LR"(
-cbuffer cbPerObject
+
+struct KKL
+{
+	float4 i;
+};
+
+cbuffer hallo
 {
 	float4x4 gWorldViewProj;
+	float4 iop = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	KKL kkl;
 }
+
+
 
 void main(float3 iPoL : POSITION, float4 iColor : COLOR,
 	out float4 oPosH : SV_POSITION,
 	out float4 oColor : COLOR
 )
 {
-sdasdasd
 	oPosH = mul(float4(iPoL, 1.0f), gWorldViewProj);
 	oColor = iColor;
 }
@@ -50,15 +59,16 @@ int main()
 	});
 
 	auto shader_object = instance.GetShaderObject(result);
-	auto reflection = instance.GetReflection(shader_object);
-	if (reflection)
-	{
-		D3D12_SHADER_DESC desc;
-		reflection->GetDesc(
-			&desc
-		);
+	auto reflection = instance.CreateReflection(shader_object);
 
-		volatile int i = 0;
-	}
+	instance.CreateLayoutFromCBuffer(*reflection, 0);
+
+	/*
+	std::array<Potato::IR::StructLayout::Ptr, 2> output;
+
+	instance.GetConstBufferStructLayoutFromReflection(reflection, output);
+	*/
+
+
 	return 0;
 }

@@ -93,7 +93,17 @@ export namespace Dumpling::HLSLCompiler
 		ArgumentPtr CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
 		CompilerPtr CreateCompiler();
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
-		ShaderReflectionPtr GetReflection(BlobPtr const& shader_object);
+		ShaderReflectionPtr CreateReflection(BlobPtr const& shader_object);
+		
+		static Potato::IR::StructLayoutObject::Ptr CreateLayoutFromCBuffer(
+			ShaderReflectionPtr::Type& target_reflection,
+			std::size_t cbuffer_index,
+			Potato::TMP::FunctionRef<Potato::IR::StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override = {},
+			Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override = {},
+			std::pmr::memory_resource* layout_resource = std::pmr::get_default_resource(),
+			std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource()
+		);
+
 		static Instance Create();
 	protected:
 

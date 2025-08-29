@@ -1,6 +1,7 @@
 
 module;
-#include <wrl/client.h>
+
+#include <cassert>
 #include "d3dcommon.h"
 #include "dxcapi.h"
 #include "d3d12shader.h"
@@ -250,7 +251,145 @@ namespace Dumpling::HLSLCompiler
 	}
 	*/
 
-	ShaderReflectionPtr Instance::GetReflection(BlobPtr const& shader_object)
+
+	std::tuple<Potato::IR::StructLayout::Ptr, void*> CreateLayoutFromVariable(
+		ID3D12ShaderReflectionVariable& variable,
+		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override,
+		std::pmr::memory_resource* layout_resource,
+		std::pmr::memory_resource* temporary_resource
+	)
+	{
+		auto var_type = variable.GetType();
+		assert(var_type != nullptr);
+
+		D3D12_SHADER_TYPE_DESC type_desc;
+		if (SUCCEEDED(var_type->GetDesc(&type_desc)))
+		{
+			if (type_layout_override)
+			{
+				std::u8string_view type_name{ reinterpret_cast<char8_t const*>(type_desc.Name) };
+				volatile int i = 0;
+			}
+		}
+
+
+		/*
+		D3D12_SHADER_VARIABLE_DESC var_desc;
+		if (SUCCEEDED(variable.GetDesc(&var_desc)))
+		{
+			std::u8string_view var_name{
+				static_cast<wchar_t>(var_desc.Name)
+			};
+		}
+		*/
+		return {};
+	}
+
+
+	Potato::IR::StructLayoutObject::Ptr Instance::CreateLayoutFromCBuffer(
+		ShaderReflectionPtr::Type& target_reflection,
+		std::size_t cbuffer_index,
+		Potato::TMP::FunctionRef<Potato::IR::StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override,
+		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override,
+		std::pmr::memory_resource* layout_resource,
+		std::pmr::memory_resource* temporary_resource
+	)
+	{
+		ID3D12ShaderReflectionConstantBuffer* const_buffer = target_reflection.GetConstantBufferByIndex(cbuffer_index);
+
+		if (const_buffer != nullptr)
+		{
+			D3D12_SHADER_BUFFER_DESC buffer_desc;
+			const_buffer->GetDesc(&buffer_desc);
+			std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
+			if (cbuffer_layout_override)
+			{
+				auto layout_object = cbuffer_layout_override(cbuffer_name);
+				if (layout_object && layout_object->GetStructLayout()->GetLayout().size == buffer_desc.Size)
+				{
+					return layout_object;
+				}
+			}
+			std::pmr::vector<Potato::IR::StructLayout::Member> members(temporary_resource);
+			members.reserve(buffer_desc.Variables);
+			for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
+			{
+				auto ver = const_buffer->GetVariableByIndex(index);
+				assert(ver != nullptr);
+				auto [layout, data] = CreateLayoutFromVariable(*ver, type_layout_override, temporary_resource, temporary_resource);
+				volatile int i = 0;
+				//ver->GetDesc();
+			}
+		}
+
+
+		D3D12_SHADER_DESC shader_desc;
+
+		if (!SUCCEEDED(target_reflection.GetDesc(&shader_desc)))
+			return {};
+
+		return {};
+
+		/*
+		for (std::size_t layout_count = 0; layout_count < shader_desc.ConstantBuffers && layout_count < output_layout.size(); ++layout_count)
+		{
+			ID3D12ShaderReflectionConstantBuffer* const_buffer = target_reflection->GetConstantBufferByIndex(layout_count);
+			assert(const_buffer);
+			D3D12_SHADER_BUFFER_DESC buffer_desc;
+			const_buffer->GetDesc(&buffer_desc);
+			std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
+			if (layout_mapping)
+			{
+				auto layout = layout_mapping(cbuffer_name);
+				if (layout)
+				{
+					output_layout[layout_count] = std::move(layout);
+					continue;
+				}
+			}
+		}
+		*/
+	}
+
+	/*
+	std::optional<std::size_t> Instance::GetConstBufferStructLayoutFromReflection(
+		ShaderReflectionPtr const& target_reflection,
+		std::span<Potato::IR::StructLayout::Ptr> output_layout,
+		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> layout_mapping,
+		std::pmr::memory_resource* layout_resource,
+		std::pmr::memory_resource* temporary_resource
+	)
+	{
+		if (target_reflection && layout_resource != nullptr)
+		{
+			D3D12_SHADER_DESC shader_desc;
+
+			if(!SUCCEEDED(target_reflection->GetDesc(&shader_desc)))
+				return std::nullopt;
+
+			for (std::size_t layout_count = 0; layout_count < shader_desc.ConstantBuffers && layout_count < output_layout.size(); ++layout_count)
+			{
+				ID3D12ShaderReflectionConstantBuffer* const_buffer = target_reflection->GetConstantBufferByIndex(layout_count);
+				assert(const_buffer);
+				D3D12_SHADER_BUFFER_DESC buffer_desc;
+				const_buffer->GetDesc(&buffer_desc);
+				std::u8string_view cbuffer_name{reinterpret_cast<char8_t const*>(buffer_desc.Name)};
+				if (layout_mapping)
+				{
+					auto layout = layout_mapping(cbuffer_name);
+					if (layout)
+					{
+						output_layout[layout_count] = std::move(layout);
+						continue;
+					}
+				}
+			}
+		}
+		return std::nullopt;
+	}
+	*/
+
+	ShaderReflectionPtr Instance::CreateReflection(BlobPtr const& shader_object)
 	{
 		if (*this && shader_object)
 		{
