@@ -252,7 +252,7 @@ namespace Dumpling::HLSLCompiler
 	*/
 
 
-	std::tuple<Potato::IR::StructLayout::Ptr, void*> CreateLayoutFromVariable(
+	Potato::IR::StructLayout::Ptr CreateLayoutFromVariable(
 		ID3D12ShaderReflectionVariable& variable,
 		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
@@ -268,7 +268,7 @@ namespace Dumpling::HLSLCompiler
 			if (type_layout_override)
 			{
 				std::u8string_view type_name{ reinterpret_cast<char8_t const*>(type_desc.Name) };
-				volatile int i = 0;
+				auto layout = type_layout_override(type_name);
 			}
 		}
 
@@ -316,7 +316,7 @@ namespace Dumpling::HLSLCompiler
 			{
 				auto ver = const_buffer->GetVariableByIndex(index);
 				assert(ver != nullptr);
-				auto [layout, data] = CreateLayoutFromVariable(*ver, type_layout_override, temporary_resource, temporary_resource);
+				auto layout = CreateLayoutFromVariable(*ver, type_layout_override, temporary_resource, temporary_resource);
 				volatile int i = 0;
 				//ver->GetDesc();
 			}
