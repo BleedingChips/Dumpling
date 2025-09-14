@@ -77,7 +77,14 @@ export namespace Dumpling::HLSLCompiler
 	using ArgumentPtr = Potato::Pointer::IntrusivePtr<void, ArgumentWrapper>;
 	using CompilerPtr = Potato::Pointer::IntrusivePtr<void, CompilerWrapper>;
 	using ResultPtr = Potato::Pointer::IntrusivePtr<void, ResultWrapper>;
-	using ShaderReflectionPtr = PlatformPtr<ID3D12ShaderReflection>;
+
+	using ShaderReflection = ID3D12ShaderReflection;
+	using ShaderReflectionPtr = PlatformPtr<ShaderReflection>;
+
+	struct ShaderStatistics
+	{
+		std::size_t const_buffer_count = 0;
+	};
 
 	struct Instance
 	{
@@ -95,8 +102,9 @@ export namespace Dumpling::HLSLCompiler
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
 		ShaderReflectionPtr CreateReflection(BlobPtr const& shader_object);
 		
+		static std::optional<ShaderStatistics> GetShaderStatistics(ShaderReflection& target_reflection);
 		static Potato::IR::StructLayoutObject::Ptr CreateLayoutFromCBuffer(
-			ShaderReflectionPtr::Type& target_reflection,
+			ShaderReflection& target_reflection,
 			std::size_t cbuffer_index,
 			Potato::TMP::FunctionRef<Potato::IR::StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override = {},
 			Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override = {},

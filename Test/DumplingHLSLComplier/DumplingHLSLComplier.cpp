@@ -61,6 +61,8 @@ int main()
 	auto shader_object = instance.GetShaderObject(result);
 	auto reflection = instance.CreateReflection(shader_object);
 
+	auto statics = instance.GetShaderStatistics(*reflection);
+
 	instance.CreateLayoutFromCBuffer(*reflection, 0);
 
 	/*

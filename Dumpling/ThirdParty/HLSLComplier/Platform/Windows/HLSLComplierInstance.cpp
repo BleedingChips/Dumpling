@@ -223,34 +223,17 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	/*
-	bool Instance::CastToWCharString(EncodingBlobPtr const& blob, Potato::TMP::FunctionRef<void(std::wstring_view)> func)
+	std::optional<ShaderStatistics> Instance::GetShaderStatistics(ShaderReflection& target_reflection)
 	{
-		if (*this && blob)
+		D3D12_SHADER_DESC desc;
+		if(SUCCEEDED(target_reflection.GetDesc(&desc)))
 		{
-			auto real_bloc = static_cast<IDxcBlobEncoding*>(blob.GetPointer());
-			auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
-			
-			ComPtr<IDxcBlobWide> output;
-			real_utils->GetBlobAsWide(
-				real_bloc,
-				output.GetAddressOf()
-			);
-
-			if (output)
-			{
-				if (func)
-				{
-					std::wstring_view view{output->GetStringPointer(), output->GetStringLength()};
-					func(view);
-				}
-				return true;
-			}
+			ShaderStatistics statistics;
+			statistics.const_buffer_count = desc.ConstantBuffers;
+			return statistics;
 		}
-		return false;
+		return std::nullopt;
 	}
-	*/
-
 
 	Potato::IR::StructLayout::Ptr CreateLayoutFromVariable(
 		ID3D12ShaderReflectionVariable& variable,
@@ -287,7 +270,7 @@ namespace Dumpling::HLSLCompiler
 
 
 	Potato::IR::StructLayoutObject::Ptr Instance::CreateLayoutFromCBuffer(
-		ShaderReflectionPtr::Type& target_reflection,
+		ShaderReflection& target_reflection,
 		std::size_t cbuffer_index,
 		Potato::TMP::FunctionRef<Potato::IR::StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override,
 		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override,
