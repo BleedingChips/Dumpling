@@ -40,7 +40,7 @@ int main()
 	auto device = Device::Create();
 
 	Form::Config config;
-	config.title = L"FuckYou";
+	config.title = u8"FuckYou";
 	config.event_hook = &hook;
 
 	auto form = Form::Create(config);

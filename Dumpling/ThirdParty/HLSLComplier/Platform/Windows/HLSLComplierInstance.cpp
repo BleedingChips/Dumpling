@@ -6,6 +6,8 @@ module;
 #include "dxcapi.h"
 #include "d3d12shader.h"
 
+#undef min
+
 module DumplingHLSLComplierInstance;
 
 namespace Dumpling::HLSLCompiler
@@ -106,14 +108,29 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	ArgumentPtr Instance::CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag)
+	ArgumentPtr Instance::CreateArguments(ShaderTarget target, std::u8string_view entry_point, std::u8string_view file_path, ComplierFlag flag)
 	{
 		if (*this)
 		{
+
+			std::array<wchar_t, 1024> entry_point_w;
+			std::array<wchar_t, 1024> file_path_w;
+
+			{
+				auto Info = Potato::Encode::StrEncoder<char8_t, wchar_t>{}.Encode(entry_point, std::span(entry_point_w));
+				entry_point_w[std::min(Info.target_space, entry_point_w.size() - 1)] = L'\0';
+			}
+
+			{
+				auto Info = Potato::Encode::StrEncoder<char8_t, wchar_t>{}.Encode(file_path, std::span(file_path_w));
+				file_path_w[std::min(Info.target_space, entry_point_w.size() - 1)] = L'\0';
+			}
+
+
 			ArgumentPtr result;
 			bool build_result = static_cast<IDxcUtils*>(utils.GetPointer())->BuildArguments(
-				file_path,
-				entry_point,
+				file_path_w.data(),
+				entry_point_w.data(),
 				Translate(target),
 				nullptr,
 				0,
@@ -130,7 +147,7 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	EncodingBlobPtr Instance::EncodeShader(std::wstring_view shader_code)
+	EncodingBlobPtr Instance::EncodeShader(std::u8string_view shader_code)
 	{
 		if (*this)
 		{
@@ -139,7 +156,7 @@ namespace Dumpling::HLSLCompiler
 			ptr->CreateBlob(
 				shader_code.data(),
 				shader_code.size() * sizeof(decltype(shader_code)::value_type),
-				DXC_CP_WIDE,
+				DXC_CP_UTF8,
 				reinterpret_cast<IDxcBlobEncoding**>(&blob.GetPointerReference())
 			);
 			return blob;

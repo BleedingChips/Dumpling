@@ -19,7 +19,7 @@ struct TopHook : public Dumpling::FormEventHook
 } hook;
 
 
-std::wstring_view shader = LR"(
+std::u8string_view shader = u8R"(
 
 struct KKL
 {
@@ -51,7 +51,7 @@ int main()
 {
 	auto instance = HLSLCompiler::Instance::Create();
 	auto code = instance.EncodeShader(shader);
-	auto argues = instance.CreateArguments(HLSLCompiler::ShaderTarget::VS_Lastest, L"main", L"Funck.ixx");
+	auto argues = instance.CreateArguments(HLSLCompiler::ShaderTarget::VS_Lastest, u8"main", u8"Funck.ixx");
 	auto compiler = instance.CreateCompiler();
 	auto result = instance.Compile(compiler, code, argues);
 	auto error_messahe = instance.GetErrorMessage(result, [](std::u8string_view str_view) {

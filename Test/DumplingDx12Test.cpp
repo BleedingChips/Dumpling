@@ -8,7 +8,7 @@ struct TopHook : public Dumpling::FormEventHook
 {
 	virtual FormEvent::Respond Hook(FormEvent& event) override
 	{
-		if (event.IsFormDestory())
+		if (event.IsMessage(FormMessage::DESTORY))
 		{
 			FormEvent::PostQuitEvent();
 		}
@@ -25,7 +25,7 @@ int main()
 	auto device = Device::Create();
 
 	Form::Config config;
-	config.title = L"FuckYou";
+	config.title = u8"FuckYou";
 	config.event_hook = &hook;
 
 	auto form = Form::Create(config);

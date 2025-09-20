@@ -24,8 +24,10 @@ int main()
 {
 
 	Form::Config config;
+	std::u8string_view title2 = u8"中国人！";
+	std::string_view title3 = "中国人！";
 
-	config.title = L"Fuck You Dumpling!";
+	config.title = u8"中国人";
 	config.event_hook = &hook;
 
 	auto form = Form::Create(config);
@@ -34,7 +36,7 @@ int main()
 	while (true)
 	{
 		auto has_event = Form::PeekMessageEventOnce([](FormEvent const& event) ->FormEvent::Respond {
-			if (event.IsFormDestory())
+			if (event.IsMessage(FormMessage::DESTORY))
 				FormEvent::PostQuitEvent();
 			return event.RespondMarkAsSkip();
 		});

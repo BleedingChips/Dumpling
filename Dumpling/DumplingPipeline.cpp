@@ -12,7 +12,7 @@ namespace Dumpling
 		return { infos.size() - 1, 1 };
 	}
 
-	PassIndex PassDistributor::GetPassIndex(std::wstring_view pass_name) const
+	PassIndex PassDistributor::GetPassIndex(std::u8string_view pass_name) const
 	{
 		for (std::size_t index = 0; index < infos.size(); ++index)
 		{
@@ -37,7 +37,7 @@ namespace Dumpling
 		return {};
 	}
 
-	std::optional<Potato::IR::StructLayoutObject::Ptr> PassDistributor::CreatePassRequest(std::wstring_view name, std::span<std::wstring_view const> require_pass, PassSequencer& output_sequence, std::pmr::memory_resource* resource, std::pmr::memory_resource* temporary_resource)
+	std::optional<Potato::IR::StructLayoutObject::Ptr> PassDistributor::CreatePassRequest(std::u8string_view name, std::span<std::u8string_view const> require_pass, PassSequencer& output_sequence, std::pmr::memory_resource* resource, std::pmr::memory_resource* temporary_resource)
 	{
 		std::size_t old_require_size = output_sequence.elements.size();
 		if (require_pass.size() >= 1)

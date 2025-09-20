@@ -67,6 +67,7 @@ if os.scriptdir() == os.projectdir() then
             set_kind("binary")
             add_files(file)
             add_deps("Dumpling")
+            add_cxflags("/utf-8")
         target_end()
     end
 
@@ -77,6 +78,7 @@ if os.scriptdir() == os.projectdir() then
                 set_kind("binary")
                 add_files(file)
                 add_deps("Dumpling")
+                add_cxflags("/utf-8")
             target_end()
         end
     end
@@ -88,6 +90,7 @@ if os.scriptdir() == os.projectdir() then
                 set_kind("binary")
                 add_files(file)
                 add_deps("Dumpling")
+                add_cxflags("/utf-8")
             target_end()
         end
     end

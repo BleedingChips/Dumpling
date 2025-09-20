@@ -2,8 +2,11 @@ module;
 
 #include <cassert>
 #include <Windows.h>
+#include <clocale>
+
 
 #undef max
+#undef min
 #undef IGNORE
 #undef interface
 
@@ -27,7 +30,7 @@ namespace Dumpling
 		{
 			HBRUSH back_ground_brush = ::CreateSolidBrush(BLACK_BRUSH);
 			const WNDCLASSEXW static_class = {
-				sizeof(WNDCLASSEXW),
+				sizeof(WNDCLASSEXA),
 				CS_HREDRAW | CS_VREDRAW,
 				&FixedFormStyle::DefaultWndProc, 0, 0, GetModuleHandle(0), NULL,NULL, back_ground_brush, NULL, style_name, NULL};
 
@@ -63,10 +66,19 @@ namespace Dumpling
 			FALSE
 		);
 
+		std::array<wchar_t, 1024> title;
+
+		auto info = Potato::Encode::StrEncoder<char8_t, wchar_t>{}.Encode(
+			fig.title,
+			std::span(title)
+		);
+
+		title[std::min(info.target_space, title.size() - 1)] = L'\0';
+
 		HWND hwnd = CreateWindowExW(
 			0,
 			fig.style->PlatformStyleName(),
-			fig.title,
+			title.data(),
 			fig.style->PlatformWSStyle(),
 			fig.rectangle.x_offset, fig.rectangle.y_offset, adject_rect.right - adject_rect.left, adject_rect.bottom - adject_rect.top,
 			NULL,
@@ -111,7 +123,7 @@ namespace Dumpling
 				auto ptr = reinterpret_cast<FormEventHook*>(data);
 				if (ptr != nullptr)
 				{
-					SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
+					SetWindowLongPtrA(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(nullptr));
 					FormEventHook::Wrapper wrap;
 					wrap.SubRef(ptr);
 				}

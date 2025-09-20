@@ -14,7 +14,7 @@ export namespace Dumpling
 
 	struct PassScription
 	{
-		std::wstring_view pass_name;
+		std::u8string_view pass_name;
 		Potato::IR::StructLayoutObject::Ptr property;
 		Potato::IR::StructLayoutObject::Ptr default_parameter;
 	};
@@ -50,12 +50,12 @@ export namespace Dumpling
 
 		PassIndex RegisterPass(PassScription scription);
 
-		PassIndex GetPassIndex(std::wstring_view pass_name) const;
+		PassIndex GetPassIndex(std::u8string_view pass_name) const;
 		Potato::IR::StructLayoutObject::ConstPtr GetParameter(PassIndex pass_index) const;
 		bool PopRequest(PassIndex pass_index, PassRequest& output, std::size_t offset = 0) const;
 		std::size_t SendRequest(PassSequencer const& sequencer);
 		void CleanRequest();
-		std::optional<Potato::IR::StructLayoutObject::Ptr> CreatePassRequest(std::wstring_view name, std::span<std::wstring_view const> require_pass, PassSequencer& output_sequence, std::pmr::memory_resource* resource = std::pmr::get_default_resource(), std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource());
+		std::optional<Potato::IR::StructLayoutObject::Ptr> CreatePassRequest(std::u8string_view name, std::span<std::u8string_view const> require_pass, PassSequencer& output_sequence, std::pmr::memory_resource* resource = std::pmr::get_default_resource(), std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource());
 
 	protected:
 

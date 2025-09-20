@@ -96,8 +96,8 @@ export namespace Dumpling::HLSLCompiler
 		operator bool() const { return utils; }
 		static BlobPtr GetShaderObject(ResultPtr const& result);
 		bool GetErrorMessage(ResultPtr const& result, Potato::TMP::FunctionRef<void(std::u8string_view)> receive_function = {});
-		EncodingBlobPtr EncodeShader(std::wstring_view shader_code);
-		ArgumentPtr CreateArguments(ShaderTarget target, wchar_t const* entry_point, wchar_t const* file_path, ComplierFlag flag = ComplierFlag::None);
+		EncodingBlobPtr EncodeShader(std::u8string_view shader_code);
+		ArgumentPtr CreateArguments(ShaderTarget target, std::u8string_view entry_point, std::u8string_view file_path, ComplierFlag flag = ComplierFlag::None);
 		CompilerPtr CreateCompiler();
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
 		ShaderReflectionPtr CreateReflection(BlobPtr const& shader_object);

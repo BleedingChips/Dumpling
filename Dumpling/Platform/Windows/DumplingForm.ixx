@@ -57,7 +57,7 @@ export namespace Dumpling
 			Rectangle rectangle;
 			FormStyle::Ptr style = FormStyle::GetFixedStyle();
 			FormEventHook::Ptr event_hook;
-			wchar_t const* title = L"Dumpling Form";
+			std::u8string_view title = u8"Dumpling Form";
 		};
 
 		HWND GetPlatformValue() const { return handle; }
