@@ -43,7 +43,7 @@ namespace Dumpling
 		if (require_pass.size() >= 1)
 		{
 			std::pmr::vector<Potato::IR::StructLayout::Member> members{ temporary_resource };
-			std::pmr::vector<Potato::IR::StructLayoutObject::MemberConstruct> member_construct{ temporary_resource };
+			std::pmr::vector<Potato::IR::StructLayout::CustomConstruct> member_construct{ temporary_resource };
 			members.reserve(require_pass.size());
 			member_construct.reserve(require_pass.size());
 			std::size_t index = 0;
@@ -61,9 +61,9 @@ namespace Dumpling
 						new_meber.struct_layout = parameter->GetStructLayout();
 						new_meber.array_count = 1;
 						members.emplace_back(std::move(new_meber));
-						Potato::IR::StructLayoutObject::MemberConstruct new_construct;
+						Potato::IR::StructLayout::CustomConstruct new_construct;
 						new_construct.construct_operator = decltype(new_construct.construct_operator)::Copy;
-						new_construct.construct_parameter_object = const_cast<void*>(parameter->GetArrayData());
+						new_construct.paramter_object.construct_parameter_const_object = parameter->GetArrayData();
 						member_construct.emplace_back(std::move(new_construct));
 						++index;
 					}
@@ -81,9 +81,10 @@ namespace Dumpling
 
 			if (new_struct_layout)
 			{
-				auto new_parameter = Potato::IR::StructLayoutObject::Construct(
+				auto new_parameter = Potato::IR::StructLayoutObject::CustomConstruction(
 					std::move(new_struct_layout),
 					std::span(member_construct.data(), member_construct.size()),
+					1,
 					resource
 				);
 

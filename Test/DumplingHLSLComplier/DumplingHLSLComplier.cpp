@@ -29,6 +29,7 @@ struct KKL
 cbuffer hallo
 {
 	float4x4 gWorldViewProj;
+	float4x3 gWorldViewProj[2];
 	float4 iop = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	KKL kkl;
 }

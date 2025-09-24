@@ -84,10 +84,10 @@ export namespace Dumpling
 		{
 			if (parameter_meber_view.has_value())
 			{
-				return parameter->TryGetArrayMemberDataWithStaticCast<Type>(*parameter_meber_view);
+				return parameter->TryGetMemberDataWithStaticCast<Type>(*parameter_meber_view);
 			}
 			else {
-				return parameter->TryGetArrayDataWithStaticCast<Type>();
+				return parameter->TryGetDataWithStaticCast<Type>();
 			}
 		}
 		return nullptr;
