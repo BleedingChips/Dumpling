@@ -28,6 +28,8 @@ struct KKL
 
 cbuffer hallo
 {
+	float Yes;
+	float2 iop2[2];
 	float4x4 gWorldViewProj;
 	float4x3 gWorldViewProj2[2];
 	float4 iop = float4(1.0f, 1.0f, 1.0f, 1.0f);

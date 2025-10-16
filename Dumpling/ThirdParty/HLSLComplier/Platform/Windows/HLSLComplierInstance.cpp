@@ -272,16 +272,11 @@ namespace Dumpling::HLSLCompiler
 			}
 		}
 
-
-		/*
 		D3D12_SHADER_VARIABLE_DESC var_desc;
 		if (SUCCEEDED(variable.GetDesc(&var_desc)))
 		{
-			std::u8string_view var_name{
-				static_cast<wchar_t>(var_desc.Name)
-			};
+			volatile int i = 0;
 		}
-		*/
 		return {};
 	}
 

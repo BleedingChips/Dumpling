@@ -59,11 +59,11 @@ namespace Dumpling
 						Potato::IR::StructLayout::Member new_meber;
 						new_meber.name = pass_name;
 						new_meber.struct_layout = parameter->GetStructLayout();
-						new_meber.array_count = 1;
+						new_meber.array_count = 0;
 						members.emplace_back(std::move(new_meber));
 						Potato::IR::StructLayout::CustomConstruct new_construct;
 						new_construct.construct_operator = decltype(new_construct.construct_operator)::Copy;
-						new_construct.paramter_object.construct_parameter_const_object = parameter->GetArrayData();
+						new_construct.paramter_object.construct_parameter_const_object = parameter->GetBuffer();
 						member_construct.emplace_back(std::move(new_construct));
 						++index;
 					}
@@ -84,7 +84,6 @@ namespace Dumpling
 				auto new_parameter = Potato::IR::StructLayoutObject::CustomConstruction(
 					std::move(new_struct_layout),
 					std::span(member_construct.data(), member_construct.size()),
-					1,
 					resource
 				);
 
