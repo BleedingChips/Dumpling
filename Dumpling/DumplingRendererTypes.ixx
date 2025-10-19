@@ -136,6 +136,47 @@ export namespace Dumpling
 
 	*/
 
+	template<typename Type, std::size_t Crow>
+		requires(sizeof(Type) == sizeof(float) && Crow > 0 && Crow <= 4)
+	struct HLSLCBVector
+	{
+		float Data[Crow];
+		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
+			return { Crow * sizeof(float),  Crow * sizeof(float) };
+		}
+	};
 
+	template<typename Type, std::size_t Crow, std::size_t Row>
+	requires(sizeof(Type) == sizeof(float) && Crow > 0 && Crow <= 4 && Row > 0 && Row <= 4)
+	struct HLSLCBMatrix
+	{
+		float Data[Crow][Row - 1];
+		float AppendData[Crow];
+		static constexpr Potato::IR::Layout HLSLConstBufferLayout() { 
+			return { sizeof(float) * 4,  Crow * sizeof(float) + 4 * sizeof(float) * (Row - 1)};
+		}
+	};
 
+	template<typename Type, std::size_t Crow>
+		requires(sizeof(Type) == sizeof(float) && Crow > 0 && Crow <= 4)
+	struct HLSLCBMatrix<Type, Crow, 1>
+	{
+		float Data[Crow];
+		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
+			return { sizeof(float) * 4,  Crow * sizeof(float) };
+		}
+	};
+
+	template<typename Type>
+	concept HLSLConstBufferLayoutDefinedClass = requires(Type)
+	{
+		{ Type::HLSLConstBufferLayout } -> std::same_as<Potato::IR::Layout>;
+	};
+
+	template<HLSLConstBufferLayoutDefinedClass Type>
+	Potato::IR::Layout GetHLSLConstBufferLayout()
+		
+	{
+		return Type::HLSLConstBufferLayout();
+	}
 }

@@ -88,6 +88,32 @@ namespace Dumpling::HLSLCompiler
 		static_cast<IDxcResult*>(ptr)->Release();
 	}
 
+
+	std::tuple<Potato::IR::StructLayout::Ptr, Potato::IR::Layout> TranslateHLSLClassBaseType(D3D12_SHADER_TYPE_DESC type_desc)
+	{
+		switch (type_desc.Class)
+		{
+		case D3D_SHADER_VARIABLE_CLASS::D3D_SVC_SCALAR:
+			switch (type_desc.Type)
+			{
+			case D3D_SHADER_VARIABLE_TYPE::D3D_SVT_FLOAT:
+				return {
+					StructLayout::GetStatic<float>(),
+					{alignof(float), sizeof(float)}
+				};
+			}
+			break;
+		case D3D_SHADER_VARIABLE_CLASS::D3D10_SVC_MATRIX_COLUMNS:
+			switch (type_desc.Type)
+			{
+			case D3D_SHADER_VARIABLE_TYPE::D3D_SVT_FLOAT:
+				break;
+			}
+			break;
+		}
+		return {};
+	}
+
 	Instance Instance::Create()
 	{
 		Instance result;
@@ -254,7 +280,7 @@ namespace Dumpling::HLSLCompiler
 
 	Potato::IR::StructLayout::Ptr CreateLayoutFromVariable(
 		ID3D12ShaderReflectionVariable& variable,
-		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override,
+		Potato::TMP::FunctionRef<std::tuple<StructLayout::Ptr, Layout>(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
 		std::pmr::memory_resource* temporary_resource
 	)
@@ -268,7 +294,10 @@ namespace Dumpling::HLSLCompiler
 			if (type_layout_override)
 			{
 				std::u8string_view type_name{ reinterpret_cast<char8_t const*>(type_desc.Name) };
-				auto layout = type_layout_override(type_name);
+				auto [struct_layout, layout] = type_layout_override(type_name);
+			}
+			else {
+				auto [struct_layout, layout] = TranslateHLSLClassBaseType(type_desc);
 			}
 		}
 
@@ -281,11 +310,11 @@ namespace Dumpling::HLSLCompiler
 	}
 
 
-	Potato::IR::StructLayoutObject::Ptr Instance::CreateLayoutFromCBuffer(
+	StructLayoutObject::Ptr Instance::CreateLayoutFromCBuffer(
 		ShaderReflection& target_reflection,
 		std::size_t cbuffer_index,
-		Potato::TMP::FunctionRef<Potato::IR::StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override,
-		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> type_layout_override,
+		Potato::TMP::FunctionRef<StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override,
+		Potato::TMP::FunctionRef<std::tuple<StructLayout::Ptr, Layout>(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
 		std::pmr::memory_resource* temporary_resource
 	)
