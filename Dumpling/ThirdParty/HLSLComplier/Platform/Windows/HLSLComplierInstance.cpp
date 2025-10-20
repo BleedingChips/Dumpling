@@ -278,13 +278,18 @@ namespace Dumpling::HLSLCompiler
 		return std::nullopt;
 	}
 
-	Potato::IR::StructLayout::Ptr CreateLayoutFromVariable(
+	StructLayout::Ptr CreateLayoutFromVariable(
 		ID3D12ShaderReflectionVariable& variable,
 		Potato::TMP::FunctionRef<std::tuple<StructLayout::Ptr, Layout>(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
 		std::pmr::memory_resource* temporary_resource
 	)
 	{
+
+
+		auto [struct_layout, layout] = MappingMatrixLayout<float>(1,1);
+
+		auto name = struct_layout->GetName();
 		auto var_type = variable.GetType();
 		assert(var_type != nullptr);
 

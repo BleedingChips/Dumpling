@@ -1,5 +1,5 @@
 module;
-
+#include <cassert>
 
 export module DumplingRendererTypes;
 
@@ -55,127 +55,140 @@ export namespace Dumpling
 		TEXTURE_CUBE
 	};
 
-	/*
-	struct RendererFormWrapper
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddRendererFormWrapperRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubRendererFormWrapperRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<RendererFormWrapper, Wrapper>;
-
-		virtual bool TryFlush() { return false; }
-		virtual RendererResource::Ptr GetAvailableRenderResource() = 0;
-
-	protected:
-
-		virtual void AddRendererFormWrapperRef() const = 0;
-		virtual void SubRendererFormWrapperRef() const = 0;
-	};
-
-	struct PassRenderer
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddPassRendererRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubPassRendererRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<PassRenderer, Wrapper>;
-
-		virtual PipelineRequester::Ptr GetPipelineRequester() const = 0;
-		virtual Potato::IR::StructLayoutObject::Ptr GetParameters() const = 0;
-
-		virtual bool ClearRendererTarget(RendererResource& render_target, Color color = Color::black, std::size_t index = 0) = 0;
-
-	protected:
-
-		virtual void AddPassRendererRef() const = 0;
-		virtual void SubPassRendererRef() const = 0;
-	};
-	*/
-
-
-
-
-	
-	/*
-
-	struct AdapterDescription
-	{
-		
-	};
-
-
-	struct HardDevice
-	{
-		struct Wrapper
-		{
-			template<typename Type> void AddRef(Type* ptr) const { ptr->AddHardDeviceRef(); }
-			template<typename Type> void SubRef(Type* ptr) const { ptr->SubHardDeviceRef(); }
-		};
-
-		using Ptr = Potato::Pointer::IntrusivePtr<HardDevice, Wrapper>;
-
-		virtual RendererFormWrapper::Ptr CreateFormWrapper(Form& form, Renderer& renderer, FormRenderTargetProperty property = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
-		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-
-		virtual std::optional<AdapterDescription> EnumAdapter(std::size_t ite) const = 0;
-
-		virtual Renderer::Ptr CreateRenderer(std::optional<std::size_t> adapter_count = std::nullopt, std::pmr::memory_resource* resource = std::pmr::get_default_resource()) = 0;
-		static bool InitDebugLayout();
-
-	protected:
-
-		virtual void AddHardDeviceRef() const = 0;
-		virtual void SubHardDeviceRef() const = 0;
-	};
-
-
-	*/
-
-	template<typename Type, std::size_t Crow>
-		requires(sizeof(Type) == sizeof(float) && Crow > 0 && Crow <= 4)
+	template<typename Type, std::size_t Columns>
+		requires(sizeof(Type) == sizeof(float) && Columns > 0 && Columns <= 4)
 	struct HLSLCBVector
 	{
-		float Data[Crow];
+		float Data[Columns];
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
-			return { Crow * sizeof(float),  Crow * sizeof(float) };
+			return { Columns * sizeof(float),  Columns * sizeof(float) };
 		}
 	};
 
-	template<typename Type, std::size_t Crow, std::size_t Row>
-	requires(sizeof(Type) == sizeof(float) && Crow > 0 && Crow <= 4 && Row > 0 && Row <= 4)
-	struct HLSLCBMatrix
+	template<typename Type, std::size_t Rows, std::size_t Columns>
+	requires(sizeof(Type) == sizeof(float) && Rows > 0 && Rows <= 4 && Columns > 0 && Columns <= 4)
+	struct HLSLCBMatrixColumnsMajor
 	{
-		float Data[Crow][Row - 1];
-		float AppendData[Crow];
+		float Data[Columns - 1][Rows];
+		float AppendData[Rows];
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() { 
-			return { sizeof(float) * 4,  Crow * sizeof(float) + 4 * sizeof(float) * (Row - 1)};
+			return { sizeof(float) * 4,  Rows * sizeof(float) + 4 * sizeof(float) * (Columns - 1)};
 		}
 	};
 
-	template<typename Type, std::size_t Crow>
-		requires(sizeof(Type) == sizeof(float) && Crow > 0 && Crow <= 4)
-	struct HLSLCBMatrix<Type, Crow, 1>
+	template<typename Type, std::size_t Rows>
+		requires(sizeof(Type) == sizeof(float) && Rows > 0 && Rows <= 4)
+	struct HLSLCBMatrixColumnsMajor<Type, Rows, 1>
 	{
-		float Data[Crow];
+		float Data[Rows];
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
-			return { sizeof(float) * 4,  Crow * sizeof(float) };
+			return { sizeof(float) * 4,  Rows * sizeof(float) };
 		}
 	};
+
+	struct HLSLConstBufferLayout
+	{
+		Potato::IR::StructLayout::Ptr struct_layout;
+		Potato::MemLayout::Layout layout;
+	};
+
+	template<template<std::size_t Columns> class Wrapper>
+	HLSLConstBufferLayout Mapping1DLayout(std::size_t Columns)
+	{
+		switch (Columns)
+		{
+		case 1:
+		{
+			using Type = typename Wrapper<1>::Type;
+			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+		}
+		case 2:
+		{
+			using Type = typename Wrapper<2>::Type;
+			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+		}
+		case 3:
+		{
+			using Type = typename Wrapper<3>::Type;
+			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+		}
+		case 4:
+		{
+			using Type = typename Wrapper<4>::Type;
+			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+		}
+		}
+		assert(false);
+		return {};
+	}
+
+	template<template<std::size_t, std::size_t> class SubWrapper, std::size_t Rows> struct Mapping2DTo1DWrapper
+	{
+		template<std::size_t Columns>
+		struct Wrapper
+		{
+			using Type = typename SubWrapper<Rows, Columns>::Type;
+		};
+	};
+
+	template<template<std::size_t Rows, std::size_t Columns> class Wrapper>
+	HLSLConstBufferLayout Mapping2DLayout(std::size_t Rows, std::size_t Columns)
+	{
+		switch (Rows)
+		{
+		case 1:
+			return Mapping1DLayout<Mapping2DTo1DWrapper<Wrapper, 1>::template Wrapper>(Columns);
+		case 2:
+			return Mapping1DLayout<Mapping2DTo1DWrapper<Wrapper, 2>::template Wrapper>(Columns);
+		case 3:
+			return Mapping1DLayout<Mapping2DTo1DWrapper<Wrapper, 3>::template Wrapper>(Columns);
+		case 4:
+			return Mapping1DLayout<Mapping2DTo1DWrapper<Wrapper, 4>::template Wrapper>(Columns);
+		};
+		assert(false);
+		return {};
+	}
+
+	template<typename ElementT> struct MappingVectorWrapper
+	{
+		template<std::size_t Columns>
+		struct Wrapper
+		{
+			using Type = HLSLCBVector<ElementT, Columns>;
+		};
+	};
+
+	template<typename ElementT> struct MappingMatrixWrapper
+	{
+		template<std::size_t Rows, std::size_t Columns >
+		struct Wrapper
+		{
+			using Type = HLSLCBMatrixColumnsMajor<ElementT, Rows, Columns>;
+		};
+	};
+
+	template<typename ElementT>
+	HLSLConstBufferLayout MappingVectorLayout(std::size_t Columns)
+	{
+		return Mapping1DLayout<MappingVectorWrapper<ElementT>::template Wrapper>(Columns);
+	}
+
+	template<typename ElementT>
+	HLSLConstBufferLayout MappingMatrixLayout(std::size_t Rows, std::size_t Columns)
+	{
+		return Mapping2DLayout<MappingMatrixWrapper<ElementT>::template Wrapper>(Rows, Columns);
+	}
+
+	
 
 	template<typename Type>
 	concept HLSLConstBufferLayoutDefinedClass = requires(Type)
 	{
-		{ Type::HLSLConstBufferLayout } -> std::same_as<Potato::IR::Layout>;
+		{ Type::HLSLConstBufferLayout() } -> std::same_as<Potato::IR::Layout>;
 	};
 
 	template<HLSLConstBufferLayoutDefinedClass Type>
 	Potato::IR::Layout GetHLSLConstBufferLayout()
-		
 	{
 		return Type::HLSLConstBufferLayout();
 	}
