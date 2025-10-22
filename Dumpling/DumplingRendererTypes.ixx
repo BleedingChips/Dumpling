@@ -89,7 +89,8 @@ export namespace Dumpling
 	struct HLSLConstBufferLayout
 	{
 		Potato::IR::StructLayout::Ptr struct_layout;
-		Potato::MemLayout::Layout layout;
+		Potato::MemLayout::Layout memory_layout;
+		explicit operator bool() const { return struct_layout; }
 	};
 
 	template<template<std::size_t Columns> class Wrapper>
