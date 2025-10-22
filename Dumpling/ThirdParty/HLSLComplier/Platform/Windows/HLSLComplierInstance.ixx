@@ -107,10 +107,10 @@ export namespace Dumpling::HLSLCompiler
 		ShaderReflectionPtr CreateReflection(BlobPtr const& shader_object);
 		
 		static std::optional<ShaderStatistics> GetShaderStatistics(ShaderReflection& target_reflection);
-		static StructLayoutObject::Ptr CreateLayoutFromCBuffer(
+		static StructLayout::Ptr CreateLayoutFromCBuffer(
 			ShaderReflection& target_reflection,
 			std::size_t cbuffer_index,
-			Potato::TMP::FunctionRef<StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override = {},
+			Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> cbuffer_layout_override = {},
 			Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override = {},
 			std::pmr::memory_resource* layout_resource = std::pmr::get_default_resource(),
 			std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource()

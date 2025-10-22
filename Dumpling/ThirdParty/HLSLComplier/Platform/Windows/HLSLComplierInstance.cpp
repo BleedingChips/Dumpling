@@ -7,6 +7,7 @@ module;
 #include "d3d12shader.h"
 
 #undef min
+#undef max
 
 module DumplingHLSLComplierInstance;
 
@@ -291,16 +292,66 @@ namespace Dumpling::HLSLCompiler
 		}
 	}
 
-	HLSLConstBufferLayout MappingToHLSLConstBufferLayout(D3D12_SHADER_TYPE_DESC type_desc)
+	std::tuple<HLSLConstBufferLayout, std::size_t> CreateLayoutFromReflectionType(
+		ID3D12ShaderReflectionType& reflection_type,
+		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override,
+		std::pmr::memory_resource* layout_resource,
+		std::pmr::memory_resource* temporary_resource
+	)
 	{
-		switch (type_desc.Class)
+		D3D12_SHADER_TYPE_DESC type_desc;
+		if (SUCCEEDED(reflection_type.GetDesc(&type_desc)))
 		{
-		case D3D_SHADER_VARIABLE_CLASS::D3D_SVC_SCALAR:
-			return MappingToVariable<MappingToScalarWrapper>(type_desc.Type);
-		case D3D_SHADER_VARIABLE_CLASS::D3D_SVC_VECTOR:
-			return MappingToVariable<MappingToVectorWrapper>(type_desc.Type, type_desc.Columns);
-		case D3D_SHADER_VARIABLE_CLASS::D3D10_SVC_MATRIX_COLUMNS:
-			return MappingToVariable<MappingToMatrixWrapper>(type_desc.Type, type_desc.Rows, type_desc.Columns);
+			HLSLConstBufferLayout layout;
+
+			switch (type_desc.Class)
+			{
+			case D3D_SHADER_VARIABLE_CLASS::D3D_SVC_SCALAR:
+				layout = MappingToVariable<MappingToScalarWrapper>(type_desc.Type);
+				break;
+			case D3D_SHADER_VARIABLE_CLASS::D3D_SVC_VECTOR:
+				layout = MappingToVariable<MappingToVectorWrapper>(type_desc.Type, type_desc.Columns);
+				break;
+			case D3D_SHADER_VARIABLE_CLASS::D3D10_SVC_MATRIX_COLUMNS:
+				layout = MappingToVariable<MappingToMatrixWrapper>(type_desc.Type, type_desc.Rows, type_desc.Columns);
+				break;
+			case D3D_SHADER_VARIABLE_CLASS::D3D_SVC_STRUCT:
+			{
+				if (type_layout_override)
+				{
+					std::u8string_view type_name{ reinterpret_cast<char8_t const*>(type_desc.Name) };
+					layout = type_layout_override(type_name);
+				}
+				if (!layout)
+				{
+					std::pmr::vector<StructLayout::Member> type_member{ temporary_resource };
+					type_member.reserve(type_desc.Members);
+					for (std::size_t i = 0; i < type_desc.Members; ++i)
+					{
+						auto type_var = reflection_type.GetMemberTypeByIndex(i);
+						auto [type_layout, array_count] = CreateLayoutFromReflectionType(*type_var, type_layout_override, layout_resource, temporary_resource);
+						assert(type_layout);
+						Potato::IR::StructLayout::Member current_member;
+						current_member.struct_layout = std::move(type_layout.struct_layout);
+						current_member.overrided_memory_layout = type_layout.memory_layout;
+						current_member.array_count = array_count;
+						current_member.name = reinterpret_cast<char8_t const*>(type_desc.Name);
+						type_member.push_back(current_member);
+					}
+					layout.struct_layout = StructLayout::CreateDynamic(
+						reinterpret_cast<char8_t const*>(type_desc.Name),
+						std::span(type_member.data(), type_member.size()),
+						Potato::MemLayout::GetHLSLConstBufferPolicy(),
+						layout_resource
+					);
+					assert(layout.struct_layout);
+					layout.memory_layout = layout.struct_layout->GetLayout();
+				}
+				break;
+			}
+			}
+			assert(layout);
+			return { layout, type_desc.Elements };
 		}
 		return {};
 	}
@@ -314,30 +365,14 @@ namespace Dumpling::HLSLCompiler
 	{
 		auto var_type = variable.GetType();
 		assert(var_type != nullptr);
-
-		D3D12_SHADER_TYPE_DESC type_desc;
-		if (SUCCEEDED(var_type->GetDesc(&type_desc)))
-		{
-			HLSLConstBufferLayout layout;
-			if (type_layout_override)
-			{
-				std::u8string_view type_name{ reinterpret_cast<char8_t const*>(type_desc.Name) };
-				layout = type_layout_override(type_name);
-			}
-			else {
-				layout = MappingToHLSLConstBufferLayout(type_desc);
-			}
-			assert(layout);
-			return { layout, type_desc.Elements };
-		}
-		return {};
+		return CreateLayoutFromReflectionType(*var_type, type_layout_override, layout_resource, temporary_resource);
 	}
 
 
-	StructLayoutObject::Ptr Instance::CreateLayoutFromCBuffer(
+	StructLayout::Ptr Instance::CreateLayoutFromCBuffer(
 		ShaderReflection& target_reflection,
 		std::size_t cbuffer_index,
-		Potato::TMP::FunctionRef<StructLayoutObject::Ptr(std::u8string_view)> cbuffer_layout_override,
+		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> cbuffer_layout_override,
 		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
 		std::pmr::memory_resource* temporary_resource
@@ -352,10 +387,10 @@ namespace Dumpling::HLSLCompiler
 			std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
 			if (cbuffer_layout_override)
 			{
-				auto layout_object = cbuffer_layout_override(cbuffer_name);
-				if (layout_object && layout_object->GetStructLayout()->GetLayout().size == buffer_desc.Size)
+				auto layout = cbuffer_layout_override(cbuffer_name);
+				if (layout && layout->GetLayout().size >= buffer_desc.Size)
 				{
-					return layout_object;
+					return layout;
 				}
 			}
 
@@ -376,40 +411,33 @@ namespace Dumpling::HLSLCompiler
 				current_member.name = reinterpret_cast<char8_t const*>(var_desc.Name);
 				members.push_back(current_member);
 			}
-			auto Str = StructLayout::CreateDynamic(
+			auto struct_layout = StructLayout::CreateDynamic(
 				reinterpret_cast<char8_t const*>(buffer_desc.Name),
-				std::span(members.data(), members.size()), Potato::MemLayout::GetHLSLConstBufferPolicy()
+				std::span(members.data(), members.size()), Potato::MemLayout::GetHLSLConstBufferPolicy(),
+				layout_resource
 			);
-			volatile int i = 0;
-		}
 
-
-		D3D12_SHADER_DESC shader_desc;
-
-		if (!SUCCEEDED(target_reflection.GetDesc(&shader_desc)))
-			return {};
-
-		return {};
-
-		/*
-		for (std::size_t layout_count = 0; layout_count < shader_desc.ConstantBuffers && layout_count < output_layout.size(); ++layout_count)
-		{
-			ID3D12ShaderReflectionConstantBuffer* const_buffer = target_reflection->GetConstantBufferByIndex(layout_count);
-			assert(const_buffer);
-			D3D12_SHADER_BUFFER_DESC buffer_desc;
-			const_buffer->GetDesc(&buffer_desc);
-			std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
-			if (layout_mapping)
 			{
-				auto layout = layout_mapping(cbuffer_name);
-				if (layout)
+				auto mvs = struct_layout->GetMemberView();
+				std::vector<D3D12_SHADER_VARIABLE_DESC> des;
+				for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
 				{
-					output_layout[layout_count] = std::move(layout);
-					continue;
+					auto mv = mvs[index];
+					auto ver = const_buffer->GetVariableByIndex(index);
+					assert(ver != nullptr);
+					D3D12_SHADER_VARIABLE_DESC ver_desc;
+					auto re = ver->GetDesc(&ver_desc);
+					assert(SUCCEEDED(re));
+					des.push_back(ver_desc);
+					auto layout = mvs[index].member_layout;
+					assert(layout.offset == ver_desc.StartOffset);
+					assert((layout.array_layout.each_element_offset * std::max(layout.array_layout.count, std::size_t{1})) >= ver_desc.Size);
 				}
 			}
+
+			return struct_layout;
 		}
-		*/
+		return {};
 	}
 
 	/*

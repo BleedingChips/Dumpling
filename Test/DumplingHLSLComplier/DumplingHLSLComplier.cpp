@@ -28,12 +28,12 @@ struct KKL
 
 cbuffer hallo
 {
-	float Yes;
+	float Yes = 1.0f;
 	float2 iop2[2];
 	float4x4 gWorldViewProj;
 	float4x3 gWorldViewProj2[2];
+	KKL kkl;
 	float4 iop = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	//KKL kkl;
 }
 
 
@@ -66,7 +66,12 @@ int main()
 
 	auto statics = instance.GetShaderStatistics(*reflection);
 
-	instance.CreateLayoutFromCBuffer(*reflection, 0);
+	for (std::size_t i = 0; i < statics->const_buffer_count; ++i)
+	{
+		auto k = instance.CreateLayoutFromCBuffer(*reflection, 0);
+	}
+
+	
 
 	/*
 	std::array<Potato::IR::StructLayout::Ptr, 2> output;
