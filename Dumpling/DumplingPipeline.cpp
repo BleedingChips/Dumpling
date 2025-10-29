@@ -63,7 +63,7 @@ namespace Dumpling
 						members.emplace_back(std::move(new_meber));
 						Potato::IR::StructLayout::CustomConstruct new_construct;
 						new_construct.construct_operator = decltype(new_construct.construct_operator)::Copy;
-						new_construct.paramter_object.construct_parameter_const_object = parameter->GetBuffer();
+						new_construct.paramter_object.construct_parameter_const_object = parameter->GetObject();
 						member_construct.emplace_back(std::move(new_construct));
 						++index;
 					}
