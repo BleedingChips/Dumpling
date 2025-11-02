@@ -45,9 +45,11 @@ int main()
 
 	auto form = Form::Create(config);
 
-	auto output = device->CreateFormWrapper(form);
-
 	auto form_renderer = device->CreateFrameRenderer();
+
+	auto output = device->CreateFormWrapper(form, *form_renderer);
+
+	
 
 	auto hud = IGHeadUpDisplay::Create(form, *form_renderer, &demo);
 

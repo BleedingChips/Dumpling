@@ -30,9 +30,11 @@ int main()
 
 	auto form = Form::Create(config);
 
-	auto output = device->CreateFormWrapper(form);
-
 	auto form_renderer = device->CreateFrameRenderer();
+
+	auto output = device->CreateFormWrapper(form, *form_renderer);
+
+	
 
 	float R = 0.0f;
 	float G = 0.0f;

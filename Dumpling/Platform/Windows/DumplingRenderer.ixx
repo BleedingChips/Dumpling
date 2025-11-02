@@ -127,7 +127,6 @@ export namespace Dumpling
 
 		Dx12GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
 
-
 		void SetRenderTargets(RenderTargetSet const& render_targets);
 		bool ClearRendererTarget(std::size_t index, Color color = Color::black);
 		//bool ClearDepthStencil(RendererTargetCarrier const& render_target, float depth, uint8_t stencil);
@@ -221,6 +220,8 @@ export namespace Dumpling
 
 		virtual void AddFrameRendererRef() const = 0;
 		virtual void SubFrameRendererRef() const = 0;
+
+		friend struct Device;
 	};
 
 	struct Device
@@ -234,7 +235,7 @@ export namespace Dumpling
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
-		FormWrapper::Ptr CreateFormWrapper(Form const& form, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		FormWrapper::Ptr CreateFormWrapper(Form const& form, FrameRenderer& render, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		static bool InitDebugLayer();
 
@@ -242,15 +243,14 @@ export namespace Dumpling
 
 	protected:
 
-		Device(Dx12FactoryPtr factory, Dx12DevicePtr device, Dx12CommandQueuePtr queue)
-			:factory(std::move(factory)),  device(std::move(device)), queue(std::move(queue))
+		Device(Dx12FactoryPtr factory, Dx12DevicePtr device)
+			:factory(std::move(factory)),  device(std::move(device))
 		{
 			
 		}
 
 		Dx12FactoryPtr factory;
 		Dx12DevicePtr device;
-		Dx12CommandQueuePtr queue;
 
 		virtual void AddDeviceRef() const = 0;
 		virtual void SubDeviceRef() const = 0;

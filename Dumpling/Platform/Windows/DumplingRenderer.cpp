@@ -89,7 +89,7 @@ namespace Dumpling
 		void SubRendererResourceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 	};
 
-	FormWrapper::Ptr Device::CreateFormWrapper(Form const& form, FormWrapper::Config fig, std::pmr::memory_resource* resource)
+	FormWrapper::Ptr Device::CreateFormWrapper(Form const& form, FrameRenderer& render, FormWrapper::Config fig, std::pmr::memory_resource* resource)
 	{
 		assert(factory);
 
@@ -109,7 +109,7 @@ namespace Dumpling
 
 				ComPtr<IDXGISwapChain1> swapChain;
 				auto re = factory->CreateSwapChainForHwnd(
-					queue.Get(), form.GetPlatformValue(), &swapChainDesc, nullptr, nullptr,
+					render.queue.Get(), form.GetPlatformValue(), &swapChainDesc, nullptr, nullptr,
 					swapChain.GetAddressOf()
 				);
 				if(SUCCEEDED(re))
@@ -370,11 +370,25 @@ namespace Dumpling
 
 	FrameRenderer::Ptr Device::CreateFrameRenderer(std::pmr::memory_resource* resource)
 	{
-		Dx12FencePtr fence;
-		auto re = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::InterfaceType), reinterpret_cast<void**>(fence.GetAddressOf()));
-		if(SUCCEEDED(re))
+		Dx12CommandQueuePtr command_queue;
+		D3D12_COMMAND_QUEUE_DESC desc{
+			D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+			D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+			D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+		0
+		};
+
+		auto result = device->CreateCommandQueue(
+			&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
+		);
+		if (SUCCEEDED(result))
 		{
-			return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<FrameRendererImp>(resource, device, queue, std::move(fence));
+			Dx12FencePtr fence;
+			auto re = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::InterfaceType), reinterpret_cast<void**>(fence.GetAddressOf()));
+			if (SUCCEEDED(re))
+			{
+				return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<FrameRendererImp>(resource, device, std::move(command_queue), std::move(fence));
+			}
 		}
 		return {};
 	}
@@ -382,8 +396,8 @@ namespace Dumpling
 
 	struct DeviceImp : public Device, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		DeviceImp(Potato::IR::MemoryResourceRecord record, Dx12FactoryPtr factory, Dx12DevicePtr device, Dx12CommandQueuePtr queue)
-			: MemoryResourceRecordIntrusiveInterface(record), Device(std::move(factory), std::move(device), std::move(queue))
+		DeviceImp(Potato::IR::MemoryResourceRecord record, Dx12FactoryPtr factory, Dx12DevicePtr device)
+			: MemoryResourceRecordIntrusiveInterface(record), Device(std::move(factory), std::move(device))
 		{}
 	protected:
 		virtual void AddDeviceRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
@@ -402,24 +416,9 @@ namespace Dumpling
 			result = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
 			if(SUCCEEDED(result))
 			{
-				Dx12CommandQueuePtr command_queue;
-				D3D12_COMMAND_QUEUE_DESC desc{
-					D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-					D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-					D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-				0
-				};
-
-				result = dev_ptr->CreateCommandQueue(
-					&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
+				return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<DeviceImp>(
+					resource, std::move(rptr), std::move(dev_ptr)
 				);
-
-				if(SUCCEEDED(result))
-				{
-					return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<DeviceImp>(
-						resource, std::move(rptr), std::move(dev_ptr), std::move(command_queue)
-					);
-				}
 			}
 		}
 		return {};
