@@ -193,4 +193,9 @@ export namespace Dumpling
 	{
 		return Type::HLSLConstBufferLayout();
 	}
+
+	struct Material
+	{
+
+	};
 }
