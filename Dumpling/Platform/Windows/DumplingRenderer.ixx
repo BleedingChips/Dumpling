@@ -16,6 +16,7 @@ import DumplingForm;
 import DumplingPipeline;
 import DumplingRendererTypes;
 import DumplingDX12;
+import DumplingPlatform;
 
 export namespace Dumpling
 {
@@ -33,7 +34,7 @@ export namespace Dumpling
 
 		struct Description
 		{
-			Dx12ResourcePtr resource_ptr;
+			ComPtr<ID3D12Resource> resource_ptr;
 			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
 			D3D12_RESOURCE_STATES default_state;
 		};
@@ -64,15 +65,15 @@ export namespace Dumpling
 
 	protected:
 
-		FormWrapper(Dx12SwapChainPtr swap_chain, Dx12DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
+		FormWrapper(ComPtr<IDXGISwapChain3> swap_chain, ComPtr<ID3D12DescriptorHeap> m_rtvHeap, Config config, std::size_t offset)
 			: swap_chain(std::move(swap_chain)), m_rtvHeap(std::move(m_rtvHeap)), config(config), offset(offset)
 		{
 			current_index = this->swap_chain->GetCurrentBackBufferIndex();
 			logic_current_index = current_index;
 		}
 
-		Dx12SwapChainPtr swap_chain;
-		Dx12DescriptorHeapPtr m_rtvHeap;
+		ComPtr<IDXGISwapChain3> swap_chain;
+		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		const std::size_t offset;
 		const Config config;
 		mutable std::shared_mutex logic_mutex;
@@ -103,7 +104,7 @@ export namespace Dumpling
 
 		struct ResourceRecord
 		{
-			Dx12ResourcePtr reference_resource;
+			ComPtr<ID3D12Resource> reference_resource;
 			D3D12_CPU_DESCRIPTOR_HANDLE handle;
 			D3D12_RESOURCE_STATES default_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
 		};
@@ -119,22 +120,23 @@ export namespace Dumpling
 	struct PassRenderer
 	{
 		PassRenderer() = default;
-		ID3D12GraphicsCommandList* operator->() const { return command.Get(); }
+		ID3D12GraphicsCommandList* operator->() const { return command.GetPointer(); }
 		~PassRenderer()
 		{
-			assert(!command);
+			assert(!*this);
 		}
 
-		Dx12GraphicCommandListPtr::InterfaceType* GetCommandList() { return command.Get(); }
+		ID3D12GraphicsCommandList* GetCommandList() { assert(*this); return command.GetPointer(); }
 
 		void SetRenderTargets(RenderTargetSet const& render_targets);
 		bool ClearRendererTarget(std::size_t index, Color color = Color::black);
 		//bool ClearDepthStencil(RendererTargetCarrier const& render_target, float depth, uint8_t stencil);
+		operator bool() const { return command && allocator; }
 
 	protected:
 
-		Dx12GraphicCommandListPtr command;
-		std::size_t reference_allocator_index = std::numeric_limits<std::size_t>::max();
+		ComPtr<ID3D12GraphicsCommandList> command;
+		ComPtr<ID3D12CommandAllocator> allocator;
 		std::size_t frame = 0;
 		std::optional<std::size_t> order;
 
@@ -147,112 +149,57 @@ export namespace Dumpling
 		friend struct FrameRenderer;
 	};
 
-	struct FrameRenderer
+	struct PassGraphics
 	{
-		struct Wrapper
-		{
-			void AddRef(FrameRenderer const* ptr) { ptr->AddFrameRendererRef(); }
-			void SubRef(FrameRenderer const* ptr) { ptr->SubFrameRendererRef(); }
-		};
-		using Ptr = Potato::Pointer::IntrusivePtr<FrameRenderer, Wrapper>;
-
-		bool PopPassRenderer(PassRenderer& output, PassRequest const& request);
-		bool FinishPassRenderer(PassRenderer& output);
-		std::optional<std::size_t> CommitFrame();
-		std::size_t GetCurrentFrame() const { std::shared_lock sl(frame_mutex); return current_frame; }
-		std::size_t TryFlushFrame();
-		bool FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration = std::nullopt);
-		Dx12DevicePtr GetRawDevice() const { return device; }
-		Dx12CommandQueuePtr GetRawCommandQuery() const { return queue; }
-	
-	protected:
-
-		virtual ~FrameRenderer();
-
-		bool PopPassRenderer_AssumedLocked(PassRenderer& output, PassRequest const& request);
-		bool FinishPassRenderer_AssumedLocked(PassRenderer& output);
-
-		FrameRenderer(Dx12DevicePtr device, Dx12CommandQueuePtr queue, Dx12FencePtr fence, std::pmr::memory_resource* resource)
-			: device(std::move(device)), queue(std::move(queue)), fence(std::move(fence)), total_allocator(resource), free_command_list(resource), finished_command_list(resource)
-		{
-			
-		}
-
-		void ResetAllocator_AssumedLocked(std::size_t frame);
-
-		enum class State
-		{
-			Idle,
-			Using,
-			Waiting,
-			Done,
-		};
-
-		struct AllocateTuple
-		{
-			Dx12CommandAllocatorPtr allocator;
-			State state = State::Idle;
-			std::size_t frame;
-		};
-
-		Dx12DevicePtr device;
-		Dx12CommandQueuePtr queue;
-		Dx12FencePtr fence;
-
-		std::mutex renderer_mutex;
-		std::pmr::vector<AllocateTuple> total_allocator;
-		std::pmr::deque<Dx12GraphicCommandListPtr> free_command_list;
-
-		struct CommandList
+		struct OrderedCommandList
 		{
 			std::size_t order = std::numeric_limits<std::size_t>::max();
-			Dx12GraphicCommandListPtr command_list;
+			ComPtr<ID3D12GraphicsCommandList> command_list;
 		};
+		std::pmr::vector<OrderedCommandList> ordered_command_list;
+	};
 
-		std::pmr::vector<CommandList> finished_command_list;
-		std::size_t last_flush_frame = 0;
-		std::size_t running_count = 0;
+	struct FrameRenderer
+	{
+		bool PopPassRenderer(PassRenderer& output, PassRequest const& request);
+		bool FinishPassRenderer(PassRenderer& output, PassGraphics& out_graphics);
+		std::optional<std::size_t> CommitFrame(PassGraphics& graphics);
+		std::uint64_t GetFinishedFrame() const;
+		operator bool() const { return device && command_queue && fence; }
+		bool Init(ComPtr<ID3D12Device> devive);
+		FrameRenderer(ComPtr<ID3D12Device> devive);
+		~FrameRenderer();
 
-		mutable std::shared_mutex frame_mutex;
+	protected:
+
+		ComPtr<ID3D12Device> device;
+		ComPtr<ID3D12CommandQueue> command_queue;
+		ComPtr<ID3D12Fence> fence;
+
+		std::pmr::vector<ComPtr<ID3D12GraphicsCommandList>> idle_command_list;
+		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> command_allocator_current_frame;
+
+		std::pmr::vector<std::tuple<ComPtr<ID3D12CommandAllocator>, std::uint64_t>> last_frame_allocator;
 		std::uint64_t current_frame = 1;
-
-		//struct Allocator
-
-		virtual void AddFrameRendererRef() const = 0;
-		virtual void SubFrameRendererRef() const = 0;
 
 		friend struct Device;
 	};
 
 	struct Device
 	{
-		struct Wrapper
+
+		struct Config
 		{
-			void AddRef(Device const* ptr) { ptr->AddDeviceRef(); }
-			void SubRef(Device const* ptr) { ptr->SubDeviceRef(); }
+
 		};
-		using Ptr = Potato::Pointer::IntrusivePtr<Device, Wrapper>;
 
-		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-
+		Device(Config config);
 		FormWrapper::Ptr CreateFormWrapper(Form const& form, FrameRenderer& render, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		FrameRenderer::Ptr CreateFrameRenderer(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		bool InitFrameRenderer(FrameRenderer& target_frame_renderer);
 		static bool InitDebugLayer();
-
-		Dx12DevicePtr::InterfaceType* GetDevice() { return device.Get(); }
-
 	protected:
 
-		Device(Dx12FactoryPtr factory, Dx12DevicePtr device)
-			:factory(std::move(factory)),  device(std::move(device))
-		{
-			
-		}
-
-		Dx12FactoryPtr factory;
-		Dx12DevicePtr device;
-
-		virtual void AddDeviceRef() const = 0;
-		virtual void SubDeviceRef() const = 0;
+		ComPtr<IDXGIFactory3> factory;
+		ComPtr<ID3D12Device> device;
 	};
 }

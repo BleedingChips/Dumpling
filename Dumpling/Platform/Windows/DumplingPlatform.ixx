@@ -16,5 +16,5 @@ export namespace Dumpling
 	};
 
 	template<typename PointerT>
-	using PlatformPtr = Potato::Pointer::IntrusivePtr<PointerT, ComWrapper>;
+	using ComPtr = Potato::Pointer::IntrusivePtr<PointerT, ComWrapper>;
 }

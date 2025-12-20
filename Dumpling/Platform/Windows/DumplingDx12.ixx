@@ -14,21 +14,25 @@ import std;
 import Potato;
 import DumplingForm;
 import DumplingPipeline;
+import DumplingPlatform;
 export import DumplingRendererTypes;
 
 export namespace Dumpling
 {
-	using Microsoft::WRL::ComPtr;
-
+	/*
 	using Dx12DevicePtr = ComPtr<ID3D12Device>;
+	using Dx12Device = typename Dx12DevicePtr::Type;
 	using Dx12CommandQueuePtr = ComPtr<ID3D12CommandQueue>;
+	using Dx12CommandQueue = typename Dx12CommandQueuePtr::Type;
 	using Dx12CommandAllocatorPtr = ComPtr<ID3D12CommandAllocator>;
 	using Dx12CommandListPtr = ComPtr<ID3D12CommandList>;
 	using Dx12GraphicCommandListPtr = ComPtr<ID3D12GraphicsCommandList>;
+	using Dx12GraphicCommandList = typename Dx12GraphicCommandListPtr::Type;
 	using Dx12FencePtr = ComPtr<ID3D12Fence>;
 	using Dx12ResourcePtr = ComPtr<ID3D12Resource>;
 	using Dx12DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
 	using Dx12FactoryPtr = ComPtr<IDXGIFactory2>;
 	using Dx12SwapChainPtr = ComPtr<IDXGISwapChain3>;
 	using Dx12DescriptorHeapPtr = ComPtr<ID3D12DescriptorHeap>;
+	*/
 }

@@ -180,8 +180,6 @@ export namespace Dumpling
 		return Mapping2DLayout<MappingMatrixWrapper<ElementT>::template Wrapper>(Rows, Columns);
 	}
 
-	
-
 	template<typename Type>
 	concept HLSLConstBufferLayoutDefinedClass = requires(Type)
 	{
@@ -197,5 +195,19 @@ export namespace Dumpling
 	struct Material
 	{
 
+		struct CBScription
+		{
+			Potato::IR::StructLayout::Ptr layout;
+			Potato::Misc::IndexSpan<> property;
+		};
+
+		struct SlotScription
+		{
+			std::size_t index;
+		};
+
+
+		std::pmr::vector<Potato::IR::StructLayout::Ptr> const_buffer;
+		std::pmr::vector<SlotScription> slot;
 	};
 }

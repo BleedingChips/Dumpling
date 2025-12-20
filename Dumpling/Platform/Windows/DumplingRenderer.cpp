@@ -6,7 +6,7 @@ module;
 #include <intsafe.h>
 #include <OCIdl.h>
 #include <d3d12sdklayers.h>
-#include "wrl.h"
+#include <Windows.h>
 
 #undef interface
 #undef max
@@ -16,6 +16,8 @@ module DumplingRenderer;
 
 namespace Dumpling
 {
+
+
 	bool Device::InitDebugLayer()
 	{
 		static std::mutex debug_mutex;
@@ -23,7 +25,7 @@ namespace Dumpling
 		std::lock_guard lg(debug_mutex);
 		if(!debug_layout)
 		{
-			D3D12GetDebugInterface(IID_PPV_ARGS(debug_layout.GetAddressOf()));
+			D3D12GetDebugInterface(__uuidof(ID3D12Debug), debug_layout.GetPointerVoidAdress());
 			if(debug_layout)
 				debug_layout->EnableDebugLayer();
 		}
@@ -61,13 +63,13 @@ namespace Dumpling
 	{
 		if(require_state == D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET)
 		{
-			Dx12ResourcePtr resource;
+			ComPtr<ID3D12Resource> resource;
 			std::size_t index = 0;
 			{
 				std::shared_lock sl(logic_mutex);
 				index = logic_current_index;
 			}
-			swap_chain->GetBuffer(index, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
+			swap_chain->GetBuffer(index, __uuidof(ID3D12Resource), resource.GetPointerVoidAdress());
 			return{
 				resource,
 				m_rtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + offset * index,
@@ -79,7 +81,7 @@ namespace Dumpling
 
 	struct FormWrapperImp : public FormWrapper, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		FormWrapperImp(Potato::IR::MemoryResourceRecord record, Dx12SwapChainPtr swap_chain, Dx12DescriptorHeapPtr m_rtvHeap, Config config, std::size_t offset)
+		FormWrapperImp(Potato::IR::MemoryResourceRecord record, ComPtr<IDXGISwapChain3> swap_chain, ComPtr<ID3D12DescriptorHeap> m_rtvHeap, Config config, std::size_t offset)
 			: MemoryResourceRecordIntrusiveInterface(record), FormWrapper(std::move(swap_chain), std::move(m_rtvHeap), config, offset)
 		{
 			
@@ -107,37 +109,41 @@ namespace Dumpling
 				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 				swapChainDesc.SampleDesc.Count = 1;
 
-				ComPtr<IDXGISwapChain1> swapChain;
+				ComPtr<IDXGISwapChain1> new_swap_chain;
 				auto re = factory->CreateSwapChainForHwnd(
-					render.queue.Get(), form.GetPlatformValue(), &swapChainDesc, nullptr, nullptr,
-					swapChain.GetAddressOf()
+					render.command_queue.GetPointer(), form.GetPlatformValue(), &swapChainDesc, nullptr, nullptr,
+					new_swap_chain.GetPointerAdress()
 				);
 				if(SUCCEEDED(re))
 				{
-					Dx12SwapChainPtr swap_chain;
-					if(SUCCEEDED(swapChain.As(&swap_chain)))
+					ComPtr<IDXGISwapChain3> swap_chain;
+
+					if (SUCCEEDED(new_swap_chain->QueryInterface(
+						__uuidof(decltype(swap_chain)::Type),
+						swap_chain.GetPointerVoidAdress())
+					))
 					{
-						Dx12DescriptorHeapPtr m_rtvHeap;
+						ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 						D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-				        rtvHeapDesc.NumDescriptors = swapChainDesc.BufferCount;
-				        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-				        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-				        auto re = device->CreateDescriptorHeap(&rtvHeapDesc,
-							__uuidof(decltype(m_rtvHeap)::InterfaceType), reinterpret_cast<void**>(m_rtvHeap.GetAddressOf())
+						rtvHeapDesc.NumDescriptors = swapChainDesc.BufferCount;
+						rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+						rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+						auto re = device->CreateDescriptorHeap(&rtvHeapDesc,
+							__uuidof(decltype(m_rtvHeap)::Type), m_rtvHeap.GetPointerVoidAdress()
 						);
-						if(SUCCEEDED(re))
+						if (SUCCEEDED(re))
 						{
 							std::size_t m_rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-							D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle {m_rtvHeap->GetCPUDescriptorHandleForHeapStart()};
+							D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle{ m_rtvHeap->GetCPUDescriptorHandleForHeapStart() };
 
-					        // Create a RTV and a command allocator for each frame.
-					        for (UINT n = 0; n < swapChainDesc.BufferCount; n++)
-					        {
-								Dx12ResourcePtr resource;
-					            swap_chain->GetBuffer(n, __uuidof(decltype(resource)::InterfaceType), reinterpret_cast<void**>(resource.GetAddressOf()));
-					            device->CreateRenderTargetView(resource.Get(), nullptr, rtvHandle);
+							// Create a RTV and a command allocator for each frame.
+							for (UINT n = 0; n < swapChainDesc.BufferCount; n++)
+							{
+								ComPtr<ID3D12Resource> resource;
+								swap_chain->GetBuffer(n, __uuidof(decltype(resource)::Type), resource.GetPointerVoidAdress());
+								device->CreateRenderTargetView(resource.GetPointer(), nullptr, rtvHandle);
 								rtvHandle.ptr += m_rtvDescriptorSize;
-					        }
+							}
 
 							return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<FormWrapperImp>(
 								resource,
@@ -156,8 +162,8 @@ namespace Dumpling
 
 	bool FrameRenderer::PopPassRenderer(PassRenderer& output, PassRequest const& request)
 	{
-		std::lock_guard lg(renderer_mutex);
-		return PopPassRenderer_AssumedLocked(output, request);
+		assert(*this);
+
 	}
 
 	FrameRenderer::~FrameRenderer()
