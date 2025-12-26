@@ -163,72 +163,59 @@ namespace Dumpling
 	bool FrameRenderer::PopPassRenderer(PassRenderer& output, PassRequest const& request)
 	{
 		assert(*this);
-
+		if (output)
+			return false;
+		ComPtr<ID3D12CommandAllocator> target_allocator;
+		if (!target_allocator && !command_allocator_current_frame.empty())
+		{
+			target_allocator = std::move(command_allocator_current_frame.back());
+			command_allocator_current_frame.pop_back();
+		}
+		if (!target_allocator)
+		{
+			auto re = device->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+				__uuidof(decltype(target_allocator)::Type), target_allocator.GetPointerVoidAdress()
+			);
+			assert(re);
+		}
+		if (!target_allocator)
+			return false;
+		ComPtr<ID3D12GraphicsCommandList> target_command_list;
+		if (!target_command_list && !idle_command_list.empty())
+		{
+			target_command_list = std::move(idle_command_list.back());
+			idle_command_list.pop_back();
+		}
+		if (!target_command_list)
+		{
+			auto re = device->CreateCommandList(
+				0, D3D12_COMMAND_LIST_TYPE_DIRECT, target_allocator.GetPointer(), nullptr,
+				__uuidof(decltype(target_command_list)::Type), target_command_list.GetPointerVoidAdress()
+			);
+			assert(re);
+		}
+		if (!target_command_list)
+		{
+			command_allocator_current_frame.emplace_back(std::move(target_allocator));
+			return false;
+		}
+		output.command = std::move(target_command_list);
+		output.frame = current_frame;
+		output.allocator = std::move(target_allocator);
+		output.order = request.order;
 	}
 
 	FrameRenderer::~FrameRenderer()
 	{
 	}
 
-	bool FrameRenderer::PopPassRenderer_AssumedLocked(PassRenderer& output, PassRequest const& request)
+	bool FrameRenderer::FinishPassRenderer(PassRenderer& output, PassGraphics& out_graphics)
 	{
-		if(!output.command)
-		{
-			std::size_t index = 0;
-			for(;index < total_allocator.size(); ++index)
-			{
-				auto& ref = total_allocator[index];
-				if(ref.state == State::Idle || ref.state == State::Waiting)
-				{
-					break;
-				}
-			}
-			if(index == total_allocator.size())
-			{
-				Dx12CommandAllocatorPtr new_allocator;
-				auto re = device->CreateCommandAllocator(
-					D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT, 
-					__uuidof(decltype(new_allocator)::InterfaceType), reinterpret_cast<void**>(new_allocator.GetAddressOf())
-				);
-				if(SUCCEEDED(re))
-				{
-					total_allocator.emplace_back(std::move(new_allocator), State::Idle, 0);
-				}else
-					return false;
-			}
-			auto& ref = total_allocator[index];
-			Dx12GraphicCommandListPtr target_command_list;
-			if(!free_command_list.empty())
-			{
-				target_command_list = std::move(free_command_list.back());
-				free_command_list.pop_back();
-				auto re = target_command_list->Reset(ref.allocator.Get(), nullptr);
-				if(!SUCCEEDED(re))
-				{
-					return false;
-				}
-				
-			}else
-			{
-				auto re = device->CreateCommandList(
-					0, D3D12_COMMAND_LIST_TYPE_DIRECT, ref.allocator.Get(), nullptr,
-					__uuidof(decltype(target_command_list)::InterfaceType), reinterpret_cast<void**>(target_command_list.GetAddressOf())
-				);
-				if(!SUCCEEDED(re))
-				{
-					return false;
-				}
-			}
-			ref.state = State::Using;
-			ref.frame = current_frame;
-			output.command = std::move(target_command_list);
-			output.frame = current_frame;
-			output.reference_allocator_index = index;
-			output.order = request.order;
-			++running_count;
-			return true;
-		}
-		return false;
+		assert(*this);
+		if (!output)
+			return false;
+		output.PreFinishRender();
 	}
 
 	bool FrameRenderer::FinishPassRenderer(PassRenderer& output)

@@ -180,6 +180,7 @@ export namespace Dumpling
 		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> command_allocator_current_frame;
 
 		std::pmr::vector<std::tuple<ComPtr<ID3D12CommandAllocator>, std::uint64_t>> last_frame_allocator;
+		std::pmr::vector<std::tuple<ComPtr<ID3D12GraphicsCommandList>, std::uint64_t>> last_frame_command_list;
 		std::uint64_t current_frame = 1;
 
 		friend struct Device;
