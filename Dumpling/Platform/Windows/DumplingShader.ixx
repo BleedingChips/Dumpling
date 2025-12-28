@@ -23,7 +23,7 @@ export namespace Dumpling
 		std::size_t const_buffer_count = 0;
 	};
 
-	std::optional<ShaderStatistics> GetShaderStatistics(ShaderReflection& target_reflection);
+	std::optional<ShaderStatistics> GetShaderStatistics(ID3D12ShaderReflection& target_reflection);
 
 	Potato::IR::StructLayout::Ptr CreateLayoutFromCBuffer(
 		ID3D12ShaderReflection& target_reflection,

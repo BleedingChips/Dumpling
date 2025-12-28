@@ -17,7 +17,7 @@ namespace Dumpling
 {
 	ImGuiHeadUpDisplayWin32Dx12::ImGuiHeadUpDisplayWin32Dx12(
 		Potato::IR::MemoryResourceRecord record,
-		Dx12DescriptorHeapPtr heap,
+		ComPtr<ID3D12DescriptorHeap> heap,
 		IGWidget::Ptr top_widget,
 		std::size_t heap_handle_increment_size,
 		ImGuiContext* context
@@ -46,14 +46,14 @@ namespace Dumpling
 				0
 			};
 			
-			Dx12DescriptorHeapPtr heap;
-			auto re = renderer.GetRawDevice()->CreateDescriptorHeap(
-				&desc, IID_PPV_ARGS(heap.GetAddressOf())
+			ComPtr<ID3D12DescriptorHeap> heap;
+			auto re = renderer.GetDevice()->CreateDescriptorHeap(
+				&desc, __uuidof(decltype(heap)::Type), heap.GetPointerVoidAdress()
 			);
 
 			if(SUCCEEDED(re))
 			{
-				std::size_t heap_handle_increment_size = renderer.GetRawDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				std::size_t heap_handle_increment_size = renderer.GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 
 				auto re = Potato::IR::MemoryResourceRecord::Allocate<ImGuiHeadUpDisplayWin32Dx12>(resource);
@@ -66,12 +66,12 @@ namespace Dumpling
 					if (ImGui_ImplWin32_Init(form.GetPlatformValue()))
 					{
 						ImGui_ImplDX12_InitInfo init_info = {};
-						init_info.Device = renderer.GetRawDevice().Get();
-						init_info.CommandQueue = renderer.GetRawCommandQuery().Get();
+						init_info.Device = renderer.GetDevice();
+						init_info.CommandQueue = renderer.GetCommandQueue();
 						init_info.NumFramesInFlight = 2;
 						init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM; // Or your render target format.
 						init_info.UserData = ptr;
-						init_info.SrvDescriptorHeap = heap.Get();
+						init_info.SrvDescriptorHeap = heap.GetPointer();
 						init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle) {
 							ImGuiHeadUpDisplayWin32Dx12* ptr = reinterpret_cast<ImGuiHeadUpDisplayWin32Dx12*>(info->UserData);
 							std::uint64_t iterator = 1;
@@ -138,7 +138,7 @@ namespace Dumpling
 				top_widget->Draw(renderer);
 			}
 			ImGui::Render();
-			renderer->SetDescriptorHeaps(1, heap.GetAddressOf());
+			renderer->SetDescriptorHeaps(1, heap.GetPointerAdress());
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandList());
 			return true;
 		}

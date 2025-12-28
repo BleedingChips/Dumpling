@@ -22,7 +22,8 @@ int main()
 {
 	Device::InitDebugLayer();
 
-	auto device = Device::Create();
+	Device device;
+	device.Init();
 
 	Form::Config config;
 	config.title = u8"FuckYou";
@@ -30,9 +31,11 @@ int main()
 
 	auto form = Form::Create(config);
 
-	auto form_renderer = device->CreateFrameRenderer();
+	FrameRenderer form_renderer;
 
-	auto output = device->CreateFormWrapper(form, *form_renderer);
+	device.InitFrameRenderer(form_renderer);
+
+	auto output = device.CreateFormWrapper(form, form_renderer);
 
 	
 
@@ -60,17 +63,28 @@ int main()
 		PassRenderer ren;
 		PassRequest request;
 
-		if (form_renderer->PopPassRenderer(ren, request))
+		if (form_renderer.PopPassRenderer(ren, request))
 		{
 			RenderTargetSet sets;
 			sets.AddRenderTarget(*output);
 			ren.SetRenderTargets(sets);
 			ren.ClearRendererTarget(0, { R, G, B, 1.0f });
-			form_renderer->FinishPassRenderer(ren);
+			form_renderer.FinishPassRenderer(ren);
 		}
 
-		auto tar = form_renderer->CommitFrame();
-		form_renderer->FlushToLastFrame();
+		auto tar = form_renderer.CommitFrame();
+
+		while (true)
+		{
+			if (form_renderer.FlushFrame() + 1 < form_renderer.GetCurrentFrame())
+			{
+				std::this_thread::yield();
+			}
+			else
+			{
+				break;
+			}
+		}
 
 		output->LogicPresent();
 		output->Present();

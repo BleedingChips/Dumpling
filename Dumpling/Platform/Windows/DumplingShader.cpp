@@ -2,7 +2,7 @@ module;
 
 #include <cassert>
 #include "Windows.h"
-
+#include "d3d12shader.h"
 #undef max
 
 module DumplingShader;
@@ -13,7 +13,7 @@ namespace Dumpling
 	using Potato::IR::StructLayout;
 
 
-	std::optional<ShaderStatistics> GetShaderStatistics(ShaderReflection& target_reflection)
+	std::optional<ShaderStatistics> GetShaderStatistics(ID3D12ShaderReflection& target_reflection)
 	{
 		D3D12_SHADER_DESC desc;
 		if (SUCCEEDED(target_reflection.GetDesc(&desc)))
@@ -143,7 +143,7 @@ namespace Dumpling
 
 
 	Potato::IR::StructLayout::Ptr CreateLayoutFromCBuffer(
-		ShaderReflection& target_reflection,
+		ID3D12ShaderReflection& target_reflection,
 		std::size_t cbuffer_index,
 		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> cbuffer_layout_override,
 		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override,

@@ -145,30 +145,24 @@ export namespace Dumpling
 		std::size_t render_target_barriers_count = 0;
 
 		void PreFinishRender();
+		void PosFinishRender();
+		void Reset();
 
 		friend struct FrameRenderer;
-	};
-
-	struct PassGraphics
-	{
-		struct OrderedCommandList
-		{
-			std::size_t order = std::numeric_limits<std::size_t>::max();
-			ComPtr<ID3D12GraphicsCommandList> command_list;
-		};
-		std::pmr::vector<OrderedCommandList> ordered_command_list;
 	};
 
 	struct FrameRenderer
 	{
 		bool PopPassRenderer(PassRenderer& output, PassRequest const& request);
-		bool FinishPassRenderer(PassRenderer& output, PassGraphics& out_graphics);
-		std::optional<std::size_t> CommitFrame(PassGraphics& graphics);
-		std::uint64_t GetFinishedFrame() const;
+		bool FinishPassRenderer(PassRenderer& output);
+		std::optional<std::size_t> CommitFrame();
+		std::uint64_t FlushFrame();
 		operator bool() const { return device && command_queue && fence; }
 		bool Init(ComPtr<ID3D12Device> devive);
-		FrameRenderer(ComPtr<ID3D12Device> devive);
 		~FrameRenderer();
+		ID3D12Device* GetDevice() { return device.GetPointer(); }
+		ID3D12CommandQueue* GetCommandQueue() { return command_queue.GetPointer(); }
+		std::uint64_t GetCurrentFrame() const { return current_frame; }
 
 	protected:
 
@@ -176,11 +170,22 @@ export namespace Dumpling
 		ComPtr<ID3D12CommandQueue> command_queue;
 		ComPtr<ID3D12Fence> fence;
 
+		struct OrderedCommandList
+		{
+			std::size_t order = std::numeric_limits<std::size_t>::max();
+			ComPtr<ID3D12GraphicsCommandList> command_list;
+		};
+
+		std::pmr::vector<OrderedCommandList> current_frame_command_lists;
+		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> current_frame_allocators;
+
 		std::pmr::vector<ComPtr<ID3D12GraphicsCommandList>> idle_command_list;
-		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> command_allocator_current_frame;
+		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> idle_allocator;
 
 		std::pmr::vector<std::tuple<ComPtr<ID3D12CommandAllocator>, std::uint64_t>> last_frame_allocator;
 		std::pmr::vector<std::tuple<ComPtr<ID3D12GraphicsCommandList>, std::uint64_t>> last_frame_command_list;
+		
+		std::pmr::vector<ID3D12CommandList*> template_buffer;
 		std::uint64_t current_frame = 1;
 
 		friend struct Device;
@@ -194,10 +199,11 @@ export namespace Dumpling
 
 		};
 
-		Device(Config config);
+		bool Init(Config config = {});
 		FormWrapper::Ptr CreateFormWrapper(Form const& form, FrameRenderer& render, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		bool InitFrameRenderer(FrameRenderer& target_frame_renderer);
 		static bool InitDebugLayer();
+		operator bool() const { return factory && device; }
 	protected:
 
 		ComPtr<IDXGIFactory3> factory;

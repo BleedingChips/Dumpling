@@ -3,6 +3,7 @@ module;
 
 #include "imgui.h"
 #include "wrl.h"
+#include "D3D12.h"
 
 export module DumplingImGuiDx12;
 
@@ -10,6 +11,7 @@ import Potato;
 import DumplingFormEvent;
 import DumplingImGuiHUD;
 import DumplingDX12;
+import DumplingPlatform;
 
 export namespace Dumpling
 {
@@ -27,7 +29,7 @@ export namespace Dumpling
 		
 		ImGuiHeadUpDisplayWin32Dx12(
 			Potato::IR::MemoryResourceRecord record,
-			Dx12DescriptorHeapPtr heap,
+			ComPtr<ID3D12DescriptorHeap> heap,
 			IGWidget::Ptr top_widget,
 			std::size_t heap_handle_increment_size,
 			ImGuiContext* context
@@ -35,7 +37,7 @@ export namespace Dumpling
 		~ImGuiHeadUpDisplayWin32Dx12();
 
 		ImGuiContext* io_context = nullptr;
-		Dx12DescriptorHeapPtr heap;
+		ComPtr<ID3D12DescriptorHeap> heap;
 		std::uint64_t available_heap_mark = 0;
 		std::size_t heap_handle_increment_size = 0;
 	};

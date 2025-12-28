@@ -97,7 +97,7 @@ export namespace Dumpling::HLSLCompiler
 		ArgumentPtr CreateArguments(ShaderTarget target, std::u8string_view entry_point, std::u8string_view file_path, ComplierFlag flag = ComplierFlag::None);
 		CompilerPtr CreateCompiler();
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
-		ShaderReflectionPtr CreateReflection(BlobPtr const& shader_object);
+		ComPtr<ID3D12ShaderReflection> CreateReflection(BlobPtr const& shader_object);
 		
 		
 

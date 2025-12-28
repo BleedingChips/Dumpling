@@ -91,14 +91,249 @@ namespace Dumpling
 		void SubRendererResourceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
 	};
 
+	bool FrameRenderer::PopPassRenderer(PassRenderer& output, PassRequest const& request)
+	{
+		assert(*this);
+		if (output)
+			return false;
+		ComPtr<ID3D12CommandAllocator> target_allocator;
+		if (!target_allocator && !current_frame_allocators.empty())
+		{
+			target_allocator = std::move(current_frame_allocators.back());
+			current_frame_allocators.pop_back();
+		}
+		if (!target_allocator && !idle_allocator.empty())
+		{
+			target_allocator = std::move(idle_allocator.back());
+			idle_allocator.pop_back();
+		}
+		if (!target_allocator)
+		{
+			auto re = device->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+				__uuidof(decltype(target_allocator)::Type), target_allocator.GetPointerVoidAdress()
+			);
+			assert(SUCCEEDED(re));
+		}
+		if (!target_allocator)
+			return false;
+		ComPtr<ID3D12GraphicsCommandList> target_command_list;
+		if (!target_command_list && !idle_command_list.empty())
+		{
+			target_command_list = std::move(idle_command_list.back());
+			idle_command_list.pop_back();
+			target_command_list->Reset(target_allocator.GetPointer(), nullptr);
+		}
+		if (!target_command_list)
+		{
+			auto re = device->CreateCommandList(
+				0, D3D12_COMMAND_LIST_TYPE_DIRECT, target_allocator.GetPointer(), nullptr,
+				__uuidof(decltype(target_command_list)::Type), target_command_list.GetPointerVoidAdress()
+			);
+			assert(SUCCEEDED(re));
+		}
+		if (!target_command_list)
+		{
+			current_frame_allocators.emplace_back(std::move(target_allocator));
+			return false;
+		}
+		output.command = std::move(target_command_list);
+		output.frame = current_frame;
+		output.allocator = std::move(target_allocator);
+		output.order = request.order;
+		return true;
+	}
+
+	FrameRenderer::~FrameRenderer()
+	{
+	}
+
+	bool FrameRenderer::FinishPassRenderer(PassRenderer& output)
+	{
+		assert(*this);
+		if (!output)
+			return false;
+		output.PreFinishRender();
+		output.command->Close();
+		current_frame_command_lists.emplace_back(
+			output.order.value_or(std::numeric_limits<std::size_t>::max()),
+			std::move(output.command)
+		);
+		current_frame_allocators.emplace_back(std::move(output.allocator));
+		output.PosFinishRender();
+		return true;
+	}
+
+	std::optional<std::size_t> FrameRenderer::CommitFrame()
+	{
+		std::sort(
+			current_frame_command_lists.begin(),
+			current_frame_command_lists.end(),
+			[](OrderedCommandList const& i1, OrderedCommandList const& i2) {
+				return i1.order < i2.order;
+			}
+		);
+
+		template_buffer.clear();
+
+		for (auto& ite : current_frame_command_lists)
+		{
+			template_buffer.push_back(ite.command_list.GetPointer());
+		}
+
+		command_queue->ExecuteCommandLists(template_buffer.size(), template_buffer.data());
+		auto re = command_queue->Signal(fence.GetPointer(), current_frame);
+		assert(SUCCEEDED(re));
+
+		for (auto& ite : current_frame_command_lists)
+		{
+			last_frame_command_list.emplace_back(
+				std::move(ite.command_list), current_frame
+			);
+		}
+
+		for (auto& ite : current_frame_allocators)
+		{
+			last_frame_allocator.emplace_back(
+				std::move(ite), current_frame
+			);
+		}
+
+		current_frame_command_lists.clear();
+		current_frame_allocators.clear();
+
+		auto old_frame = current_frame;
+		++current_frame;
+		return old_frame;
+	}
+
+	std::uint64_t FrameRenderer::FlushFrame()
+	{
+		auto current_frame = fence->GetCompletedValue();
+		bool need_remove = false;
+		for (auto& [ite, frame] : last_frame_allocator)
+		{
+			if (frame <= current_frame)
+			{
+				idle_allocator.emplace_back(std::move(ite));
+				ite.Reset();
+				need_remove = true;
+			}
+			else
+				break;
+		}
+
+		if (need_remove)
+		{
+			last_frame_allocator.erase(
+				std::remove_if(
+					last_frame_allocator.begin(),
+					last_frame_allocator.end(),
+					[](auto& ite) {
+						return !std::get<0>(ite);
+					}
+				),
+				last_frame_allocator.end()
+			);
+			need_remove = false;
+		}
+
+		for (auto& [ite, frame] : last_frame_command_list)
+		{
+			if (frame <= current_frame)
+			{
+				idle_command_list.emplace_back(std::move(ite));
+				ite.Reset();
+				need_remove = true;
+			}
+			else
+				break;
+		}
+
+		if (need_remove)
+		{
+			last_frame_command_list.erase(
+				std::remove_if(
+					last_frame_command_list.begin(),
+					last_frame_command_list.end(),
+					[](auto& ite) {
+						return !std::get<0>(ite);
+					}
+				),
+				last_frame_command_list.end()
+			);
+			need_remove = false;
+		}
+		return current_frame;
+	}
+
+	bool FrameRenderer::Init(ComPtr<ID3D12Device> in_devive)
+	{
+		if (*this || !in_devive)
+			return false;
+
+		ComPtr<ID3D12CommandQueue> command_queue;
+		D3D12_COMMAND_QUEUE_DESC desc{
+			D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
+			D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+			D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+		0
+		};
+
+		auto result = in_devive->CreateCommandQueue(
+			&desc, __uuidof(decltype(command_queue)::Type), command_queue.GetPointerVoidAdress()
+		);
+		if (SUCCEEDED(result))
+		{
+			ComPtr<ID3D12Fence> fence;
+			auto re = in_devive->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::Type), fence.GetPointerVoidAdress());
+			if (SUCCEEDED(re))
+			{
+				this->device = std::move(in_devive);
+				this->command_queue = std::move(command_queue);
+				this->fence = std::move(fence);
+				return true;
+			}
+		}
+		return {};
+	}
+
+	bool Device::InitFrameRenderer(FrameRenderer& target_frame_renderer)
+	{
+		return target_frame_renderer.Init(device);
+	}
+
+
+	bool Device::Init(Config config)
+	{
+		if (*this)
+			return false;
+		ComPtr<IDXGIFactory3> new_factory;
+		UINT Flags = 0;
+		Flags |= DXGI_CREATE_FACTORY_DEBUG;
+		HRESULT result = CreateDXGIFactory2(Flags, __uuidof(decltype(new_factory)::Type), new_factory.GetPointerVoidAdress());
+		if (SUCCEEDED(result))
+		{
+			ComPtr<ID3D12Device> dev_ptr;
+			result = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::Type), dev_ptr.GetPointerVoidAdress());
+			if (SUCCEEDED(result))
+			{
+				factory = std::move(new_factory);
+				device = std::move(dev_ptr);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	FormWrapper::Ptr Device::CreateFormWrapper(Form const& form, FrameRenderer& render, FormWrapper::Config fig, std::pmr::memory_resource* resource)
 	{
 		assert(factory);
 
-		if(form)
+		if (form)
 		{
 			RECT rect;
-			if(GetClientRect(form.GetPlatformValue(), &rect))
+			if (GetClientRect(form.GetPlatformValue(), &rect))
 			{
 				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 				swapChainDesc.BufferCount = fig.swap_buffer_count;
@@ -114,7 +349,7 @@ namespace Dumpling
 					render.command_queue.GetPointer(), form.GetPlatformValue(), &swapChainDesc, nullptr, nullptr,
 					new_swap_chain.GetPointerAdress()
 				);
-				if(SUCCEEDED(re))
+				if (SUCCEEDED(re))
 				{
 					ComPtr<IDXGISwapChain3> swap_chain;
 
@@ -155,263 +390,6 @@ namespace Dumpling
 						}
 					}
 				}
-			}
-		}
-		return {};
-	}
-
-	bool FrameRenderer::PopPassRenderer(PassRenderer& output, PassRequest const& request)
-	{
-		assert(*this);
-		if (output)
-			return false;
-		ComPtr<ID3D12CommandAllocator> target_allocator;
-		if (!target_allocator && !command_allocator_current_frame.empty())
-		{
-			target_allocator = std::move(command_allocator_current_frame.back());
-			command_allocator_current_frame.pop_back();
-		}
-		if (!target_allocator)
-		{
-			auto re = device->CreateCommandAllocator(
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-				__uuidof(decltype(target_allocator)::Type), target_allocator.GetPointerVoidAdress()
-			);
-			assert(re);
-		}
-		if (!target_allocator)
-			return false;
-		ComPtr<ID3D12GraphicsCommandList> target_command_list;
-		if (!target_command_list && !idle_command_list.empty())
-		{
-			target_command_list = std::move(idle_command_list.back());
-			idle_command_list.pop_back();
-		}
-		if (!target_command_list)
-		{
-			auto re = device->CreateCommandList(
-				0, D3D12_COMMAND_LIST_TYPE_DIRECT, target_allocator.GetPointer(), nullptr,
-				__uuidof(decltype(target_command_list)::Type), target_command_list.GetPointerVoidAdress()
-			);
-			assert(re);
-		}
-		if (!target_command_list)
-		{
-			command_allocator_current_frame.emplace_back(std::move(target_allocator));
-			return false;
-		}
-		output.command = std::move(target_command_list);
-		output.frame = current_frame;
-		output.allocator = std::move(target_allocator);
-		output.order = request.order;
-	}
-
-	FrameRenderer::~FrameRenderer()
-	{
-	}
-
-	bool FrameRenderer::FinishPassRenderer(PassRenderer& output, PassGraphics& out_graphics)
-	{
-		assert(*this);
-		if (!output)
-			return false;
-		output.PreFinishRender();
-	}
-
-	bool FrameRenderer::FinishPassRenderer(PassRenderer& output)
-	{
-		std::lock_guard lg(renderer_mutex);
-		return FinishPassRenderer_AssumedLocked(output);
-	}
-
-	bool FrameRenderer::FinishPassRenderer_AssumedLocked(PassRenderer& output)
-	{
-		if(output.command && output.frame == current_frame)
-		{
-			output.PreFinishRender();
-			auto re = output.command->Close();
-			if(SUCCEEDED(re))
-			{
-				finished_command_list.emplace_back(
-					output.order.value_or(std::numeric_limits<std::size_t>::max()),
-					std::move(output.command)
-				);
-				assert(total_allocator.size() > output.reference_allocator_index);
-				auto& ref = total_allocator[output.reference_allocator_index];
-				assert(ref.state == State::Using && ref.frame == current_frame);
-				ref.state = State::Waiting;
-				--running_count;
-				return true;
-			}
-		}
-		return false;
-	}
-
-	std::optional<std::size_t> FrameRenderer::CommitFrame()
-	{
-		std::lock_guard lg(renderer_mutex);
-		if(running_count == 0)
-		{
-			for(auto& ite : total_allocator)
-			{
-				assert(ite.state != State::Using);
-				if(ite.state == State::Waiting)
-				{
-					assert(ite.frame == current_frame);
-					ite.state = State::Done;
-				}
-			}
-			std::size_t old_frame;
-			{
-				std::lock_guard lg(frame_mutex);
-				std::sort(
-					finished_command_list.begin(),
-					finished_command_list.end(),
-					[](CommandList const& i1, CommandList const& i2) {
-						return i1.order < i2.order;
-					}
-				);
-
-				std::pmr::vector<ID3D12CommandList*> command_list;
-				command_list.reserve(finished_command_list.size());
-
-				for (auto& ite : finished_command_list)
-				{
-					command_list.push_back(ite.command_list.Get());
-				}
-
-				queue->ExecuteCommandLists(command_list.size(), command_list.data());
-				auto re = queue->Signal(fence.Get(), current_frame);
-				assert(SUCCEEDED(re));
-				old_frame = current_frame;
-				++current_frame;
-			}
-			
-			for(auto ite : finished_command_list)
-			{
-				free_command_list.emplace_back(std::move(ite.command_list));
-			}
-			finished_command_list.clear();
-			return old_frame;
-		}
-		return std::nullopt;
-	}
-
-	void FrameRenderer::ResetAllocator_AssumedLocked(std::size_t frame)
-	{
-		if (frame != last_flush_frame)
-		{
-			for (auto& ite : total_allocator)
-			{
-				if (ite.state == State::Done && ite.frame <= frame)
-				{
-					ite.state = State::Idle;
-					ite.allocator->Reset();
-				}
-			}
-			last_flush_frame = frame;
-		}
-	}
-
-	std::size_t FrameRenderer::TryFlushFrame()
-	{
-		auto cur = fence->GetCompletedValue();
-		{
-			std::lock_guard lg(renderer_mutex);
-			ResetAllocator_AssumedLocked(cur);
-		}
-		return cur;
-	}
-
-	bool FrameRenderer::FlushToLastFrame(std::optional<std::chrono::steady_clock::duration> time_duration)
-	{
-		while(true)
-		{
-			auto cur = fence->GetCompletedValue();
-			assert(cur != UINT64_MAX);
-			if (cur == UINT64_MAX)
-				return false;
-			{
-				std::lock_guard lg(renderer_mutex);
-				ResetAllocator_AssumedLocked(cur);
-				if(cur + 1 >= current_frame)
-				{
-					return true;
-				}
-			}
-			if(time_duration.has_value())
-			{
-				std::this_thread::sleep_for(*time_duration);
-			}else
-			{
-				std::this_thread::yield();
-			}
-		}
-		return true;
-	}
-
-	struct FrameRendererImp : public FrameRenderer, public Potato::IR::MemoryResourceRecordIntrusiveInterface
-	{
-		FrameRendererImp(Potato::IR::MemoryResourceRecord record, Dx12DevicePtr device, Dx12CommandQueuePtr ptr, Dx12FencePtr fence)
-			: MemoryResourceRecordIntrusiveInterface(record), FrameRenderer(std::move(device), std::move(ptr), std::move(fence), record.GetMemoryResource())
-		{
-
-		}
-		virtual void AddFrameRendererRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
-		virtual void SubFrameRendererRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
-	};
-
-	FrameRenderer::Ptr Device::CreateFrameRenderer(std::pmr::memory_resource* resource)
-	{
-		Dx12CommandQueuePtr command_queue;
-		D3D12_COMMAND_QUEUE_DESC desc{
-			D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT,
-			D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-			D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-		0
-		};
-
-		auto result = device->CreateCommandQueue(
-			&desc, __uuidof(decltype(command_queue)::InterfaceType), reinterpret_cast<void**>(command_queue.GetAddressOf())
-		);
-		if (SUCCEEDED(result))
-		{
-			Dx12FencePtr fence;
-			auto re = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::InterfaceType), reinterpret_cast<void**>(fence.GetAddressOf()));
-			if (SUCCEEDED(re))
-			{
-				return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<FrameRendererImp>(resource, device, std::move(command_queue), std::move(fence));
-			}
-		}
-		return {};
-	}
-		
-
-	struct DeviceImp : public Device, public Potato::IR::MemoryResourceRecordIntrusiveInterface
-	{
-		DeviceImp(Potato::IR::MemoryResourceRecord record, Dx12FactoryPtr factory, Dx12DevicePtr device)
-			: MemoryResourceRecordIntrusiveInterface(record), Device(std::move(factory), std::move(device))
-		{}
-	protected:
-		virtual void AddDeviceRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
-		virtual void SubDeviceRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }
-	};
-
-	auto Device::Create(std::pmr::memory_resource* resource)-> Ptr
-	{
-		Dx12FactoryPtr rptr;
-		UINT Flags = 0;
-		Flags |= DXGI_CREATE_FACTORY_DEBUG;
-		HRESULT result = CreateDXGIFactory2(Flags, __uuidof(decltype(rptr)::InterfaceType), reinterpret_cast<void**>(rptr.GetAddressOf()));
-		if(SUCCEEDED(result))
-		{
-			Dx12DevicePtr dev_ptr;
-			result = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, __uuidof(decltype(dev_ptr)::InterfaceType), reinterpret_cast<void**>(dev_ptr.GetAddressOf()));
-			if(SUCCEEDED(result))
-			{
-				return Potato::IR::MemoryResourceRecord::AllocateAndConstruct<DeviceImp>(
-					resource, std::move(rptr), std::move(dev_ptr)
-				);
 			}
 		}
 		return {};
@@ -482,7 +460,7 @@ namespace Dumpling
 					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
 					D3D12_RESOURCE_TRANSITION_BARRIER{
-						ref.reference_resource.Get(),
+						ref.reference_resource.GetPointer(),
 						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 						ref.default_state,
 						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_WRITE
@@ -499,7 +477,7 @@ namespace Dumpling
 					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
 					D3D12_RESOURCE_TRANSITION_BARRIER{
-						ite.reference_resource.Get(),
+						ite.reference_resource.GetPointer(),
 						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 						ite.default_state,
 						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET
@@ -530,7 +508,7 @@ namespace Dumpling
 					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
 					D3D12_RESOURCE_TRANSITION_BARRIER{
-						ref.reference_resource.Get(),
+						ref.reference_resource.GetPointer(),
 						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_WRITE,
 						ref.default_state
@@ -547,7 +525,7 @@ namespace Dumpling
 					D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE,
 					D3D12_RESOURCE_TRANSITION_BARRIER{
-						ite.reference_resource.Get(),
+						ite.reference_resource.GetPointer(),
 						D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET,
 						ite.default_state
@@ -577,6 +555,19 @@ namespace Dumpling
 		{
 			ite = D3D12_CPU_DESCRIPTOR_HANDLE{0};
 		}
+	}
+
+	void PassRenderer::PosFinishRender()
+	{
+		Reset();
+	}
+
+	void PassRenderer::Reset()
+	{
+		command.Reset();
+		allocator.Reset();
+		order.reset();
+		frame = std::numeric_limits<std::size_t>::max();
 	}
 
 	bool PassRenderer::ClearRendererTarget(std::size_t index, Color color)

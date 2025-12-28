@@ -205,7 +205,7 @@ namespace Dumpling::HLSLCompiler
 	{
 		if (result)
 		{
-			PlatformPtr<IDxcBlobUtf8> error_message;
+			ComPtr<IDxcBlobUtf8> error_message;
 			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
 			auto re = real_result->GetOutput(
 				DXC_OUT_ERRORS,
@@ -279,13 +279,13 @@ namespace Dumpling::HLSLCompiler
 	}
 	*/
 
-	ShaderReflectionPtr Instance::CreateReflection(BlobPtr const& shader_object)
+	ComPtr<ID3D12ShaderReflection> Instance::CreateReflection(BlobPtr const& shader_object)
 	{
 		if (*this && shader_object)
 		{
 			auto real_blob = static_cast<IDxcBlob*>(shader_object.GetPointer());
 			auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
-			ShaderReflectionPtr reflection;
+			ComPtr<ID3D12ShaderReflection> reflection;
 			DxcBuffer buffer;
 			buffer.Encoding = DXC_CP_ACP;
 			buffer.Ptr = real_blob->GetBufferPointer();
