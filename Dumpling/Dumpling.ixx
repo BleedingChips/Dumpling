@@ -9,6 +9,7 @@ export import DumplingRendererTypes;
 export import DumplingRenderer;
 export import DumplingPipeline;
 export import DumplingShader;
+export import DumplingMaterial;
 
 #ifdef DUMPLING_WITH_IMGUI
 export import DumplingImGui;

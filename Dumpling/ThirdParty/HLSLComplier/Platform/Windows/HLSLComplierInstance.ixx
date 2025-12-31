@@ -98,10 +98,8 @@ export namespace Dumpling::HLSLCompiler
 		CompilerPtr CreateCompiler();
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
 		ComPtr<ID3D12ShaderReflection> CreateReflection(BlobPtr const& shader_object);
-		
-		
-
 		static Instance Create();
+
 	protected:
 
 		using Ptr = Potato::Pointer::IntrusivePtr<void, UtilsWrapper>;

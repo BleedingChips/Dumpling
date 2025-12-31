@@ -204,6 +204,8 @@ export namespace Dumpling
 		bool InitFrameRenderer(FrameRenderer& target_frame_renderer);
 		static bool InitDebugLayer();
 		operator bool() const { return factory && device; }
+		ComPtr<ID3D12Resource> CreateBufferResource(std::size_t size);
+
 	protected:
 
 		ComPtr<IDXGIFactory3> factory;
