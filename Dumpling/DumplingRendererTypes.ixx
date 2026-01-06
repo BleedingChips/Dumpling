@@ -191,23 +191,4 @@ export namespace Dumpling
 	{
 		return Type::HLSLConstBufferLayout();
 	}
-
-	struct Material
-	{
-
-		struct CBScription
-		{
-			Potato::IR::StructLayout::Ptr layout;
-			Potato::Misc::IndexSpan<> property;
-		};
-
-		struct SlotScription
-		{
-			std::size_t index;
-		};
-
-
-		std::pmr::vector<Potato::IR::StructLayout::Ptr> const_buffer;
-		std::pmr::vector<SlotScription> slot;
-	};
 }

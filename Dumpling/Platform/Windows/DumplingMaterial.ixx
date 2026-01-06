@@ -10,8 +10,9 @@ import DumplingRendererTypes;
 
 export namespace Dumpling
 {
-	struct Materail
+
+	struct MaterialState
 	{
-		ComPtr<ID3D12RootSignature> RootSignature;
+		Potato::IR::StructLayout::Ptr vs_layout;
 	};
 }

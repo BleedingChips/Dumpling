@@ -18,6 +18,8 @@ struct TopHook : public Dumpling::FormEventHook
 	virtual void SubFormEventHookRef() const {};
 } hook;
 
+
+
 int main()
 {
 	Device::InitDebugLayer();

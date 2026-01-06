@@ -36,16 +36,35 @@ cbuffer hallo
 	float4 iop = float4(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-
-
-void main(float3 iPoL : POSITION, float4 iColor : COLOR,
-	out float4 oPosH : SV_POSITION,
-	out float4 oColor : COLOR
-)
+cbuffer hallo2
 {
-	oPosH = mul(float4(iPoL, 1.0f), gWorldViewProj);
-	oColor = iColor;
+	float Yes2 = 1.0f;
 }
+
+struct Vertex
+{
+	float4 position : SV_POSITION;
+};
+
+Vertex VSMain()
+{
+	Vertex vertex;
+	vertex.position = float4(0.0f, 0.0f, 0.0f, 1.0f) * Yes * Yes2;
+	return vertex;
+}
+
+struct Pixel
+{
+	float3 Color : SV_TARGET0;
+};
+
+Pixel PSMain(Vertex vertex)
+{
+	Pixel pixel;
+	pixel.Color = float3(1.0f, 1.0f, 1.0f) * Yes2;
+	return pixel;
+}
+
 )";
 
 
@@ -53,23 +72,27 @@ void main(float3 iPoL : POSITION, float4 iColor : COLOR,
 int main()
 {
 	auto instance = HLSLCompiler::Instance::Create();
-	auto code = instance.EncodeShader(shader);
-	auto argues = instance.CreateArguments(HLSLCompiler::ShaderTarget::VS_Lastest, u8"main", u8"Funck.ixx");
 	auto compiler = instance.CreateCompiler();
-	auto result = instance.Compile(compiler, code, argues);
-	auto error_messahe = instance.GetErrorMessage(result, [](std::u8string_view str_view) {
-		volatile int oi = 0;
-	});
 
-	auto shader_object = instance.GetShaderObject(result);
-	auto reflection = instance.CreateReflection(shader_object);
-
-	auto statics = instance.GetShaderStatistics(*reflection);
-
-	for (std::size_t i = 0; i < statics->const_buffer_count; ++i)
 	{
-		auto k = instance.CreateLayoutFromCBuffer(*reflection, 0);
+		HLSLCompiler::MaterialShaderOutput shader_output;
+		ShaderSlot shader_slot;
+		bool result = instance.CompileMaterial(
+			compiler,
+			shader_slot,
+			shader_output,
+			{
+				{shader, u8"VSMain", u8"Test.hlsl"},
+				{shader, u8"PSMain", u8"Test.hlsl"}
+			},
+			{}
+		);
+
+		volatile int i = 0;
 	}
+	
+
+
 
 	
 

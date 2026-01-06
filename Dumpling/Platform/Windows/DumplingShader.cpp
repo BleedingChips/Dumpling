@@ -19,6 +19,7 @@ namespace Dumpling
 		if (SUCCEEDED(target_reflection.GetDesc(&desc)))
 		{
 			ShaderStatistics statistics;
+			statistics.bound_resource_count = desc.BoundResources;
 			statistics.const_buffer_count = desc.ConstantBuffers;
 			statistics.texture_count = desc.TextureLoadInstructions;
 			return statistics;
@@ -142,74 +143,152 @@ namespace Dumpling
 	}
 
 
-	Potato::IR::StructLayout::Ptr CreateLayoutFromCBuffer(
-		ID3D12ShaderReflection& target_reflection,
-		std::size_t cbuffer_index,
-		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> cbuffer_layout_override,
-		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override,
-		std::pmr::memory_resource* layout_resource,
-		std::pmr::memory_resource* temporary_resource
+	ShaderSlot::ConstBuffer CreateLayoutFromCBuffer(
+		ID3D12ShaderReflectionConstantBuffer& target_const_buffer,
+		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> layout_override,
+		ShaderReflectionConstBufferContext const& context
 	)
 	{
-		ID3D12ShaderReflectionConstantBuffer* const_buffer = target_reflection.GetConstantBufferByIndex(cbuffer_index);
-
-		if (const_buffer != nullptr)
+		D3D12_SHADER_BUFFER_DESC buffer_desc;
+		target_const_buffer.GetDesc(&buffer_desc);
+		std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
+		if (layout_override)
 		{
-			D3D12_SHADER_BUFFER_DESC buffer_desc;
-			const_buffer->GetDesc(&buffer_desc);
-			std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
-			if (cbuffer_layout_override)
+			auto cbuffer_source = layout_override(cbuffer_name);
+			if (cbuffer_source.layout && cbuffer_source.layout->GetLayout().size >= buffer_desc.Size)
 			{
-				auto layout = cbuffer_layout_override(cbuffer_name);
-				if (layout && layout->GetLayout().size >= buffer_desc.Size)
-				{
-					return layout;
-				}
+				return cbuffer_source;
 			}
+		}
 
-			std::pmr::vector<Potato::IR::StructLayout::Member> members(temporary_resource);
-			members.reserve(buffer_desc.Variables);
+		std::pmr::vector<Potato::IR::StructLayout::Member> members(context.temporary_resource);
+		members.reserve(buffer_desc.Variables);
+		for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
+		{
+			auto ver = target_const_buffer.GetVariableByIndex(index);
+			assert(ver != nullptr);
+			auto [layout, array_count] = CreateLayoutFromVariable(*ver, context.type_layout_override, context.layout_resource, context.temporary_resource);
+			Potato::IR::StructLayout::Member current_member;
+			current_member.struct_layout = std::move(layout.struct_layout);
+			current_member.overrided_memory_layout = layout.memory_layout;
+			current_member.array_count = array_count;
+			D3D12_SHADER_VARIABLE_DESC var_desc;
+			bool re = SUCCEEDED(ver->GetDesc(&var_desc));
+			assert(re);
+			current_member.name = reinterpret_cast<char8_t const*>(var_desc.Name);
+			members.push_back(current_member);
+		}
+		auto struct_layout = StructLayout::CreateDynamic(
+			reinterpret_cast<char8_t const*>(buffer_desc.Name),
+			std::span(members.data(), members.size()), Potato::MemLayout::GetHLSLConstBufferPolicy(),
+			context.layout_resource
+		);
+
+		{
+			auto mvs = struct_layout->GetMemberView();
+			std::vector<D3D12_SHADER_VARIABLE_DESC> des;
 			for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
 			{
-				auto ver = const_buffer->GetVariableByIndex(index);
+				auto mv = mvs[index];
+				auto ver = target_const_buffer.GetVariableByIndex(index);
 				assert(ver != nullptr);
-				auto [layout, array_count] = CreateLayoutFromVariable(*ver, type_layout_override, temporary_resource, temporary_resource);
-				Potato::IR::StructLayout::Member current_member;
-				current_member.struct_layout = std::move(layout.struct_layout);
-				current_member.overrided_memory_layout = layout.memory_layout;
-				current_member.array_count = array_count;
-				D3D12_SHADER_VARIABLE_DESC var_desc;
-				bool re = SUCCEEDED(ver->GetDesc(&var_desc));
-				assert(re);
-				current_member.name = reinterpret_cast<char8_t const*>(var_desc.Name);
-				members.push_back(current_member);
+				D3D12_SHADER_VARIABLE_DESC ver_desc;
+				auto re = ver->GetDesc(&ver_desc);
+				assert(SUCCEEDED(re));
+				des.push_back(ver_desc);
+				auto layout = mvs[index].member_layout;
+				assert(layout.offset == ver_desc.StartOffset);
+				assert((layout.array_layout.each_element_offset * std::max(layout.array_layout.count, std::size_t{ 1 })) >= ver_desc.Size);
 			}
-			auto struct_layout = StructLayout::CreateDynamic(
-				reinterpret_cast<char8_t const*>(buffer_desc.Name),
-				std::span(members.data(), members.size()), Potato::MemLayout::GetHLSLConstBufferPolicy(),
-				layout_resource
-			);
-
-			{
-				auto mvs = struct_layout->GetMemberView();
-				std::vector<D3D12_SHADER_VARIABLE_DESC> des;
-				for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
-				{
-					auto mv = mvs[index];
-					auto ver = const_buffer->GetVariableByIndex(index);
-					assert(ver != nullptr);
-					D3D12_SHADER_VARIABLE_DESC ver_desc;
-					auto re = ver->GetDesc(&ver_desc);
-					assert(SUCCEEDED(re));
-					des.push_back(ver_desc);
-					auto layout = mvs[index].member_layout;
-					assert(layout.offset == ver_desc.StartOffset);
-					assert((layout.array_layout.each_element_offset * std::max(layout.array_layout.count, std::size_t{ 1 })) >= ver_desc.Size);
-				}
-			}
-
-			return struct_layout;
 		}
-		return {};
+
+		return { struct_layout, context.default_source };
+	}
+
+	bool GetShaderSlot(
+		ShaderType type, 
+		ID3D12ShaderReflection& reflection, 
+		ShaderSlot& out_slot,
+		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> layout_override,
+		ShaderReflectionConstBufferContext const& context
+		)
+	{
+
+		std::array<ShaderSlot::Type, 2> slot_types;
+		switch (type)
+		{
+		case ShaderType::PS:
+			slot_types[0] = ShaderSlot::Type::PS_CONST_BUFFER;
+			slot_types[1] = ShaderSlot::Type::PS_TEXTURE;
+			break;
+		default:
+			slot_types[0] = ShaderSlot::Type::VS_CONST_BUFFER;
+			slot_types[1] = ShaderSlot::Type::VS_TEXTURE;
+			break;
+		}
+
+		D3D12_SHADER_DESC desc;
+		if (!SUCCEEDED(reflection.GetDesc(&desc)))
+			return false;
+
+		std::size_t exist_index = std::numeric_limits<std::size_t>::max();
+
+		auto reference_context = context;
+
+		auto layout_exist_override = [&](std::u8string_view name) mutable -> ShaderSlot::ConstBuffer
+			{
+				std::size_t index = 0;
+
+				for (auto& ite : out_slot.const_buffer)
+				{
+					if (name == ite.layout->GetName())
+					{
+						exist_index = index;
+						return ite;
+					}
+					++index;
+				}
+
+				if (layout_override)
+				{
+					return layout_override(name);
+				}
+
+				return {};
+			};
+
+		for (std::size_t i = 0; i < desc.BoundResources; ++i)
+		{
+			D3D12_SHADER_INPUT_BIND_DESC bind_sesc;
+			reflection.GetResourceBindingDesc(i, &bind_sesc);
+			switch (bind_sesc.Type)
+			{
+			case D3D_SHADER_INPUT_TYPE::D3D_SIT_CBUFFER:
+			{
+				auto buffer = reflection.GetConstantBufferByName(bind_sesc.Name);
+				if (buffer != nullptr)
+				{
+					exist_index = std::numeric_limits<std::size_t>::max();
+					auto cbuffer_layout = CreateLayoutFromCBuffer(*buffer, layout_exist_override, context);
+					if (!cbuffer_layout.layout)
+						return false;
+					if (exist_index == std::numeric_limits<std::size_t>::max())
+					{
+						auto current_buffer_index = out_slot.const_buffer.size();
+						out_slot.const_buffer.emplace_back(std::move(cbuffer_layout));
+						out_slot.slots.push_back({ slot_types[0], current_buffer_index, bind_sesc.BindPoint });
+					}
+					else {
+						out_slot.slots.push_back({ slot_types[0], exist_index, bind_sesc.BindPoint });
+					}
+					out_slot.total_statics.bound_resource_count += 1;
+					out_slot.total_statics.const_buffer_count += 1;
+				}
+				break;
+			}
+			}
+		}
+
+		return true;
 	}
 }

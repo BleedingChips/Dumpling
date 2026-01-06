@@ -3,6 +3,7 @@ module;
 
 #include <d3dcommon.h>
 #include "d3d12shader.h"
+#include "d3d12.h"
 
 export module DumplingHLSLComplierInstance;
 
@@ -11,6 +12,8 @@ import Potato;
 import DumplingPlatform;
 import DumplingRendererTypes;
 import DumplingShader;
+import DumplingMaterial;
+import DumplingRenderer;
 
 
 namespace Dumpling::HLSLCompiler
@@ -66,10 +69,35 @@ export namespace Dumpling::HLSLCompiler
 	using Potato::IR::StructLayout;
 	using Potato::IR::StructLayoutObject;
 
+	using BlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
+	using EncodingBlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
+	using ArgumentPtr = Potato::Pointer::IntrusivePtr<void, ArgumentWrapper>;
+	using CompilerPtr = Potato::Pointer::IntrusivePtr<void, CompilerWrapper>;
+	using ResultPtr = Potato::Pointer::IntrusivePtr<void, ResultWrapper>;
+
 	enum class ShaderTarget
 	{
 		VS_6_0,
-		VS_Lastest,
+		
+		PS_6_0,
+
+		VS_Lastest = VS_6_0,
+		PS_Lastest = PS_6_0,
+	};
+
+	constexpr ShaderType TranslateShaderType(ShaderTarget target)
+	{
+		switch (target)
+		{
+		case ShaderTarget::VS_6_0:
+			return ShaderType::VS;
+		}
+		return ShaderType::PS;
+	}
+
+	enum class ComplieTargetVersion
+	{
+		VERSION_5
 	};
 
 	enum class ComplierFlag
@@ -77,11 +105,34 @@ export namespace Dumpling::HLSLCompiler
 		None
 	};
 
-	using BlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
-	using EncodingBlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
-	using ArgumentPtr = Potato::Pointer::IntrusivePtr<void, ArgumentWrapper>;
-	using CompilerPtr = Potato::Pointer::IntrusivePtr<void, CompilerWrapper>;
-	using ResultPtr = Potato::Pointer::IntrusivePtr<void, ResultWrapper>;
+	struct ComplieContext
+	{
+		ComplieTargetVersion version = ComplieTargetVersion::VERSION_5;
+		ComplierFlag flag = ComplierFlag::None;
+		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> cbuffer_layout_override;
+		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override;
+		Potato::TMP::FunctionRef<void(std::u8string_view, ShaderTarget)> error_capture;
+	};
+
+	struct ShaderEnterPointView
+	{
+		std::u8string_view code;
+		std::u8string_view entry_point;
+		std::u8string_view file_path;
+		operator bool() const { return !code.empty() && !entry_point.empty(); }
+	};
+
+	struct MaterialShaderContext
+	{
+		ShaderEnterPointView vs_entry_point;
+		ShaderEnterPointView ps_entry_point;
+	};
+
+	struct MaterialShaderOutput
+	{
+		ComPtr<ID3D10Blob> vs;
+		ComPtr<ID3D10Blob> ps;
+	};
 
 	struct Instance
 	{
@@ -100,7 +151,11 @@ export namespace Dumpling::HLSLCompiler
 		ComPtr<ID3D12ShaderReflection> CreateReflection(BlobPtr const& shader_object);
 		static Instance Create();
 
+		bool CompileMaterial(CompilerPtr& compiler, ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext  const& material_context, ComplieContext const& context);
+
 	protected:
+
+		ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context);
 
 		using Ptr = Potato::Pointer::IntrusivePtr<void, UtilsWrapper>;
 

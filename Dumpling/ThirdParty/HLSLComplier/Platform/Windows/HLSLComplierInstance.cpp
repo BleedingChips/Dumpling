@@ -17,9 +17,10 @@ namespace Dumpling::HLSLCompiler
 	{
 		switch (target)
 		{
-		case ShaderTarget::VS_Lastest:
 		case ShaderTarget::VS_6_0:
 			return L"vs_6_0";
+		case ShaderTarget::PS_6_0:
+			return L"ps_6_0";
 		default:
 			return L"";
 		}
@@ -215,7 +216,7 @@ namespace Dumpling::HLSLCompiler
 			);
 			if (error_message)
 			{
-				if (receive_function)
+				if (receive_function && error_message->GetStringLength() > 0)
 				{
 					std::u8string_view error_message_view{
 						reinterpret_cast<char8_t const*>(error_message->GetStringPointer()),
@@ -241,44 +242,6 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	/*
-	std::optional<std::size_t> Instance::GetConstBufferStructLayoutFromReflection(
-		ShaderReflectionPtr const& target_reflection,
-		std::span<Potato::IR::StructLayout::Ptr> output_layout,
-		Potato::TMP::FunctionRef<Potato::IR::StructLayout::Ptr(std::u8string_view)> layout_mapping,
-		std::pmr::memory_resource* layout_resource,
-		std::pmr::memory_resource* temporary_resource
-	)
-	{
-		if (target_reflection && layout_resource != nullptr)
-		{
-			D3D12_SHADER_DESC shader_desc;
-
-			if(!SUCCEEDED(target_reflection->GetDesc(&shader_desc)))
-				return std::nullopt;
-
-			for (std::size_t layout_count = 0; layout_count < shader_desc.ConstantBuffers && layout_count < output_layout.size(); ++layout_count)
-			{
-				ID3D12ShaderReflectionConstantBuffer* const_buffer = target_reflection->GetConstantBufferByIndex(layout_count);
-				assert(const_buffer);
-				D3D12_SHADER_BUFFER_DESC buffer_desc;
-				const_buffer->GetDesc(&buffer_desc);
-				std::u8string_view cbuffer_name{reinterpret_cast<char8_t const*>(buffer_desc.Name)};
-				if (layout_mapping)
-				{
-					auto layout = layout_mapping(cbuffer_name);
-					if (layout)
-					{
-						output_layout[layout_count] = std::move(layout);
-						continue;
-					}
-				}
-			}
-		}
-		return std::nullopt;
-	}
-	*/
-
 	ComPtr<ID3D12ShaderReflection> Instance::CreateReflection(BlobPtr const& shader_object)
 	{
 		if (*this && shader_object)
@@ -298,5 +261,64 @@ namespace Dumpling::HLSLCompiler
 			return reflection;
 		}
 		return {};
+	}
+
+	ComPtr<ID3D10Blob> Instance::CompileShader(CompilerPtr& compiler, ShaderTarget shader_target, ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context)
+	{
+		auto encoded_code = EncodeShader(entry_point.code);
+		auto argument = CreateArguments(shader_target, entry_point.entry_point, entry_point.file_path, context.flag);
+		auto compiler_result = Compile(compiler, encoded_code, argument);
+
+		if (!compiler_result)
+			return {};
+
+		if (!GetErrorMessage(compiler_result, [&](std::u8string_view error) {
+			if (context.error_capture)
+			{
+				context.error_capture(error, shader_target);
+			}
+			}))
+		{
+			return {};
+		}
+
+		auto shader_object = GetShaderObject(compiler_result);
+
+		if (!shader_object)
+			return {};
+
+		auto reflection = CreateReflection(shader_object);
+
+		if (!reflection)
+			return {};
+
+		ShaderType shader_type = TranslateShaderType(shader_target);
+
+		ShaderReflectionConstBufferContext reflection_context;
+		reflection_context.type_layout_override = context.type_layout_override;
+
+		if (!GetShaderSlot(shader_type, *reflection, out_slot, context.cbuffer_layout_override, reflection_context))
+			return {};
+
+		return {};
+	}
+
+	bool Instance::CompileMaterial(CompilerPtr& compiler, ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext const& material_context, ComplieContext const& context)
+	{
+		if (!compiler)
+			return false;
+
+		if (material_context.vs_entry_point)
+		{
+			auto target = ShaderTarget::VS_6_0;
+			auto block = CompileShader(compiler, target, out_slot, material_context.vs_entry_point, context);
+		}
+
+		if (material_context.ps_entry_point)
+		{
+			auto target = ShaderTarget::PS_6_0;
+			auto block = CompileShader(compiler, target, out_slot, material_context.ps_entry_point, context);
+		}
+		return false;
 	}
 }
