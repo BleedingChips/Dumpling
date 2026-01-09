@@ -142,13 +142,14 @@ export namespace Dumpling::HLSLCompiler
 		Instance& operator=(Instance const& in_complier) = default;
 		Instance() = default;
 		operator bool() const { return utils; }
-		static BlobPtr GetShaderObject(ResultPtr const& result);
+
+		ComPtr<ID3D10Blob> GetShaderObject(ResultPtr const& result);
+		ComPtr<ID3D12ShaderReflection> CreateReflection(ResultPtr const& result);
 		bool GetErrorMessage(ResultPtr const& result, Potato::TMP::FunctionRef<void(std::u8string_view)> receive_function = {});
 		EncodingBlobPtr EncodeShader(std::u8string_view shader_code);
 		ArgumentPtr CreateArguments(ShaderTarget target, std::u8string_view entry_point, std::u8string_view file_path, ComplierFlag flag = ComplierFlag::None);
 		CompilerPtr CreateCompiler();
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
-		ComPtr<ID3D12ShaderReflection> CreateReflection(BlobPtr const& shader_object);
 		static Instance Create();
 
 		bool CompileMaterial(CompilerPtr& compiler, ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext  const& material_context, ComplieContext const& context);

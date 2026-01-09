@@ -230,35 +230,41 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	BlobPtr Instance::GetShaderObject(ResultPtr const& result)
+	ComPtr<ID3D12ShaderReflection> Instance::CreateReflection(ResultPtr const& result)
+	{
+		if (!result)
+			return {};
+
+		BlobPtr blob;
+		auto real_result = static_cast<IDxcResult*>(result.GetPointer());
+		auto re = real_result->GetOutput(DXC_OUT_REFLECTION, __uuidof(IDxcBlob), blob.GetPointerVoidAdress(), nullptr);
+
+		if (!SUCCEEDED(re))
+			return {};
+
+		auto real_blob = static_cast<IDxcBlob*>(blob.GetPointer());
+		auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
+		ComPtr<ID3D12ShaderReflection> reflection;
+		DxcBuffer buffer;
+		buffer.Encoding = DXC_CP_ACP;
+		buffer.Ptr = real_blob->GetBufferPointer();
+		buffer.Size = real_blob->GetBufferSize();
+		auto result_kk = real_utils->CreateReflection(
+			&buffer,
+			__uuidof(ID3D12ShaderReflection),
+			reflection.GetPointerVoidAdress()
+		);
+		return reflection;
+	}
+
+	ComPtr<ID3D10Blob> Instance::GetShaderObject(ResultPtr const& result)
 	{
 		if (result)
 		{
-			BlobPtr blob;
+			ComPtr<ID3D10Blob> blob;
 			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
-			real_result->GetOutput(DXC_OUT_REFLECTION, __uuidof(IDxcBlob), blob.GetPointerVoidAdress(), nullptr);
+			real_result->GetOutput(DXC_OUT_OBJECT, __uuidof(decltype(blob)::Type), blob.GetPointerVoidAdress(), nullptr);
 			return blob;
-		}
-		return {};
-	}
-
-	ComPtr<ID3D12ShaderReflection> Instance::CreateReflection(BlobPtr const& shader_object)
-	{
-		if (*this && shader_object)
-		{
-			auto real_blob = static_cast<IDxcBlob*>(shader_object.GetPointer());
-			auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
-			ComPtr<ID3D12ShaderReflection> reflection;
-			DxcBuffer buffer;
-			buffer.Encoding = DXC_CP_ACP;
-			buffer.Ptr = real_blob->GetBufferPointer();
-			buffer.Size = real_blob->GetBufferSize();
-			auto result_kk = real_utils->CreateReflection(
-				&buffer,
-				__uuidof(ID3D12ShaderReflection),
-				reflection.GetPointerVoidAdress()
-			);
-			return reflection;
 		}
 		return {};
 	}
@@ -282,12 +288,7 @@ namespace Dumpling::HLSLCompiler
 			return {};
 		}
 
-		auto shader_object = GetShaderObject(compiler_result);
-
-		if (!shader_object)
-			return {};
-
-		auto reflection = CreateReflection(shader_object);
+		auto reflection = CreateReflection(compiler_result);
 
 		if (!reflection)
 			return {};
@@ -300,7 +301,7 @@ namespace Dumpling::HLSLCompiler
 		if (!GetShaderSlot(shader_type, *reflection, out_slot, context.cbuffer_layout_override, reflection_context))
 			return {};
 
-		return {};
+		return GetShaderObject(compiler_result);
 	}
 
 	bool Instance::CompileMaterial(CompilerPtr& compiler, ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext const& material_context, ComplieContext const& context)
@@ -308,17 +309,34 @@ namespace Dumpling::HLSLCompiler
 		if (!compiler)
 			return false;
 
+		ComPtr<ID3D10Blob> vs_code;
+
 		if (material_context.vs_entry_point)
 		{
 			auto target = ShaderTarget::VS_6_0;
 			auto block = CompileShader(compiler, target, out_slot, material_context.vs_entry_point, context);
+			if (!block)
+			{
+				return false;
+			}
+			vs_code = std::move(block);
 		}
+
+		ComPtr<ID3D10Blob> ps_code;
 
 		if (material_context.ps_entry_point)
 		{
 			auto target = ShaderTarget::PS_6_0;
 			auto block = CompileShader(compiler, target, out_slot, material_context.ps_entry_point, context);
+			if (!block)
+			{
+				return false;
+			}
+			ps_code = std::move(block);
 		}
-		return false;
+
+		out_shader.vs = std::move(vs_code);
+		out_shader.ps = std::move(ps_code);
+		return true;
 	}
 }

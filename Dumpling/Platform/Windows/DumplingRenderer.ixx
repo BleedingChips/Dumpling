@@ -191,6 +191,39 @@ export namespace Dumpling
 		friend struct Device;
 	};
 
+	struct StreamerRequest
+	{
+		StreamerRequest() = default;
+		~StreamerRequest()
+		{
+			assert(!*this);
+		}
+		operator bool() const { return commands && allocator; }
+	protected:
+		ComPtr<ID3D12CommandList> commands;
+		ComPtr<ID3D12CommandAllocator> allocator;
+
+		friend struct ResourceStreamer;
+	};
+
+	struct ResourceStreamer
+	{
+		bool Init(ComPtr<ID3D12Device> device);
+		std::uint64_t Commited(StreamerRequest& request);
+		bool PopRequester(StreamerRequest& request);
+		operator bool() const { return device && fence && command_queue; }
+		bool TryFlushTo(std::uint64_t fence_value);
+	protected:
+		ComPtr<ID3D12Device> device;
+		ComPtr<ID3D12Fence> fence;
+		std::size_t current_flush_frame;
+		ComPtr<ID3D12CommandQueue> command_queue;
+		std::pmr::vector<ComPtr<ID3D12CommandList>> idle_command_list;
+		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> idle_allocator;
+		std::pmr::vector<std::tuple<std::uint64_t, ComPtr<ID3D12CommandAllocator>>> waitting_allocator;
+		std::uint64_t last_flush_version = 1;
+	};
+
 	struct Device
 	{
 
@@ -202,9 +235,11 @@ export namespace Dumpling
 		bool Init(Config config = {});
 		FormWrapper::Ptr CreateFormWrapper(Form const& form, FrameRenderer& render, FormWrapper::Config fig = {}, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 		bool InitFrameRenderer(FrameRenderer& target_frame_renderer);
+		bool InitResourceStreamer(ResourceStreamer& target_resource_streamer);
 		static bool InitDebugLayer();
 		operator bool() const { return factory && device; }
-		ComPtr<ID3D12Resource> CreateBufferResource(std::size_t size);
+
+		ComPtr<ID3D12Resource> CreateUploadResource(std::size_t buffer_size);
 
 	protected:
 

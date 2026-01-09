@@ -32,6 +32,12 @@ namespace Dumpling
 		return debug_layout;
 	}
 
+	ComPtr<ID3D12Resource> Device::CreateUploadResource(std::size_t buffer_size)
+	{
+		return {};
+	}
+
+
 	bool FormWrapper::Present(std::size_t syn_interval)
 	{
 		auto re = swap_chain->Present(syn_interval, 0);
@@ -298,11 +304,131 @@ namespace Dumpling
 		return {};
 	}
 
+	bool ResourceStreamer::Init(ComPtr<ID3D12Device> in_device)
+	{
+		if (*this || !in_device)
+			return false;
+
+		ComPtr<ID3D12CommandQueue> command_queue;
+		D3D12_COMMAND_QUEUE_DESC desc{
+			D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_COPY,
+			D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+			D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
+		0
+		};
+
+		auto result = in_device->CreateCommandQueue(
+			&desc, __uuidof(decltype(command_queue)::Type), command_queue.GetPointerVoidAdress()
+		);
+		if (SUCCEEDED(result))
+		{
+			ComPtr<ID3D12Fence> fence;
+			auto re = in_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::Type), fence.GetPointerVoidAdress());
+			if (SUCCEEDED(re))
+			{
+				this->device = std::move(in_device);
+				this->command_queue = std::move(command_queue);
+				this->fence = std::move(fence);
+				return true;
+			}
+		}
+		return {};
+	}
+
+	bool ResourceStreamer::PopRequester(StreamerRequest& request)
+	{
+		if (request)
+			return false;
+
+		ComPtr<ID3D12CommandAllocator> current_allocator;
+		if (!current_allocator && !idle_allocator.empty())
+		{
+			current_allocator = std::move(*idle_allocator.rbegin());
+			idle_allocator.pop_back();
+		}
+
+		if (!current_allocator)
+		{
+			auto re = device->CreateCommandAllocator(
+				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_COPY,
+				__uuidof(decltype(current_allocator)::Type), current_allocator.GetPointerVoidAdress()
+			);
+			assert(SUCCEEDED(re));
+		}
+
+		if (!current_allocator)
+			return false;
+
+
+		ComPtr<ID3D12CommandList> current_command;
+
+		if (!current_command && !idle_command_list.empty())
+		{
+			current_command = std::move(*idle_command_list.rbegin());
+			idle_command_list.pop_back();
+		}
+
+		if (!current_command)
+		{
+			auto re = device->CreateCommandList(
+				0, D3D12_COMMAND_LIST_TYPE_DIRECT, current_allocator.GetPointer(), nullptr,
+				__uuidof(decltype(current_command)::Type), current_command.GetPointerVoidAdress()
+			);
+		}
+
+		if (!current_command)
+		{
+			idle_allocator.emplace_back(std::move(current_allocator));
+			return false;
+		}
+
+		request.commands = std::move(current_command);
+		request.allocator = std::move(current_allocator);
+		return true;
+	}
+
+	bool ResourceStreamer::TryFlushTo(std::uint64_t fence_value)
+	{
+		auto current_version = fence->GetCompletedValue();
+		if (current_version != last_flush_version)
+		{
+			last_flush_version = current_version;
+			
+			bool change = false;
+
+			for (auto& [version, allocator] : waitting_allocator)
+			{
+				if (version <= current_version)
+				{
+					idle_allocator.push_back(std::move(allocator));
+					change = true;
+					break;
+				}
+			}
+
+			if (change)
+			{
+				waitting_allocator.erase(
+					std::remove_if(waitting_allocator.begin(), waitting_allocator.end(), [](std::tuple<std::uint64_t, ComPtr<ID3D12CommandAllocator>>& ite) {
+						return !std::get<1>(ite);
+						}),
+					waitting_allocator.end()
+				);
+			}
+
+		}
+		return current_version;
+	}
+
 	bool Device::InitFrameRenderer(FrameRenderer& target_frame_renderer)
 	{
 		return target_frame_renderer.Init(device);
 	}
 
+	bool Device::InitResourceStreamer(ResourceStreamer& target_resource_streamer)
+	{
+		return target_resource_streamer.Init(device);
+	}
 
 	bool Device::Init(Config config)
 	{

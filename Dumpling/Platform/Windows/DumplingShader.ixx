@@ -63,6 +63,8 @@ export namespace Dumpling
 		std::pmr::vector<ConstBuffer> const_buffer;
 		std::pmr::vector<Slot> slots;
 		ShaderStatistics total_statics;
+
+		void Reset() { const_buffer.clear(); slots.clear(); total_statics = {}; }
 	};
 
 	struct ShaderReflectionConstBufferContext
