@@ -63,6 +63,44 @@ export namespace Dumpling
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
 			return { Columns * sizeof(float),  Columns * sizeof(float) };
 		}
+		constexpr HLSLCBVector() {
+			for (auto& ite : Data)
+				ite = 0;
+		}
+		constexpr HLSLCBVector(Type value) {
+			Data[0] = value;
+			for (std::size_t i = 1; i < Columns; ++i)
+			{
+				Data[i] = 0;
+			}
+		}
+		constexpr HLSLCBVector(Type value0, Type value1) requires(Columns >= 2) {
+			Data[0] = value0;
+			Data[1] = value1;
+			for (std::size_t i = 2; i < Columns; ++i)
+			{
+				Data[i] = 0;
+			}
+		}
+		constexpr HLSLCBVector(Type value0, Type value1, Type value2) requires(Columns >= 3) {
+			Data[0] = value0;
+			Data[1] = value1;
+			Data[2] = value2;
+			for (std::size_t i = 3; i < Columns; ++i)
+			{
+				Data[i] = 0;
+			}
+		}
+		constexpr HLSLCBVector(Type value0, Type value1, Type value2, Type value3) requires(Columns >= 4) {
+			Data[0] = value0;
+			Data[1] = value1;
+			Data[2] = value2;
+			Data[3] = value3;
+			for (std::size_t i = 4; i < Columns; ++i)
+			{
+				Data[i] = 0;
+			}
+		}
 	};
 
 	template<typename Type, std::size_t Rows, std::size_t Columns>
@@ -191,4 +229,6 @@ export namespace Dumpling
 	{
 		return Type::HLSLConstBufferLayout();
 	}
+
+	using Float4 = HLSLCBVector<float, 4>;
 }

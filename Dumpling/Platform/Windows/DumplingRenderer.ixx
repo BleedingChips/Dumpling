@@ -214,6 +214,8 @@ export namespace Dumpling
 		bool PopRequester(StreamerRequest& request);
 		operator bool() const { return device && fence && command_queue; }
 		bool TryFlushTo(std::uint64_t fence_value);
+		ComPtr<ID3D12Resource> CreateVertexBuffer(void const* buffer, std::size_t size, StreamerRequest& request);
+
 	protected:
 		
 		ComPtr<ID3D12Device> device;
@@ -240,10 +242,6 @@ export namespace Dumpling
 		bool InitResourceStreamer(ResourceStreamer& target_resource_streamer);
 		static bool InitDebugLayer();
 		operator bool() const { return factory && device; }
-
-		std::tuple<ComPtr<ID3D12Resource>, std::uint64_t> CreateVertexBuffer(void const* buffer, std::size_t size, StreamerRequest& request);
-
-		ComPtr<ID3D12Resource> CreateUploadResource(std::size_t buffer_size);
 
 	protected:
 

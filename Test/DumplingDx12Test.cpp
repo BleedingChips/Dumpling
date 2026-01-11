@@ -47,6 +47,13 @@ int main()
 
 	bool need_loop = true;
 
+	std::array<Float4, 3> vertex = {
+		Float4{1.0f, 1.0f, 1.0f, 1.0f},
+		Float4{1.0f, 1.0f, 1.0f, 1.0f},
+		Float4{1.0f, 1.0f, 1.0f, 1.0f}
+	};
+
+
 	ResourceStreamer streamer;
 
 	device.InitResourceStreamer(streamer);
@@ -54,6 +61,7 @@ int main()
 	{
 		StreamerRequest request;
 		streamer.PopRequester(request);
+		streamer.CreateVertexBuffer(&vertex, sizeof(Float4) * 3, request);
 		streamer.Commited(request);
 		streamer.PopRequester(request);
 		streamer.Commited(request);
