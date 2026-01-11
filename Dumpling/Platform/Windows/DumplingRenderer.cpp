@@ -32,9 +32,95 @@ namespace Dumpling
 		return debug_layout;
 	}
 
-	ComPtr<ID3D12Resource> Device::CreateUploadResource(std::size_t buffer_size)
+	std::tuple<ComPtr<ID3D12Resource>, std::uint64_t> Device::CreateVertexBuffer(void const* buffer, std::size_t size, StreamerRequest& request)
 	{
-		return {};
+
+		ComPtr<ID3D12Resource> upload_resource;
+
+		{
+			D3D12_HEAP_PROPERTIES property;
+			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
+			property.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD;
+			property.CreationNodeMask = 0;
+			property.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_L0;
+
+			D3D12_RESOURCE_DESC resource_desc;
+			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER;
+			resource_desc.Alignment = 0;
+			resource_desc.Width = size;
+			resource_desc.Height = 1;
+			resource_desc.DepthOrArraySize = 1;
+			resource_desc.MipLevels = 1;
+			resource_desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+			resource_desc.SampleDesc.Count = 1;
+			resource_desc.SampleDesc.Quality = 0;
+			resource_desc.Layout = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+			resource_desc.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+			D3D12_CLEAR_VALUE clear_value;
+
+			auto re = device->CreateCommittedResource(
+				&property, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resource_desc,
+				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE,
+				nullptr,
+				__uuidof(decltype(upload_resource)::Type), upload_resource.GetPointerVoidAdress()
+			);
+
+			if (!SUCCEEDED(re))
+			{
+				return {};
+			}
+		}
+
+		{
+			void* target = nullptr;
+			D3D12_RANGE range{ 0, size };
+			auto re = upload_resource->Map(0, &range, &target);
+			if (!SUCCEEDED(re))
+			{
+				return {};
+			}
+			std::memcpy(target, buffer, size);
+			upload_resource->Unmap(0, &range);
+		}
+
+		ComPtr<ID3D12Resource> default_resource;
+
+		{
+			D3D12_HEAP_PROPERTIES property;
+			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE;
+			property.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT;
+			property.CreationNodeMask = 0;
+			property.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_L0;
+
+			D3D12_RESOURCE_DESC resource_desc;
+			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER;
+			resource_desc.Alignment = 0;
+			resource_desc.Width = size;
+			resource_desc.Height = 1;
+			resource_desc.DepthOrArraySize = 1;
+			resource_desc.MipLevels = 1;
+			resource_desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+			resource_desc.SampleDesc.Count = 1;
+			resource_desc.SampleDesc.Quality = 0;
+			resource_desc.Layout = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+			resource_desc.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+			D3D12_CLEAR_VALUE clear_value;
+
+			auto re = device->CreateCommittedResource(
+				&property, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resource_desc,
+				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE,
+				nullptr,
+				__uuidof(decltype(default_resource)::Type), default_resource.GetPointerVoidAdress()
+			);
+
+			if (!SUCCEEDED(re))
+			{
+				return {};
+			}
+		}
+
+		{
+		}
 	}
 
 
@@ -335,6 +421,26 @@ namespace Dumpling
 		return {};
 	}
 
+	std::uint64_t ResourceStreamer::Commited(StreamerRequest& request)
+	{
+		if (!request)
+			return std::numeric_limits<std::uint64_t>::max();
+
+		request.PreCommited();
+
+		auto list = std::move(request.commands);
+		auto allo = std::move(request.allocator);
+
+		ID3D12CommandList* temporary_list = list.GetPointer();
+	
+		command_queue->ExecuteCommandLists(1, &temporary_list);
+		command_queue->Signal(fence.GetPointer(), current_flush_frame);
+		
+		idle_command_list.emplace_back(std::move(list));
+		waitting_allocator.emplace_back(current_flush_frame, std::move(allo));
+		return current_flush_frame++;
+	}
+
 	bool ResourceStreamer::PopRequester(StreamerRequest& request)
 	{
 		if (request)
@@ -360,20 +466,25 @@ namespace Dumpling
 			return false;
 
 
-		ComPtr<ID3D12CommandList> current_command;
+		ComPtr<ID3D12GraphicsCommandList> current_command;
 
 		if (!current_command && !idle_command_list.empty())
 		{
 			current_command = std::move(*idle_command_list.rbegin());
 			idle_command_list.pop_back();
+			if (current_command)
+			{
+				current_command->Reset(current_allocator.GetPointer(), nullptr);
+			}
 		}
 
 		if (!current_command)
 		{
 			auto re = device->CreateCommandList(
-				0, D3D12_COMMAND_LIST_TYPE_DIRECT, current_allocator.GetPointer(), nullptr,
+				0, D3D12_COMMAND_LIST_TYPE_COPY, current_allocator.GetPointer(), nullptr,
 				__uuidof(decltype(current_command)::Type), current_command.GetPointerVoidAdress()
 			);
+			assert(SUCCEEDED(re));
 		}
 
 		if (!current_command)

@@ -1,12 +1,12 @@
 module;
 
-#include "wrl.h"
 #include "d3d12.h"
 #include "dxgi1_6.h"
 #include <cassert>
 
 #undef interface
 #undef max
+#undef GetObject
 
 export module DumplingRenderer;
 
@@ -200,7 +200,8 @@ export namespace Dumpling
 		}
 		operator bool() const { return commands && allocator; }
 	protected:
-		ComPtr<ID3D12CommandList> commands;
+		void PreCommited() { commands->Close(); }
+		ComPtr<ID3D12GraphicsCommandList> commands;
 		ComPtr<ID3D12CommandAllocator> allocator;
 
 		friend struct ResourceStreamer;
@@ -214,11 +215,12 @@ export namespace Dumpling
 		operator bool() const { return device && fence && command_queue; }
 		bool TryFlushTo(std::uint64_t fence_value);
 	protected:
+		
 		ComPtr<ID3D12Device> device;
 		ComPtr<ID3D12Fence> fence;
-		std::size_t current_flush_frame;
+		std::size_t current_flush_frame = 2;
 		ComPtr<ID3D12CommandQueue> command_queue;
-		std::pmr::vector<ComPtr<ID3D12CommandList>> idle_command_list;
+		std::pmr::vector<ComPtr<ID3D12GraphicsCommandList>> idle_command_list;
 		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> idle_allocator;
 		std::pmr::vector<std::tuple<std::uint64_t, ComPtr<ID3D12CommandAllocator>>> waitting_allocator;
 		std::uint64_t last_flush_version = 1;
@@ -238,6 +240,8 @@ export namespace Dumpling
 		bool InitResourceStreamer(ResourceStreamer& target_resource_streamer);
 		static bool InitDebugLayer();
 		operator bool() const { return factory && device; }
+
+		std::tuple<ComPtr<ID3D12Resource>, std::uint64_t> CreateVertexBuffer(void const* buffer, std::size_t size, StreamerRequest& request);
 
 		ComPtr<ID3D12Resource> CreateUploadResource(std::size_t buffer_size);
 

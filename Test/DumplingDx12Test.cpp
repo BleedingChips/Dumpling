@@ -46,6 +46,19 @@ int main()
 	float B = 0.0f;
 
 	bool need_loop = true;
+
+	ResourceStreamer streamer;
+
+	device.InitResourceStreamer(streamer);
+
+	{
+		StreamerRequest request;
+		streamer.PopRequester(request);
+		streamer.Commited(request);
+		streamer.PopRequester(request);
+		streamer.Commited(request);
+	}
+
 	while(need_loop)
 	{
 
