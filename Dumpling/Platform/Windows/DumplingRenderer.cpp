@@ -32,6 +32,7 @@ namespace Dumpling
 		return debug_layout;
 	}
 
+	/*
 	std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>> CreateBufferImp(void const* buffer, std::size_t size, ID3D12Device& device, ID3D12GraphicsCommandList& command)
 	{
 		ComPtr<ID3D12Resource> upload_resource;
@@ -40,8 +41,8 @@ namespace Dumpling
 			D3D12_HEAP_PROPERTIES property;
 			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 			property.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD;
-			property.CreationNodeMask = 0;
-			property.VisibleNodeMask = 0;
+			property.CreationNodeMask = 1;
+			property.VisibleNodeMask = 1;
 			property.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_UNKNOWN;
 
 			D3D12_RESOURCE_DESC resource_desc;
@@ -87,7 +88,7 @@ namespace Dumpling
 
 		{
 			D3D12_HEAP_PROPERTIES property;
-			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE;
+			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 			property.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT;
 			property.CreationNodeMask = 0;
 			property.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_UNKNOWN;
@@ -132,7 +133,7 @@ namespace Dumpling
 		auto [commited_resource, default_resource] = CreateBufferImp(buffer, size, *device, *request.commands);
 		return default_resource;
 	}
-
+	*/
 
 	bool FormWrapper::Present(std::size_t syn_interval)
 	{
@@ -398,147 +399,6 @@ namespace Dumpling
 			}
 		}
 		return {};
-	}
-
-	bool ResourceStreamer::Init(ComPtr<ID3D12Device> in_device)
-	{
-		if (*this || !in_device)
-			return false;
-
-		ComPtr<ID3D12CommandQueue> command_queue;
-		D3D12_COMMAND_QUEUE_DESC desc{
-			D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_COPY,
-			D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-			D3D12_COMMAND_QUEUE_FLAGS::D3D12_COMMAND_QUEUE_FLAG_NONE,
-		0
-		};
-
-		auto result = in_device->CreateCommandQueue(
-			&desc, __uuidof(decltype(command_queue)::Type), command_queue.GetPointerVoidAdress()
-		);
-		if (SUCCEEDED(result))
-		{
-			ComPtr<ID3D12Fence> fence;
-			auto re = in_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(decltype(fence)::Type), fence.GetPointerVoidAdress());
-			if (SUCCEEDED(re))
-			{
-				this->device = std::move(in_device);
-				this->command_queue = std::move(command_queue);
-				this->fence = std::move(fence);
-				return true;
-			}
-		}
-		return {};
-	}
-
-	std::uint64_t ResourceStreamer::Commited(StreamerRequest& request)
-	{
-		if (!request)
-			return std::numeric_limits<std::uint64_t>::max();
-
-		request.PreCommited();
-
-		auto list = std::move(request.commands);
-		auto allo = std::move(request.allocator);
-
-		ID3D12CommandList* temporary_list = list.GetPointer();
-	
-		command_queue->ExecuteCommandLists(1, &temporary_list);
-		command_queue->Signal(fence.GetPointer(), current_flush_frame);
-		
-		idle_command_list.emplace_back(std::move(list));
-		waitting_allocator.emplace_back(current_flush_frame, std::move(allo));
-		return current_flush_frame++;
-	}
-
-	bool ResourceStreamer::PopRequester(StreamerRequest& request)
-	{
-		if (request)
-			return false;
-
-		ComPtr<ID3D12CommandAllocator> current_allocator;
-		if (!current_allocator && !idle_allocator.empty())
-		{
-			current_allocator = std::move(*idle_allocator.rbegin());
-			idle_allocator.pop_back();
-		}
-
-		if (!current_allocator)
-		{
-			auto re = device->CreateCommandAllocator(
-				D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_COPY,
-				__uuidof(decltype(current_allocator)::Type), current_allocator.GetPointerVoidAdress()
-			);
-			assert(SUCCEEDED(re));
-		}
-
-		if (!current_allocator)
-			return false;
-
-
-		ComPtr<ID3D12GraphicsCommandList> current_command;
-
-		if (!current_command && !idle_command_list.empty())
-		{
-			current_command = std::move(*idle_command_list.rbegin());
-			idle_command_list.pop_back();
-			if (current_command)
-			{
-				current_command->Reset(current_allocator.GetPointer(), nullptr);
-			}
-		}
-
-		if (!current_command)
-		{
-			auto re = device->CreateCommandList(
-				0, D3D12_COMMAND_LIST_TYPE_COPY, current_allocator.GetPointer(), nullptr,
-				__uuidof(decltype(current_command)::Type), current_command.GetPointerVoidAdress()
-			);
-			assert(SUCCEEDED(re));
-		}
-
-		if (!current_command)
-		{
-			idle_allocator.emplace_back(std::move(current_allocator));
-			return false;
-		}
-
-		request.commands = std::move(current_command);
-		request.allocator = std::move(current_allocator);
-		return true;
-	}
-
-	bool ResourceStreamer::TryFlushTo(std::uint64_t fence_value)
-	{
-		auto current_version = fence->GetCompletedValue();
-		if (current_version != last_flush_version)
-		{
-			last_flush_version = current_version;
-			
-			bool change = false;
-
-			for (auto& [version, allocator] : waitting_allocator)
-			{
-				if (version <= current_version)
-				{
-					idle_allocator.push_back(std::move(allocator));
-					change = true;
-					break;
-				}
-			}
-
-			if (change)
-			{
-				waitting_allocator.erase(
-					std::remove_if(waitting_allocator.begin(), waitting_allocator.end(), [](std::tuple<std::uint64_t, ComPtr<ID3D12CommandAllocator>>& ite) {
-						return !std::get<1>(ite);
-						}),
-					waitting_allocator.end()
-				);
-			}
-
-		}
-		return current_version;
 	}
 
 	bool Device::InitFrameRenderer(FrameRenderer& target_frame_renderer)

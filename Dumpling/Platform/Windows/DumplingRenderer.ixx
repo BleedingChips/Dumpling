@@ -17,6 +17,7 @@ import DumplingPipeline;
 import DumplingRendererTypes;
 import DumplingDX12;
 import DumplingPlatform;
+import DumplingResourceStreamer;
 
 export namespace Dumpling
 {
@@ -191,42 +192,7 @@ export namespace Dumpling
 		friend struct Device;
 	};
 
-	struct StreamerRequest
-	{
-		StreamerRequest() = default;
-		~StreamerRequest()
-		{
-			assert(!*this);
-		}
-		operator bool() const { return commands && allocator; }
-	protected:
-		void PreCommited() { commands->Close(); }
-		ComPtr<ID3D12GraphicsCommandList> commands;
-		ComPtr<ID3D12CommandAllocator> allocator;
-
-		friend struct ResourceStreamer;
-	};
-
-	struct ResourceStreamer
-	{
-		bool Init(ComPtr<ID3D12Device> device);
-		std::uint64_t Commited(StreamerRequest& request);
-		bool PopRequester(StreamerRequest& request);
-		operator bool() const { return device && fence && command_queue; }
-		bool TryFlushTo(std::uint64_t fence_value);
-		ComPtr<ID3D12Resource> CreateVertexBuffer(void const* buffer, std::size_t size, StreamerRequest& request);
-
-	protected:
-		
-		ComPtr<ID3D12Device> device;
-		ComPtr<ID3D12Fence> fence;
-		std::size_t current_flush_frame = 2;
-		ComPtr<ID3D12CommandQueue> command_queue;
-		std::pmr::vector<ComPtr<ID3D12GraphicsCommandList>> idle_command_list;
-		std::pmr::vector<ComPtr<ID3D12CommandAllocator>> idle_allocator;
-		std::pmr::vector<std::tuple<std::uint64_t, ComPtr<ID3D12CommandAllocator>>> waitting_allocator;
-		std::uint64_t last_flush_version = 1;
-	};
+	
 
 	struct Device
 	{

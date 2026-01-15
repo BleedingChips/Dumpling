@@ -58,13 +58,20 @@ int main()
 
 	device.InitResourceStreamer(streamer);
 
+	auto heap = streamer.CreateDefaultHeap(sizeof(Float4) * 3);
+	ComPtr<ID3D12Resource> vertex_buffer;
+
 	{
-		StreamerRequest request;
-		streamer.PopRequester(request);
-		streamer.CreateVertexBuffer(&vertex, sizeof(Float4) * 3, request);
-		streamer.Commited(request);
-		streamer.PopRequester(request);
-		streamer.Commited(request);
+		PassStreamer pass_streamer;
+		streamer.PopRequester(pass_streamer, {});
+		pass_streamer.CreateVertexBuffer(&vertex, sizeof(Float4) * 3, *heap);
+		auto version = streamer.Commited(pass_streamer);
+		while (!streamer.TryFlushTo(version))
+		{
+			std::this_thread::yield();
+		}
+		streamer.PopRequester(pass_streamer, {});
+		streamer.Commited(pass_streamer);
 	}
 
 	while(need_loop)
