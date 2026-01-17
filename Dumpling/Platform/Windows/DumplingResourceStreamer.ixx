@@ -54,7 +54,8 @@ export namespace Dumpling
 		std::uint64_t Commited(PassStreamer& request);
 		bool PopRequester(PassStreamer& request, PassStreamer::Config config);
 		operator bool() const { return device && fence && command_queue; }
-		bool TryFlushTo(std::uint64_t fence_value);
+		std::uint64_t Flush();
+		bool TryFlushTo(std::uint64_t target_fence_value) { return Flush() >= target_fence_value; }
 		ComPtr<ID3D12Heap> CreateDefaultHeap(std::size_t heap_size);
 
 	protected:
@@ -71,7 +72,7 @@ export namespace Dumpling
 			std::variant<
 				ComPtr<ID3D12CommandAllocator>,
 				ComPtr<ID3D12Resource>,
-				HeapDescription
+				ComPtr<ID3D12Heap>
 			> object;
 		};
 

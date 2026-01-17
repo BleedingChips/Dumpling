@@ -53,7 +53,6 @@ int main()
 		Float4{1.0f, 1.0f, 1.0f, 1.0f}
 	};
 
-
 	ResourceStreamer streamer;
 
 	device.InitResourceStreamer(streamer);

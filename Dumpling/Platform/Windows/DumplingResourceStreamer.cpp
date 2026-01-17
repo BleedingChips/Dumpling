@@ -73,18 +73,31 @@ namespace Dumpling
 				std::move(ite)
 			);
 		}
+		request.using_resource.clear();
 		if (heap)
 		{
 			waitting_object.emplace_back(
 				current_flush_frame,
-				HeapDescription{std::move(heap), heap_size}
+				std::move(heap)
 			);
 		}
+		request.PosCommited();
 		return current_flush_frame++;
 	}
 
-	void PassStreamer::PreCommited() { commands->Close(); }
-	void PassStreamer::PosCommited() { device.Reset(); }
+	void PassStreamer::PreCommited() 
+	{ 
+		commands->Close(); 
+	}
+
+	void PassStreamer::PosCommited() 
+	{
+		commands.Reset();
+		device.Reset(); 
+		allocator.Reset();
+		upload_heap.Reset();
+		using_resource.clear();
+	}
 
 	ComPtr<ID3D12Resource> PassStreamer::CreateVertexBuffer(void const* buffer, std::size_t size, ID3D12Heap& heap, std::size_t heap_offset)
 	{
@@ -111,7 +124,7 @@ namespace Dumpling
 				upload_heap,
 				using_heap_size,
 				&resource_desc,
-				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON,
+				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				__uuidof(decltype(upload_resource)::Type), upload_resource.GetPointerVoidAdress()
 			);
@@ -145,19 +158,21 @@ namespace Dumpling
 					barrier[0].Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 					barrier[0].Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
 					barrier[0].Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
-						upload_resource, 
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, 
+						upload_resource,
+						0,
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ,
 						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE
 					};
 					barrier[1].Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 					barrier[1].Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
 					barrier[1].Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
 						default_resource,
+						0,
 						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE
+						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST
 					};
 
-					commands->ResourceBarrier(barrier.size(), barrier.data());
+					commands->ResourceBarrier(1, barrier.data() + 1);
 					commands->CopyBufferRegion(
 						default_resource,
 						0,
@@ -167,6 +182,9 @@ namespace Dumpling
 					);
 					std::swap(barrier[0].Transition.StateAfter, barrier[0].Transition.StateBefore);
 					std::swap(barrier[1].Transition.StateAfter, barrier[1].Transition.StateBefore);
+					commands->ResourceBarrier(1, barrier.data() + 1);
+					using_resource.emplace_back(upload_resource);
+					using_resource.emplace_back(default_resource);
 					return default_resource;
 				}
 			}
@@ -241,7 +259,7 @@ namespace Dumpling
 		heap_desc.Flags = D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_NONE;
 		heap_desc.SizeInBytes = heap_size;
 		heap_desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		heap_desc.Properties.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT;
+		heap_desc.Properties.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD;
 		heap_desc.Properties.CreationNodeMask = 1;
 		heap_desc.Properties.VisibleNodeMask = 1;
 		heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_UNKNOWN;
@@ -309,6 +327,7 @@ namespace Dumpling
 
 	ComPtr<ID3D12Heap> ResourceStreamer::CreateDefaultHeap(std::size_t heap_size)
 	{
+		heap_size = Potato::MemLayout::AlignTo(heap_size, 64);
 		ComPtr<ID3D12Heap> heap;
 		D3D12_HEAP_DESC heap_desc;
 		heap_desc.Alignment = 0;
@@ -332,7 +351,7 @@ namespace Dumpling
 		return {};
 	}
 
-	bool ResourceStreamer::TryFlushTo(std::uint64_t fence_value)
+	std::uint64_t ResourceStreamer::Flush()
 	{
 		auto current_version = fence->GetCompletedValue();
 		if (current_version != last_flush_version)
@@ -356,10 +375,11 @@ namespace Dumpling
 							)
 						);
 					}
-					else if (std::holds_alternative<HeapDescription>(begin->object))
+					else if (std::holds_alternative<ComPtr<ID3D12Heap>>(begin->object))
 					{
-						auto& ref = std::get<HeapDescription>(begin->object);
-						idle_upload_heap.emplace_back(std::move(ref.heap), ref.heap_size);
+						ComPtr<ID3D12Heap> heap = std::move(std::get<ComPtr<ID3D12Heap>>(begin->object));
+						D3D12_HEAP_DESC heap_desc = heap->GetDesc();
+						idle_upload_heap.emplace_back(std::move(heap), heap_desc.SizeInBytes);
 					}
 				}
 				else {
