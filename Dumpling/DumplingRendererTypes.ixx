@@ -8,6 +8,7 @@ import Potato;
 
 export namespace Dumpling
 {
+	using StructLayout = Potato::IR::StructLayout;
 
 	struct Color
 	{
@@ -55,14 +56,38 @@ export namespace Dumpling
 		TEXTURE_CUBE
 	};
 
+	template<typename Type>
+	concept HLSLConstBufferType16AlignRequire = requires(Type type)
+	{
+		typename Type::HLSLConstBufferRequire16Align;
+	};
+
+	template<typename Type> requires(alignof(Type) <= 16)
+	struct HLSLConstBufferLayoutOverride
+	{
+		Potato::IR::Layout GetLayout() const {
+			return {16, Potato::MemLayout::AlignTo(sizeof(Type), 16)};
+		}
+
+		Potato::IR::Layout GetLayoutAsMember() const
+		{
+			if constexpr(HLSLConstBufferType16AlignRequire<Type>)
+				return { 16, sizeof(Type) };
+			return Potato::IR::Layout::Get<Type>();
+		}
+
+	};
+
 	template<typename Type, std::size_t Columns>
 		requires(sizeof(Type) == sizeof(float) && Columns > 0 && Columns <= 4)
 	struct HLSLCBVector
 	{
 		float Data[Columns];
+		/*
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
 			return { Columns * sizeof(float),  Columns * sizeof(float) };
 		}
+		*/
 		constexpr HLSLCBVector() {
 			for (auto& ite : Data)
 				ite = 0;
@@ -109,9 +134,13 @@ export namespace Dumpling
 	{
 		float Data[Columns - 1][Rows];
 		float AppendData[Rows];
+		using HLSLConstBufferRequire16Align = void;
+		
+		/*
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() { 
 			return { sizeof(float) * 4,  Rows * sizeof(float) + 4 * sizeof(float) * (Columns - 1)};
 		}
+		*/
 	};
 
 	template<typename Type, std::size_t Rows>
@@ -119,42 +148,38 @@ export namespace Dumpling
 	struct HLSLCBMatrixColumnsMajor<Type, Rows, 1>
 	{
 		float Data[Rows];
+		using HLSLConstBufferRequire16Align = void;
+		/*
 		static constexpr Potato::IR::Layout HLSLConstBufferLayout() {
 			return { sizeof(float) * 4,  Rows * sizeof(float) };
 		}
-	};
-
-	struct HLSLConstBufferLayout
-	{
-		Potato::IR::StructLayout::Ptr struct_layout;
-		Potato::MemLayout::Layout memory_layout;
-		explicit operator bool() const { return struct_layout; }
+		*/
 	};
 
 	template<template<std::size_t Columns> class Wrapper>
-	HLSLConstBufferLayout Mapping1DLayout(std::size_t Columns)
+	StructLayout::Ptr Mapping1DLayout(std::size_t Columns)
 	{
 		switch (Columns)
 		{
 		case 1:
 		{
 			using Type = typename Wrapper<1>::Type;
-			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+			return StructLayout::GetStatic<Type, HLSLConstBufferLayoutOverride>();
 		}
 		case 2:
 		{
 			using Type = typename Wrapper<2>::Type;
-			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+			return StructLayout::GetStatic<Type, HLSLConstBufferLayoutOverride>();
 		}
 		case 3:
 		{
 			using Type = typename Wrapper<3>::Type;
-			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+			return StructLayout::GetStatic<Type, HLSLConstBufferLayoutOverride>();
 		}
 		case 4:
 		{
 			using Type = typename Wrapper<4>::Type;
-			return { Potato::IR::StructLayout::GetStatic<Type>(), GetHLSLConstBufferLayout<Type>() };
+			return StructLayout::GetStatic<Type, HLSLConstBufferLayoutOverride>();
 		}
 		}
 		assert(false);
@@ -171,7 +196,7 @@ export namespace Dumpling
 	};
 
 	template<template<std::size_t Rows, std::size_t Columns> class Wrapper>
-	HLSLConstBufferLayout Mapping2DLayout(std::size_t Rows, std::size_t Columns)
+	StructLayout::Ptr Mapping2DLayout(std::size_t Rows, std::size_t Columns)
 	{
 		switch (Rows)
 		{
@@ -207,28 +232,111 @@ export namespace Dumpling
 	};
 
 	template<typename ElementT>
-	HLSLConstBufferLayout MappingVectorLayout(std::size_t Columns)
+	StructLayout::Ptr MappingVectorLayout(std::size_t Columns)
 	{
 		return Mapping1DLayout<MappingVectorWrapper<ElementT>::template Wrapper>(Columns);
 	}
 
 	template<typename ElementT>
-	HLSLConstBufferLayout MappingMatrixLayout(std::size_t Rows, std::size_t Columns)
+	StructLayout::Ptr MappingMatrixLayout(std::size_t Rows, std::size_t Columns)
 	{
 		return Mapping2DLayout<MappingMatrixWrapper<ElementT>::template Wrapper>(Rows, Columns);
 	}
 
-	template<typename Type>
-	concept HLSLConstBufferLayoutDefinedClass = requires(Type)
-	{
-		{ Type::HLSLConstBufferLayout() } -> std::same_as<Potato::IR::Layout>;
-	};
+	using Float4 = HLSLCBVector<float, 4>;
+	using Float3 = HLSLCBVector<float, 3>;
+	using Float2 = HLSLCBVector<float, 2>;
 
-	template<HLSLConstBufferLayoutDefinedClass Type>
-	Potato::IR::Layout GetHLSLConstBufferLayout()
+	constexpr std::optional<Potato::MemLayout::MermberLayout> HLSLConstBufferCombineMemberFunc(Potato::MemLayout::Layout& target_layout, Potato::MemLayout::Layout member, std::size_t array_count)
 	{
-		return Type::HLSLConstBufferLayout();
+
+		constexpr std::size_t max_align = sizeof(float) * 4;
+
+		assert(member.align <= max_align);
+		if (member.align > max_align)
+			return std::nullopt;
+
+		Potato::MemLayout::MermberLayout offset;
+
+		if (array_count == 0)
+		{
+			offset.array_layout = { 0, member.size };
+		}
+		else {
+			member.align = max_align;
+			auto aligned_size = Potato::MemLayout::AlignTo(member.size, max_align);
+			offset.array_layout = { array_count, aligned_size };
+			auto each_element_count = (member.size / max_align) + 1;
+			member.size = (aligned_size * (array_count - 1)) + member.size;
+		}
+
+		if (target_layout.align < member.align)
+			target_layout.align = member.align;
+
+		if (member.align == max_align)
+		{
+			target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, member.align);
+		}
+		else {
+			auto edge = (target_layout.size % max_align);
+			if (edge + member.size > max_align)
+			{
+				target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, member.align);
+			}
+		}
+
+		offset.offset = target_layout.size;
+		target_layout.size += member.size;
+		return offset;
 	}
 
-	using Float4 = HLSLCBVector<float, 4>;
+	constexpr std::optional<Potato::MemLayout::MermberLayout> HLSLConstBufferCompleteLayoutFunc(Potato::MemLayout::Layout& target_layout, Potato::MemLayout::Layout member, std::size_t array_count)
+	{
+
+		constexpr std::size_t max_align = sizeof(float) * 4;
+
+		assert(member.align <= max_align);
+		if (member.align > max_align)
+			return std::nullopt;
+
+		if (target_layout.align < member.align)
+			target_layout.align = member.align;
+
+		Potato::MemLayout::MermberLayout offset;
+
+		if (array_count == 0)
+		{
+			offset.array_layout = { 0, member.size };
+		}
+		else {
+			member.align = max_align;
+			auto aligned_size = Potato::MemLayout::AlignTo(member.size, max_align);
+			offset.array_layout = { array_count, aligned_size };
+			auto each_element_count = (member.size / max_align) + 1;
+			member.size = (aligned_size * (array_count - 1)) + member.size;
+		}
+
+		if (member.align == max_align)
+		{
+			target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, member.align);
+		}
+		else {
+			auto edge = (target_layout.size % max_align);
+			if (edge + member.size > max_align)
+			{
+				target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, member.align);
+			}
+		}
+
+		offset.offset = target_layout.size;
+		target_layout.size += member.size;
+		return offset;
+	}
+
+	constexpr std::optional<Potato::MemLayout::Layout> HLSLConstBufferCompleteLayoutFunc(Potato::MemLayout::Layout layout) {
+		auto max_align = std::max(layout.align, std::size_t{ 16 });
+		return Potato::MemLayout::Layout{max_align, Potato::MemLayout::AlignTo(layout.size, max_align)};
+	}
+
+	Potato::MemLayout::LayoutPolicyRef GetHLSLConstBufferPolicy() { return Potato::MemLayout::LayoutPolicyRef(HLSLConstBufferCombineMemberFunc, HLSLConstBufferCompleteLayoutFunc); }
 }

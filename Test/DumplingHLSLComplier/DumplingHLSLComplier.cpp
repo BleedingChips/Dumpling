@@ -71,6 +71,7 @@ Pixel PSMain(Vertex vertex)
 
 int main()
 {
+
 	auto instance = HLSLCompiler::Instance::Create();
 	auto compiler = instance.CreateCompiler();
 

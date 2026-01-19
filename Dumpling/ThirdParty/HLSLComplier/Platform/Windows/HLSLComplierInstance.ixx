@@ -110,7 +110,7 @@ export namespace Dumpling::HLSLCompiler
 		ComplieTargetVersion version = ComplieTargetVersion::VERSION_5;
 		ComplierFlag flag = ComplierFlag::None;
 		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> cbuffer_layout_override;
-		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override;
+		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override;
 		Potato::TMP::FunctionRef<void(std::u8string_view, ShaderTarget)> error_capture;
 	};
 

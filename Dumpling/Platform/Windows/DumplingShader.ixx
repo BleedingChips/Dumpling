@@ -70,7 +70,7 @@ export namespace Dumpling
 	struct ShaderReflectionConstBufferContext
 	{
 		ShaderSlot::Source default_source;
-		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override;
+		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override;
 		std::pmr::memory_resource* layout_resource = std::pmr::get_default_resource();
 		std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource();
 	};

@@ -6,6 +6,7 @@ module;
 #undef max
 
 module DumplingShader;
+import DumplingRendererTypes;
 
 
 namespace Dumpling
@@ -29,28 +30,28 @@ namespace Dumpling
 
 	template<typename ElementT> struct MappingToScalarWrapper
 	{
-		HLSLConstBufferLayout operator()() {
-			return { StructLayout::GetStatic<ElementT>(), {alignof(ElementT), sizeof(ElementT)} };
+		StructLayout::Ptr operator()() {
+			return StructLayout::GetStatic<ElementT, HLSLConstBufferLayoutOverride>();
 		}
 	};
 
 	template<typename ElementT> struct MappingToVectorWrapper
 	{
-		HLSLConstBufferLayout operator()(std::size_t Columns) {
+		StructLayout::Ptr operator()(std::size_t Columns) {
 			return MappingVectorLayout<ElementT>(Columns);
 		}
 	};
 
 	template<typename ElementT> struct MappingToMatrixWrapper
 	{
-		HLSLConstBufferLayout operator()(std::size_t Rows, std::size_t Columns) {
+		StructLayout::Ptr operator()(std::size_t Rows, std::size_t Columns) {
 			return MappingMatrixLayout<ElementT>(Rows, Columns);
 		}
 	};
 
 
 	template<template<class ElementT> class Wrapper, typename ...Parameters>
-	HLSLConstBufferLayout MappingToVariable(D3D_SHADER_VARIABLE_TYPE type, Parameters&&... pars)
+	StructLayout::Ptr MappingToVariable(D3D_SHADER_VARIABLE_TYPE type, Parameters&&... pars)
 	{
 		switch (type)
 		{
@@ -66,9 +67,9 @@ namespace Dumpling
 		}
 	}
 
-	std::tuple<HLSLConstBufferLayout, std::size_t> CreateLayoutFromReflectionType(
+	std::tuple<StructLayout::Ptr, std::size_t> CreateLayoutFromReflectionType(
 		ID3D12ShaderReflectionType& reflection_type,
-		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override,
+		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
 		std::pmr::memory_resource* temporary_resource
 	)
@@ -76,7 +77,7 @@ namespace Dumpling
 		D3D12_SHADER_TYPE_DESC type_desc;
 		if (SUCCEEDED(reflection_type.GetDesc(&type_desc)))
 		{
-			HLSLConstBufferLayout layout;
+			StructLayout::Ptr layout;
 
 			switch (type_desc.Class)
 			{
@@ -106,20 +107,18 @@ namespace Dumpling
 						auto [type_layout, array_count] = CreateLayoutFromReflectionType(*type_var, type_layout_override, layout_resource, temporary_resource);
 						assert(type_layout);
 						Potato::IR::StructLayout::Member current_member;
-						current_member.struct_layout = std::move(type_layout.struct_layout);
-						current_member.overrided_memory_layout = type_layout.memory_layout;
+						current_member.struct_layout = std::move(type_layout);
 						current_member.array_count = array_count;
 						current_member.name = reinterpret_cast<char8_t const*>(type_desc.Name);
 						type_member.push_back(current_member);
 					}
-					layout.struct_layout = StructLayout::CreateDynamic(
+					layout = StructLayout::CreateDynamic(
 						reinterpret_cast<char8_t const*>(type_desc.Name),
 						std::span(type_member.data(), type_member.size()),
-						Potato::MemLayout::GetHLSLConstBufferPolicy(),
+						GetHLSLConstBufferPolicy(),
 						layout_resource
 					);
-					assert(layout.struct_layout);
-					layout.memory_layout = layout.struct_layout->GetLayout();
+					assert(layout);
 				}
 				break;
 			}
@@ -130,9 +129,9 @@ namespace Dumpling
 		return {};
 	}
 
-	std::tuple<HLSLConstBufferLayout, std::size_t> CreateLayoutFromVariable(
+	std::tuple<StructLayout::Ptr, std::size_t> CreateLayoutFromVariable(
 		ID3D12ShaderReflectionVariable& variable,
-		Potato::TMP::FunctionRef<HLSLConstBufferLayout(std::u8string_view)> type_layout_override,
+		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override,
 		std::pmr::memory_resource* layout_resource,
 		std::pmr::memory_resource* temporary_resource
 	)
@@ -169,8 +168,7 @@ namespace Dumpling
 			assert(ver != nullptr);
 			auto [layout, array_count] = CreateLayoutFromVariable(*ver, context.type_layout_override, context.layout_resource, context.temporary_resource);
 			Potato::IR::StructLayout::Member current_member;
-			current_member.struct_layout = std::move(layout.struct_layout);
-			current_member.overrided_memory_layout = layout.memory_layout;
+			current_member.struct_layout = std::move(layout);
 			current_member.array_count = array_count;
 			D3D12_SHADER_VARIABLE_DESC var_desc;
 			bool re = SUCCEEDED(ver->GetDesc(&var_desc));
@@ -180,7 +178,7 @@ namespace Dumpling
 		}
 		auto struct_layout = StructLayout::CreateDynamic(
 			reinterpret_cast<char8_t const*>(buffer_desc.Name),
-			std::span(members.data(), members.size()), Potato::MemLayout::GetHLSLConstBufferPolicy(),
+			std::span(members.data(), members.size()), GetHLSLConstBufferPolicy(),
 			context.layout_resource
 		);
 
