@@ -75,8 +75,13 @@ export namespace Dumpling
 				return { 16, sizeof(Type) };
 			return Potato::IR::Layout::Get<Type>();
 		}
-
 	};
+
+	template<typename Type>
+	decltype(auto) GetHLSLConstBufferStructLayout()
+	{
+		return StructLayout::GetStatic<Type, HLSLConstBufferLayoutOverride>();
+	}
 
 	template<typename Type, std::size_t Columns>
 		requires(sizeof(Type) == sizeof(float) && Columns > 0 && Columns <= 4)
@@ -243,9 +248,9 @@ export namespace Dumpling
 		return Mapping2DLayout<MappingMatrixWrapper<ElementT>::template Wrapper>(Rows, Columns);
 	}
 
-	using Float4 = HLSLCBVector<float, 4>;
-	using Float3 = HLSLCBVector<float, 3>;
-	using Float2 = HLSLCBVector<float, 2>;
+	using CBFloat4 = HLSLCBVector<float, 4>;
+	using CBFloat3 = HLSLCBVector<float, 3>;
+	using CBFloat2 = HLSLCBVector<float, 2>;
 
 	constexpr std::optional<Potato::MemLayout::MermberLayout> HLSLConstBufferCombineMemberFunc(Potato::MemLayout::Layout& target_layout, Potato::MemLayout::Layout member, std::size_t array_count)
 	{
@@ -260,12 +265,12 @@ export namespace Dumpling
 
 		if (array_count == 0)
 		{
-			offset.array_layout = { 0, member.size };
+			offset.array_layout = { 0, member.size, member.size };
 		}
 		else {
 			member.align = max_align;
 			auto aligned_size = Potato::MemLayout::AlignTo(member.size, max_align);
-			offset.array_layout = { array_count, aligned_size };
+			offset.array_layout = { array_count, aligned_size, member.size };
 			auto each_element_count = (member.size / max_align) + 1;
 			member.size = (aligned_size * (array_count - 1)) + member.size;
 		}
@@ -275,13 +280,13 @@ export namespace Dumpling
 
 		if (member.align == max_align)
 		{
-			target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, member.align);
+			target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, max_align);
 		}
 		else {
 			auto edge = (target_layout.size % max_align);
 			if (edge + member.size > max_align)
 			{
-				target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, member.align);
+				target_layout.size = Potato::MemLayout::AlignTo(target_layout.size, max_align);
 			}
 		}
 

@@ -1,5 +1,7 @@
+#include <d3d12.h>
 import Dumpling;
 import std;
+import Potato;
 
 using namespace Dumpling;
 
@@ -39,7 +41,30 @@ int main()
 
 	auto output = device.CreateFormWrapper(form, form_renderer);
 
-	
+	auto vertex_layout = Potato::IR::StructLayout::CreateDynamic(
+		u8"default_vertex_layout",
+		std::initializer_list<StructLayout::Member>{
+			{
+				GetHLSLConstBufferStructLayout<CBFloat3>(),
+				u8"POSITION"
+			},
+			{
+				GetHLSLConstBufferStructLayout<CBFloat3>(),
+				u8"COLOR"
+			}
+		},
+		GetHLSLConstBufferPolicy()
+	);
+
+	auto vertex_object = Potato::IR::StructLayoutObject::DefaultConstruct(vertex_layout, 3, GetHLSLConstBufferPolicy());
+	auto size_in_byte = vertex_object->GetBuffer().size();
+
+	std::array<char8_t, 1024> tem_input;
+	std::array<D3D12_INPUT_ELEMENT_DESC, 1024> element_desc;
+
+	auto size = CreateInputDescription(*vertex_layout, element_desc, tem_input);
+	auto element_span = std::span(element_desc).subspan(0, *size);
+
 
 	float R = 0.0f;
 	float G = 0.0f;
@@ -47,23 +72,17 @@ int main()
 
 	bool need_loop = true;
 
-	std::array<Float4, 3> vertex = {
-		Float4{1.0f, 1.0f, 1.0f, 1.0f},
-		Float4{1.0f, 1.0f, 1.0f, 1.0f},
-		Float4{1.0f, 1.0f, 1.0f, 1.0f}
-	};
-
 	ResourceStreamer streamer;
 
 	device.InitResourceStreamer(streamer);
 
-	auto heap = streamer.CreateDefaultHeap(sizeof(Float4) * 3);
+	auto heap = streamer.CreateDefaultHeap(size_in_byte);
 	ComPtr<ID3D12Resource> vertex_buffer;
 
 	{
 		PassStreamer pass_streamer;
 		streamer.PopRequester(pass_streamer, {});
-		pass_streamer.CreateVertexBuffer(&vertex, sizeof(Float4) * 3, *heap);
+		pass_streamer.CreateVertexBuffer(vertex_object->GetBuffer().data(), size_in_byte, *heap);
 		auto version = streamer.Commited(pass_streamer);
 		while (!streamer.TryFlushTo(version))
 		{
