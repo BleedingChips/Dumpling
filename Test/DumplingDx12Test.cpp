@@ -82,7 +82,7 @@ int main()
 	{
 		PassStreamer pass_streamer;
 		streamer.PopRequester(pass_streamer, {});
-		pass_streamer.CreateVertexBuffer(vertex_object->GetBuffer().data(), size_in_byte, *heap);
+		vertex_buffer = pass_streamer.CreateVertexBuffer(vertex_object->GetBuffer().data(), size_in_byte, *heap);
 		auto version = streamer.Commited(pass_streamer);
 		while (!streamer.TryFlushTo(version))
 		{
@@ -91,6 +91,8 @@ int main()
 		streamer.PopRequester(pass_streamer, {});
 		streamer.Commited(pass_streamer);
 	}
+
+	auto view = GetVertexBufferView(*vertex_object, *vertex_buffer);
 
 	while(need_loop)
 	{
