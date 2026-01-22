@@ -65,6 +65,17 @@ int main()
 	auto size = CreateInputDescription(*vertex_layout, element_desc, tem_input);
 	auto element_span = std::span(element_desc).subspan(0, *size);
 
+	D3D12_ROOT_SIGNATURE_DESC desc;
+	desc.NumParameters = 0;
+	desc.NumStaticSamplers = 0;
+	desc.pParameters = nullptr;
+	desc.pStaticSamplers = nullptr;
+	desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	ComPtr<ID3D10Blob> root_signature;
+	ComPtr<ID3D10Blob> error_code;
+
+	auto result = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, root_signature.GetPointerAdress(), error_code.GetPointerAdress());
 
 	float R = 0.0f;
 	float G = 0.0f;

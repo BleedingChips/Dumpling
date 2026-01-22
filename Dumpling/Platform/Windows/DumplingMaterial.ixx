@@ -14,8 +14,18 @@ export namespace Dumpling
 	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(std::size_t buffer_size, Potato::MemLayout::ArrayLayout array_layout, ID3D12Resource& vertex_resource);
 	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(Potato::IR::StructLayoutObject& object, ID3D12Resource& vertex_resource) { return GetVertexBufferView(object.GetBuffer().size(), object.GetArrayLayout(), vertex_resource); }
 	
+	enum class PrimitiveTolopogy
+	{
+		TRIANGLE = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+	};
+
 	struct MaterialState
 	{
 		Potato::IR::StructLayout::Ptr vs_layout;
+		PrimitiveTolopogy tolopogy = PrimitiveTolopogy::TRIANGLE;
+		ComPtr<ID3D10Blob> vs_shader;
+		ComPtr<ID3D10Blob> ps_shader;
 	};
+
+	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, MaterialState const& state);
 }

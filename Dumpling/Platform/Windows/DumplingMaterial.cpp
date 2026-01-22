@@ -76,4 +76,9 @@ namespace Dumpling
 		view.StrideInBytes = array_layout.each_element_offset;
 		return view;
 	}
+
+	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, MaterialState const& state)
+	{
+		return {};
+	}
 }
