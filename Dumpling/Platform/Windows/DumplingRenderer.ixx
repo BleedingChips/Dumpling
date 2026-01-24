@@ -208,6 +208,7 @@ export namespace Dumpling
 		bool InitResourceStreamer(ResourceStreamer& target_resource_streamer);
 		static bool InitDebugLayer();
 		operator bool() const { return factory && device; }
+		operator ID3D12Device& () { return *device; }
 
 	protected:
 

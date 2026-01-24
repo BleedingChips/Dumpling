@@ -77,8 +77,110 @@ namespace Dumpling
 		return view;
 	}
 
-	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, MaterialState const& state)
+	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderStatistics const& statics)
 	{
-		return {};
+		D3D12_ROOT_SIGNATURE_DESC desc;
+		desc.NumParameters = 0;
+		desc.NumStaticSamplers = 0;
+		desc.pParameters = nullptr;
+		desc.pStaticSamplers = nullptr;
+		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+		ComPtr<ID3D10Blob> root_signature_code;
+		ComPtr<ID3D10Blob> error_code;
+
+		auto result = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, root_signature_code.GetPointerAdress(), error_code.GetPointerAdress());
+
+		if (!SUCCEEDED(result))
+			return {};
+
+		ComPtr<ID3D12RootSignature> root_signature;
+
+		auto re = device.CreateRootSignature(1,
+			root_signature_code->GetBufferPointer(),
+			root_signature_code->GetBufferSize(),
+			__uuidof(decltype(root_signature)::Type),
+			root_signature.GetPointerVoidAdress()
+		);
+
+		if (!SUCCEEDED(re))
+			return {};
+
+		return root_signature;
+	}
+
+	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, ID3D12RootSignature& root_signature, MaterialState const& material_state)
+	{
+		std::array<char8_t, 1024> temp_str;
+		std::array<D3D12_INPUT_ELEMENT_DESC, 128> input_element;
+
+		auto size = CreateInputDescription(*material_state.vs_layout, std::span(input_element), std::span(temp_str));
+
+		if (!size.has_value())
+			return {};
+
+		// Describe and create the graphics pipeline state object (PSO).
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { input_element.data(), static_cast<UINT32>(*size)};
+		psoDesc.pRootSignature = &root_signature;
+		psoDesc.VS = {
+			material_state.vs_shader->GetBufferPointer(),
+			material_state.vs_shader->GetBufferSize()
+		};
+		psoDesc.PS = {
+			material_state.ps_shader->GetBufferPointer(),
+			material_state.ps_shader->GetBufferSize()
+		};
+		{
+			psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+			psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+			psoDesc.RasterizerState.FrontCounterClockwise = FALSE;
+			psoDesc.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+			psoDesc.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+			psoDesc.RasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+			psoDesc.RasterizerState.DepthClipEnable = TRUE;
+			psoDesc.RasterizerState.MultisampleEnable = FALSE;
+			psoDesc.RasterizerState.AntialiasedLineEnable = FALSE;
+			psoDesc.RasterizerState.ForcedSampleCount = 0;
+			psoDesc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		}
+		{
+			psoDesc.BlendState.AlphaToCoverageEnable = false;
+			psoDesc.BlendState.IndependentBlendEnable = false;
+			psoDesc.BlendState.RenderTarget[0] = {
+				false,
+				false,
+				D3D12_BLEND_ONE,
+				D3D12_BLEND_ZERO,
+				D3D12_BLEND_OP_ADD,
+				D3D12_BLEND_ONE,
+				D3D12_BLEND_ZERO,
+				D3D12_BLEND_OP_ADD,
+				D3D12_LOGIC_OP_NOOP,
+				D3D12_COLOR_WRITE_ENABLE_ALL
+			};
+		}
+		
+
+		psoDesc.DepthStencilState.DepthEnable = FALSE;
+		psoDesc.DepthStencilState.StencilEnable = FALSE;
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT;
+		psoDesc.SampleDesc.Count = 1;
+
+		ComPtr<ID3D12PipelineState> pipeline_state;
+
+		auto re = device.CreateGraphicsPipelineState(
+			&psoDesc,
+			__uuidof(decltype(pipeline_state)::Type),
+			pipeline_state.GetPointerVoidAdress()
+		);
+
+		if (!SUCCEEDED(re))
+			return {};
+
+		return pipeline_state;
 	}
 }

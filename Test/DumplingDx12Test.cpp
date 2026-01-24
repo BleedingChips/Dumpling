@@ -20,7 +20,33 @@ struct TopHook : public Dumpling::FormEventHook
 	virtual void SubFormEventHookRef() const {};
 } hook;
 
+std::u8string_view shader = u8R"(
 
+struct Vertex
+{
+	float4 position : SV_POSITION;
+};
+
+Vertex VSMain(float3 Position : POSITION)
+{
+	Vertex vertex;
+	vertex.position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	return vertex;
+}
+
+struct Pixel
+{
+	float4 Color : SV_TARGET0;
+};
+
+Pixel PSMain(Vertex vertex)
+{
+	Pixel pixel;
+	pixel.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	return pixel;
+}
+
+)";
 
 int main()
 {
@@ -32,6 +58,22 @@ int main()
 	Form::Config config;
 	config.title = u8"FuckYou";
 	config.event_hook = &hook;
+
+	auto instance = HLSLCompiler::Instance::Create();
+	auto compiler = instance.CreateCompiler();
+
+	HLSLCompiler::MaterialShaderOutput shader_output;
+	ShaderSlot shader_slot;
+	bool result = instance.CompileMaterial(
+		compiler,
+		shader_slot,
+		shader_output,
+		{
+			{shader, u8"VSMain", u8"Test.hlsl"},
+			{shader, u8"PSMain", u8"Test.hlsl"}
+		},
+		{}
+	);
 
 	auto form = Form::Create(config);
 
@@ -65,17 +107,15 @@ int main()
 	auto size = CreateInputDescription(*vertex_layout, element_desc, tem_input);
 	auto element_span = std::span(element_desc).subspan(0, *size);
 
-	D3D12_ROOT_SIGNATURE_DESC desc;
-	desc.NumParameters = 0;
-	desc.NumStaticSamplers = 0;
-	desc.pParameters = nullptr;
-	desc.pStaticSamplers = nullptr;
-	desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	auto root_signature = CreateRootSignature(device, shader_slot.total_statics);
 
-	ComPtr<ID3D10Blob> root_signature;
-	ComPtr<ID3D10Blob> error_code;
+	MaterialState material_state;
+	material_state.vs_layout = vertex_layout;
+	material_state.vs_shader = shader_output.vs;
+	material_state.ps_shader = shader_output.ps;
 
-	auto result = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, root_signature.GetPointerAdress(), error_code.GetPointerAdress());
+
+	auto pipeline_object = CreatePipelineState(device, *root_signature, material_state);
 
 	float R = 0.0f;
 	float G = 0.0f;
