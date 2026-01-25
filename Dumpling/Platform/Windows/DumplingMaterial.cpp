@@ -133,7 +133,7 @@ namespace Dumpling
 		};
 		{
 			psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-			psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+			psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 			psoDesc.RasterizerState.FrontCounterClockwise = FALSE;
 			psoDesc.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
 			psoDesc.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

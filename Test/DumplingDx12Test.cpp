@@ -31,7 +31,7 @@ struct Vertex
 Vertex VSMain(float3 Position : POSITION)
 {
 	Vertex vertex;
-	vertex.position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	vertex.position = float4(Position.x, Position.y, Position.z, 1.0f);
 	return vertex;
 }
 
@@ -103,12 +103,27 @@ int main()
 	
 	auto p = vertex_object->GetObject(0);
 
+	D3D12_VIEWPORT view_port{
+		0.0f,
+		0.0f,
+		1024.0f,
+		768.0f,
+		0.0f,
+		1.0f
+	};
+	D3D12_RECT rect{
+		0,
+		0,
+		1024,
+		768
+	};
+
 
 	CBFloat3& v1 = *vertex_layout->GetMemberView()[0].As<CBFloat3>(vertex_object->GetObject(0));
-	v1 = CBFloat3{ 0.0f, 0.5f, 0.0f };
 	CBFloat3& v2 = *vertex_layout->GetMemberView()[0].As<CBFloat3>(vertex_object->GetObject(1));
-	v2 = CBFloat3{ 0.0f, 0.0f, 0.0f };
 	CBFloat3& v3 = *vertex_layout->GetMemberView()[0].As<CBFloat3>(vertex_object->GetObject(2));
+	v1 = CBFloat3{ 0.0f, 0.5f, 0.0f };
+	v2 = CBFloat3{ 0.0f, 0.0f, 0.0f };
 	v3 = CBFloat3{ 0.5f, 0.0f, 0.0f };
 	
 	auto size_in_byte = vertex_object->GetBuffer().size();
@@ -186,6 +201,8 @@ int main()
 			ren->SetGraphicsRootSignature(root_signature.GetPointer());
 			ren->IASetVertexBuffers(0, 1, &view);
 			ren->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			ren->RSSetViewports(1, &view_port);
+			ren->RSSetScissorRects(1, &rect);
 			ren->DrawInstanced(3, 1, 0, 0);
 			form_renderer.FinishPassRenderer(ren);
 		}

@@ -21,13 +21,16 @@ namespace Dumpling
 	bool Device::InitDebugLayer()
 	{
 		static std::mutex debug_mutex;
-		static ComPtr<ID3D12Debug> debug_layout;
+		static ComPtr<ID3D12Debug1> debug_layout;
 		std::lock_guard lg(debug_mutex);
 		if(!debug_layout)
 		{
-			D3D12GetDebugInterface(__uuidof(ID3D12Debug), debug_layout.GetPointerVoidAdress());
-			if(debug_layout)
+			D3D12GetDebugInterface(__uuidof(decltype(debug_layout)::Type), debug_layout.GetPointerVoidAdress());
+			if (debug_layout)
+			{
 				debug_layout->EnableDebugLayer();
+				debug_layout->SetEnableGPUBasedValidation(true);
+			}
 		}
 		return debug_layout;
 	}
