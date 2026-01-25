@@ -32,109 +32,6 @@ namespace Dumpling
 		return debug_layout;
 	}
 
-	/*
-	std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>> CreateBufferImp(void const* buffer, std::size_t size, ID3D12Device& device, ID3D12GraphicsCommandList& command)
-	{
-		ComPtr<ID3D12Resource> upload_resource;
-
-		{
-			D3D12_HEAP_PROPERTIES property;
-			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			property.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD;
-			property.CreationNodeMask = 1;
-			property.VisibleNodeMask = 1;
-			property.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_UNKNOWN;
-
-			D3D12_RESOURCE_DESC resource_desc;
-			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER;
-			resource_desc.Alignment = 0;
-			resource_desc.Width = size;
-			resource_desc.Height = 1;
-			resource_desc.DepthOrArraySize = 1;
-			resource_desc.MipLevels = 1;
-			resource_desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-			resource_desc.SampleDesc.Count = 1;
-			resource_desc.SampleDesc.Quality = 0;
-			resource_desc.Layout = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resource_desc.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
-			D3D12_CLEAR_VALUE clear_value;
-
-			auto re = device.CreateCommittedResource(
-				&property, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resource_desc,
-				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE,
-				nullptr,
-				__uuidof(decltype(upload_resource)::Type), upload_resource.GetPointerVoidAdress()
-			);
-
-			if (!SUCCEEDED(re))
-			{
-				return {};
-			}
-		}
-
-		{
-			void* target = nullptr;
-			D3D12_RANGE range{ 0, size };
-			auto re = upload_resource->Map(0, &range, &target);
-			if (!SUCCEEDED(re))
-			{
-				return {};
-			}
-			std::memcpy(target, buffer, size);
-			upload_resource->Unmap(0, &range);
-		}
-
-		ComPtr<ID3D12Resource> default_resource;
-
-		{
-			D3D12_HEAP_PROPERTIES property;
-			property.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY::D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-			property.Type = D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT;
-			property.CreationNodeMask = 0;
-			property.MemoryPoolPreference = D3D12_MEMORY_POOL::D3D12_MEMORY_POOL_UNKNOWN;
-
-			D3D12_RESOURCE_DESC resource_desc;
-			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER;
-			resource_desc.Alignment = 0;
-			resource_desc.Width = size;
-			resource_desc.Height = 1;
-			resource_desc.DepthOrArraySize = 1;
-			resource_desc.MipLevels = 1;
-			resource_desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-			resource_desc.SampleDesc.Count = 1;
-			resource_desc.SampleDesc.Quality = 0;
-			resource_desc.Layout = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resource_desc.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-			D3D12_CLEAR_VALUE clear_value;
-
-			auto re = device.CreateCommittedResource(
-				&property, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resource_desc,
-				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE,
-				nullptr,
-				__uuidof(decltype(default_resource)::Type), default_resource.GetPointerVoidAdress()
-			);
-
-			if (!SUCCEEDED(re))
-			{
-				return {};
-			}
-		}
-
-		{
-		}
-
-		return {};
-	}
-
-
-
-	ComPtr<ID3D12Resource> ResourceStreamer::CreateVertexBuffer(void const* buffer, std::size_t size, StreamerRequest& request)
-	{
-		auto [commited_resource, default_resource] = CreateBufferImp(buffer, size, *device, *request.commands);
-		return default_resource;
-	}
-	*/
-
 	bool FormWrapper::Present(std::size_t syn_interval)
 	{
 		auto re = swap_chain->Present(syn_interval, 0);
@@ -220,6 +117,7 @@ namespace Dumpling
 		}
 		if (!target_allocator)
 			return false;
+		target_allocator->Reset();
 		ComPtr<ID3D12GraphicsCommandList> target_command_list;
 		if (!target_command_list && !idle_command_list.empty())
 		{

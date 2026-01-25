@@ -224,6 +224,8 @@ namespace Dumpling
 		{
 			auto current_allocator = std::move(*idle_allocator.rbegin());
 			idle_allocator.pop_back();
+			assert(current_allocator);
+			current_allocator->Reset();
 			return current_allocator;
 		}
 

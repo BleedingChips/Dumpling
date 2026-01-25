@@ -2,6 +2,7 @@
 import Dumpling;
 import std;
 import Potato;
+#undef GetObject
 
 using namespace Dumpling;
 
@@ -99,6 +100,17 @@ int main()
 	);
 
 	auto vertex_object = Potato::IR::StructLayoutObject::DefaultConstruct(vertex_layout, 3, GetHLSLConstBufferPolicy());
+	
+	auto p = vertex_object->GetObject(0);
+
+
+	CBFloat3& v1 = *vertex_layout->GetMemberView()[0].As<CBFloat3>(vertex_object->GetObject(0));
+	v1 = CBFloat3{ 0.0f, 0.5f, 0.0f };
+	CBFloat3& v2 = *vertex_layout->GetMemberView()[0].As<CBFloat3>(vertex_object->GetObject(1));
+	v2 = CBFloat3{ 0.0f, 0.0f, 0.0f };
+	CBFloat3& v3 = *vertex_layout->GetMemberView()[0].As<CBFloat3>(vertex_object->GetObject(2));
+	v3 = CBFloat3{ 0.5f, 0.0f, 0.0f };
+	
 	auto size_in_byte = vertex_object->GetBuffer().size();
 
 	std::array<char8_t, 1024> tem_input;
@@ -170,6 +182,11 @@ int main()
 			sets.AddRenderTarget(*output);
 			ren.SetRenderTargets(sets);
 			ren.ClearRendererTarget(0, { R, G, B, 1.0f });
+			ren->SetPipelineState(pipeline_object.GetPointer());
+			ren->SetGraphicsRootSignature(root_signature.GetPointer());
+			ren->IASetVertexBuffers(0, 1, &view);
+			ren->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			ren->DrawInstanced(3, 1, 0, 0);
 			form_renderer.FinishPassRenderer(ren);
 		}
 
