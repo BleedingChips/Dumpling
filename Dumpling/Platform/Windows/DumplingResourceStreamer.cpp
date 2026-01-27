@@ -50,14 +50,6 @@ namespace Dumpling
 		auto list = std::move(request.commands);
 		auto allo = std::move(request.allocator);
 		auto heap = std::move(request.upload_heap);
-		std::size_t heap_size = request.heap_size;
-		if (request.using_heap_size == 0)
-		{
-			idle_upload_heap.emplace_back(
-				std::move(heap),
-				heap_size
-			);
-		}
 
 		ID3D12CommandList* temporary_list = list.GetPointer();
 
@@ -66,22 +58,45 @@ namespace Dumpling
 
 		idle_command_list.emplace_back(std::move(list));
 		waitting_object.emplace_back(current_flush_frame, std::move(allo));
-		for (auto& ite : request.using_resource)
+
+		bool heap_has_been_used = false;
+
+		for (auto& ite : request.upload_resource)
 		{
-			waitting_object.emplace_back(
-				current_flush_frame,
-				std::move(ite)
-			);
+			if (ite)
+			{
+				if (ite.using_size > 0)
+				{
+					heap_has_been_used = true;
+					waitting_object.emplace_back(
+						current_flush_frame,
+						std::move(ite.resource)
+					);
+				}
+				ite.Reset();
+			}
 		}
-		request.using_resource.clear();
+
 		if (heap)
 		{
-			waitting_object.emplace_back(
-				current_flush_frame,
-				std::move(heap)
-			);
+			if (!heap_has_been_used)
+			{
+				D3D12_HEAP_DESC heap_desc = heap->GetDesc();
+				idle_upload_heap.emplace_back(
+					std::move(heap),
+					static_cast<std::size_t>(heap_desc.SizeInBytes)
+				);
+			}
+			else {
+				waitting_object.emplace_back(
+					current_flush_frame,
+					std::move(heap)
+				);
+			}
 		}
+
 		request.PosCommited();
+		
 		return current_flush_frame++;
 	}
 
@@ -96,9 +111,86 @@ namespace Dumpling
 		device.Reset(); 
 		allocator.Reset();
 		upload_heap.Reset();
-		using_resource.clear();
+		for (auto& ite : upload_resource)
+			ite.Reset();
 	}
 
+	std::optional<D3D12_RESOURCE_STATES> PassStreamer::UploadResource(std::size_t buffer_category, void const* buffer, std::size_t buffer_size, ID3D12Resource& target_resource, std::size_t target_offset, std::size_t sub_resource, D3D12_RESOURCE_STATES original_state, bool recover_state)
+	{
+		if (buffer_category >= upload_resource.size())
+			return std::nullopt;
+
+		auto& resource = upload_resource[buffer_category];
+
+		if (!resource)
+			return std::nullopt;
+
+		auto align_size = Potato::MemLayout::AlignTo(buffer_size, 64);
+
+		if (resource.using_size + align_size > resource.max_size)
+			return std::nullopt;
+
+		D3D12_RANGE range{ resource.using_size, resource.using_size + align_size };
+		void* target_adress = nullptr;
+
+		static std::size_t i = 0;
+		if (i == 1)
+			return std::nullopt;
+		i += 1;
+
+		auto re = resource.resource->Map(sub_resource, &range, &target_adress);
+		if (target_adress == nullptr)
+			return std::nullopt;
+		std::memcpy(target_adress, buffer, buffer_size);
+		resource.resource->Unmap(sub_resource, &range);
+
+		auto current_state = original_state;
+		if (original_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST)
+		{
+			current_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST;
+			D3D12_RESOURCE_BARRIER barrier;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
+				&target_resource,
+				0,
+				original_state,
+				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST
+			};
+
+			commands->ResourceBarrier(1, &barrier);
+		}
+
+		
+		commands->CopyBufferRegion(
+			&target_resource,
+			target_offset,
+			resource.resource,
+			resource.using_size,
+			buffer_size
+		);
+
+		if (recover_state && current_state != original_state)
+		{
+			D3D12_RESOURCE_BARRIER barrier;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
+				&target_resource,
+				0,
+				current_state,
+				original_state
+			};
+
+			current_state = original_state;
+
+			commands->ResourceBarrier(1, &barrier);
+		}
+		resource.using_size += align_size;
+		return current_state;
+	}
+
+	/*
 	ComPtr<ID3D12Resource> PassStreamer::CreateVertexBuffer(void const* buffer, std::size_t size, ID3D12Heap& heap, std::size_t heap_offset)
 	{
 		size = Potato::MemLayout::AlignTo(size, sizeof(float) * 16);
@@ -183,14 +275,13 @@ namespace Dumpling
 					std::swap(barrier[0].Transition.StateAfter, barrier[0].Transition.StateBefore);
 					std::swap(barrier[1].Transition.StateAfter, barrier[1].Transition.StateBefore);
 					commands->ResourceBarrier(1, barrier.data() + 1);
-					using_resource.emplace_back(upload_resource);
-					using_resource.emplace_back(default_resource);
 					return default_resource;
 				}
 			}
 		}
 		return {};
 	}
+	*/
 
 	ComPtr<ID3D12GraphicsCommandList> ResourceStreamer::GetCommandList(ID3D12CommandAllocator& allocator)
 	{
@@ -283,6 +374,7 @@ namespace Dumpling
 
 		ComPtr<ID3D12CommandAllocator> current_allocator;
 		ComPtr<ID3D12GraphicsCommandList> current_command_list;
+		bool need_heap = (config.buffer_size + config.texture_size) > 0;
 		ComPtr<ID3D12Heap> current_heap;
 		std::size_t heap_size = 0;
 
@@ -293,19 +385,43 @@ namespace Dumpling
 			current_command_list = GetCommandList(*current_allocator);
 		}
 
-		if (current_command_list)
+		if (current_command_list && need_heap)
 		{
-			std::tie(current_heap, heap_size) = GetUploadHeap(config.max_upload_heap_sie);
+			std::tie(current_heap, heap_size) = GetUploadHeap(
+				Potato::MemLayout::AlignTo(config.buffer_size, heap_align) +
+				Potato::MemLayout::AlignTo(config.texture_size, heap_align)
+			);
 		}
 
-		if (current_allocator && current_command_list && current_heap)
+		if (
+			current_allocator 
+			&& current_command_list 
+			&& (!need_heap || current_heap)
+			)
 		{
 			request.commands = std::move(current_command_list);
 			request.allocator = std::move(current_allocator);
 			request.device = device;
 			request.upload_heap = std::move(current_heap);
-			request.heap_size = heap_size;
-			request.using_heap_size = 0;
+
+			if (need_heap)
+			{
+				assert(request.upload_heap);
+
+				if (config.buffer_size > 0)
+				{
+					auto [upload_resource, resource_size] = CreateBufferResource(*request.upload_heap, config.buffer_size);
+					assert(upload_resource);
+					request.upload_resource[0].resource = std::move(upload_resource);
+					request.upload_resource[0].max_size = resource_size;
+				}
+
+				if (config.texture_size > 0)
+				{
+					assert(false);
+				}
+			}
+
 			return true;
 		}
 
@@ -353,6 +469,46 @@ namespace Dumpling
 		return {};
 	}
 
+	std::tuple<ComPtr<ID3D12Resource>, std::size_t> ResourceStreamer::CreateBufferResource(ID3D12Heap& heap, std::size_t buffer_size)
+	{
+		buffer_size = Potato::MemLayout::AlignTo(buffer_size, heap_align);
+		D3D12_RESOURCE_DESC resource_desc;
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER;
+		resource_desc.Alignment = 0;
+		resource_desc.Width = buffer_size;
+		resource_desc.Height = 1;
+		resource_desc.DepthOrArraySize = 1;
+		resource_desc.MipLevels = 1;
+		resource_desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+		resource_desc.SampleDesc.Count = 1;
+		resource_desc.SampleDesc.Quality = 0;
+		resource_desc.Layout = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		resource_desc.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+		D3D12_CLEAR_VALUE clear_value;
+
+		ComPtr<ID3D12Resource> resource;
+
+		auto re = device->CreatePlacedResource(
+			&heap,
+			0,
+			&resource_desc,
+			(
+				heap.GetDesc().Properties.Type == D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD ?
+					D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ :
+					D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON
+				),
+			nullptr,
+			__uuidof(decltype(resource)::Type), resource.GetPointerVoidAdress()
+		);
+
+		if (resource)
+		{
+			assert(SUCCEEDED(re));
+			return { resource, buffer_size };
+		}
+		return { {}, 0 };
+	}
+
 	std::uint64_t ResourceStreamer::Flush()
 	{
 		auto current_version = fence->GetCompletedValue();
@@ -392,7 +548,6 @@ namespace Dumpling
 				waitting_object.begin(),
 				begin
 			);
-
 		}
 		return current_version;
 	}

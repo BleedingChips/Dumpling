@@ -68,12 +68,21 @@ namespace Dumpling
 		return mmv.size();
 	}
 
-	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(std::size_t buffer_size, Potato::MemLayout::ArrayLayout array_layout, ID3D12Resource& vertex_resource)
+	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(std::size_t buffer_size, Potato::MemLayout::ArrayLayout array_layout, ID3D12Resource& vertex_resource, std::size_t offset)
 	{
 		D3D12_VERTEX_BUFFER_VIEW view;
-		view.BufferLocation = vertex_resource.GetGPUVirtualAddress();
+		view.BufferLocation = vertex_resource.GetGPUVirtualAddress() + offset;
 		view.SizeInBytes = buffer_size;
 		view.StrideInBytes = array_layout.each_element_offset;
+		return view;
+	}
+
+	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView(ID3D12Resource& index_resource, std::size_t index_size, std::size_t offset)
+	{
+		D3D12_INDEX_BUFFER_VIEW view;
+		view.BufferLocation = index_resource.GetGPUVirtualAddress() + offset;
+		view.SizeInBytes = sizeof(std::uint32_t) * index_size;
+		view.Format = DXGI_FORMAT_R32_UINT;
 		return view;
 	}
 

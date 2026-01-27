@@ -15,11 +15,15 @@ import DumplingRendererTypes;
 
 export namespace Dumpling
 {
+	constexpr std::size_t heap_align = 64 * 1024;
+	constexpr std::size_t resource_buffer_align = 64;
+
 	struct PassStreamer
 	{
 		struct Config
 		{
-			std::size_t max_upload_heap_sie = 64 * 1024;
+			std::size_t buffer_size = 0;
+			std::size_t texture_size = 0;
 		};
 
 		PassStreamer() = default;
@@ -29,9 +33,16 @@ export namespace Dumpling
 		}
 		operator bool() const { return commands && allocator && device; }
 
-		ComPtr<ID3D12Resource> CreateVertexBuffer(void const* buffer, std::size_t size, ID3D12Heap& heap, std::size_t heap_offset = 0);
+		std::optional<D3D12_RESOURCE_STATES> UploadBuffer(void const* buffer, std::size_t size, ID3D12Resource& target_resource, std::size_t target_offset = 0, D3D12_RESOURCE_STATES original_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, bool recover_state = true)
+		{
+			return UploadResource(0, buffer, size, target_resource, target_offset, 0, original_state, true);
+		}
+		std::optional<D3D12_RESOURCE_STATES> UploadBuffer(std::span<std::byte> buffer, ID3D12Resource& target_resource, std::size_t target_offset = 0, D3D12_RESOURCE_STATES original_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, bool recover_state = true) { return UploadBuffer(buffer.data(), buffer.size(), target_resource, target_offset, original_state, recover_state); }
+		//ComPtr<ID3D12Resource> CreateVertexBuffer(void const* buffer, std::size_t size, ID3D12Heap& heap, std::size_t heap_offset = 0);
 
 	protected:
+
+		std::optional<D3D12_RESOURCE_STATES> UploadResource(std::size_t buffer_category, void const* buffer, std::size_t buffer_size, ID3D12Resource& target_resource, std::size_t target_offset, std::size_t sub_resource, D3D12_RESOURCE_STATES original_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, bool recover_state = true);
 
 		void PreCommited();
 		void PosCommited();
@@ -39,11 +50,18 @@ export namespace Dumpling
 		ComPtr<ID3D12CommandAllocator> allocator;
 		ComPtr<ID3D12Device> device;
 
-		ComPtr<ID3D12Heap> upload_heap;
-		std::size_t heap_size = 0;
-		std::size_t using_heap_size = 0;
+		struct ResourceDescription
+		{
+			ComPtr<ID3D12Resource> resource;
+			std::size_t max_size = 0;
+			std::size_t using_size = 0;
+			void Reset() { resource.Reset(); max_size = 0; using_size = 0; }
+			operator bool() const { return resource; }
+		};
 
-		std::pmr::vector<ComPtr<ID3D12Resource>> using_resource;
+		std::array<ResourceDescription, 2> upload_resource;
+
+		ComPtr<ID3D12Heap> upload_heap;
 
 		friend struct ResourceStreamer;
 	};
@@ -57,6 +75,7 @@ export namespace Dumpling
 		std::uint64_t Flush();
 		bool TryFlushTo(std::uint64_t target_fence_value) { return Flush() >= target_fence_value; }
 		ComPtr<ID3D12Heap> CreateDefaultHeap(std::size_t heap_size);
+		std::tuple<ComPtr<ID3D12Resource>, std::size_t> CreateBufferResource(ID3D12Heap& heap, std::size_t buffer_size);
 
 	protected:
 

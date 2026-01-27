@@ -125,14 +125,12 @@ int main()
 	v1 = CBFloat3{ 0.0f, 0.5f, 0.0f };
 	v2 = CBFloat3{ 0.0f, 0.0f, 0.0f };
 	v3 = CBFloat3{ 0.5f, 0.0f, 0.0f };
+
+	std::uint32_t index_object[3] = {2, 1, 0};
+
+	auto index_buffer_offset = Potato::MemLayout::AlignTo(vertex_object->GetBuffer().size(), resource_buffer_align);
 	
 	auto size_in_byte = vertex_object->GetBuffer().size();
-
-	std::array<char8_t, 1024> tem_input;
-	std::array<D3D12_INPUT_ELEMENT_DESC, 1024> element_desc;
-
-	auto size = CreateInputDescription(*vertex_layout, element_desc, tem_input);
-	auto element_span = std::span(element_desc).subspan(0, *size);
 
 	auto root_signature = CreateRootSignature(device, shader_slot.total_statics);
 
@@ -154,13 +152,26 @@ int main()
 
 	device.InitResourceStreamer(streamer);
 
-	auto heap = streamer.CreateDefaultHeap(size_in_byte);
-	ComPtr<ID3D12Resource> vertex_buffer;
+	auto heap = streamer.CreateDefaultHeap(heap_align);
+
+	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, heap_align);
 
 	{
 		PassStreamer pass_streamer;
-		streamer.PopRequester(pass_streamer, {});
-		vertex_buffer = pass_streamer.CreateVertexBuffer(vertex_object->GetBuffer().data(), size_in_byte, *heap);
+		streamer.PopRequester(pass_streamer, {1, 0});
+
+		auto current_state = pass_streamer.UploadBuffer(
+			vertex_object->GetBuffer(),
+			*vertex_buffer
+		);
+
+		
+		auto state_change2 = pass_streamer.UploadBuffer(
+			&index_object, sizeof(std::uint32_t) * 3,
+			*vertex_buffer,
+			index_buffer_offset
+		);
+
 		auto version = streamer.Commited(pass_streamer);
 		while (!streamer.TryFlushTo(version))
 		{
@@ -171,6 +182,7 @@ int main()
 	}
 
 	auto view = GetVertexBufferView(*vertex_object, *vertex_buffer);
+	auto index_view = GetIndexBufferView(*vertex_buffer, 3, index_buffer_offset);
 
 	while(need_loop)
 	{
@@ -200,9 +212,11 @@ int main()
 			ren->SetPipelineState(pipeline_object.GetPointer());
 			ren->SetGraphicsRootSignature(root_signature.GetPointer());
 			ren->IASetVertexBuffers(0, 1, &view);
+			//ren->IASetIndexBuffer(&index_view);
 			ren->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			ren->RSSetViewports(1, &view_port);
 			ren->RSSetScissorRects(1, &rect);
+			//ren->DrawIndexedInstanced(3, 1, 0, 0, 0);
 			ren->DrawInstanced(3, 1, 0, 0);
 			form_renderer.FinishPassRenderer(ren);
 		}
