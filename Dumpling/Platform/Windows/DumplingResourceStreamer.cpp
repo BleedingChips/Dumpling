@@ -65,6 +65,7 @@ namespace Dumpling
 		{
 			if (ite)
 			{
+				ite.resource->Unmap(0, nullptr);
 				if (ite.using_size > 0)
 				{
 					heap_has_been_used = true;
@@ -132,17 +133,11 @@ namespace Dumpling
 
 		D3D12_RANGE range{ resource.using_size, resource.using_size + align_size };
 		void* target_adress = nullptr;
-
-		static std::size_t i = 0;
-		if (i == 1)
-			return std::nullopt;
-		i += 1;
-
-		auto re = resource.resource->Map(sub_resource, &range, &target_adress);
+		auto re = resource.resource->Map(sub_resource, nullptr, &target_adress);
 		if (target_adress == nullptr)
 			return std::nullopt;
-		std::memcpy(target_adress, buffer, buffer_size);
-		resource.resource->Unmap(sub_resource, &range);
+		std::memcpy(reinterpret_cast<std::byte*>(target_adress) + resource.using_size, buffer, buffer_size);
+		resource.resource->Unmap(sub_resource, nullptr);
 
 		auto current_state = original_state;
 		if (original_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST)
@@ -413,6 +408,7 @@ namespace Dumpling
 					auto [upload_resource, resource_size] = CreateBufferResource(*request.upload_heap, config.buffer_size);
 					assert(upload_resource);
 					request.upload_resource[0].resource = std::move(upload_resource);
+					request.upload_resource[0].resource->Map(0, nullptr, nullptr);
 					request.upload_resource[0].max_size = resource_size;
 				}
 

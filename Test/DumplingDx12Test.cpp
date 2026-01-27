@@ -212,12 +212,12 @@ int main()
 			ren->SetPipelineState(pipeline_object.GetPointer());
 			ren->SetGraphicsRootSignature(root_signature.GetPointer());
 			ren->IASetVertexBuffers(0, 1, &view);
-			//ren->IASetIndexBuffer(&index_view);
+			ren->IASetIndexBuffer(&index_view);
 			ren->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			ren->RSSetViewports(1, &view_port);
 			ren->RSSetScissorRects(1, &rect);
-			//ren->DrawIndexedInstanced(3, 1, 0, 0, 0);
-			ren->DrawInstanced(3, 1, 0, 0);
+			ren->DrawIndexedInstanced(3, 1, 0, 0, 0);
+			//ren->DrawInstanced(3, 1, 0, 0);
 			form_renderer.FinishPassRenderer(ren);
 		}
 
