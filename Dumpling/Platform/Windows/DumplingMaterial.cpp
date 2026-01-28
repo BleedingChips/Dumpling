@@ -106,40 +106,73 @@ namespace Dumpling
 
 	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderSlot const& shader_slot)
 	{
-		D3D12_ROOT_PARAMETER root_parameter;
-		D3D12_ROOT_SIGNATURE_DESC desc;
-		desc.NumParameters = shader_slot.slots.empty() ? 0 : 1;
-		desc.NumStaticSamplers = 0;
-		desc.pParameters = &root_parameter;
-		desc.pStaticSamplers = nullptr;
-		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-		root_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
+		std::array<D3D12_ROOT_PARAMETER, 32> parameters;
+		std::size_t parameters_index = 0;
+		ShaderSlot::Type last_type;
 		std::array<D3D12_DESCRIPTOR_RANGE, 256> ranges;
-
-		root_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		root_parameter.DescriptorTable.pDescriptorRanges = ranges.data();
-		root_parameter.DescriptorTable.NumDescriptorRanges = shader_slot.slots.size();
-
-		std::size_t description_heap_offset = 0;
-		std::size_t offset = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		for (std::size_t i = 0; i < shader_slot.slots.size(); ++i)
+		std::size_t ranges_index = 0;
+		std::size_t last_range_index = 0;
+		D3D12_ROOT_SIGNATURE_DESC desc;
+		std::size_t heap_offset = 0;
+		std::size_t heap_incread_size = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		{
-			auto& slot = shader_slot.slots[i];
-			auto& tar = ranges[i];
-			switch (slot.type)
+			std::size_t slot_index = 0;
+			for (auto& ite : shader_slot.slots)
 			{
-			case ShaderSlot::Type::VS_CONST_BUFFER:
-				tar.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-				tar.OffsetInDescriptorsFromTableStart = description_heap_offset;
-				tar.BaseShaderRegister = slot.slot_index;
-				tar.NumDescriptors = 1;
-				tar.RegisterSpace = slot.space;
-				description_heap_offset += offset;
-				break;
+				auto& parameter = parameters[parameters_index];
+				auto& range = ranges[ranges_index];
+				assert(parameters_index < parameters.size() && ranges_index < ranges.size());
+
+				if (slot_index == 0 || last_type != ite.type)
+				{
+					parameters_index += 1;
+					parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+					parameter.DescriptorTable = { 1, ranges.data() + ranges_index };
+				}
+				else {
+					parameters[parameters_index - 1].DescriptorTable.NumDescriptorRanges += 1;
+				}
+
+				switch (ite.type)
+				{
+				case ShaderSlot::Type::VS_CONST_BUFFER:
+				case ShaderSlot::Type::VS_TEXTURE:
+					parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+					break;
+				case ShaderSlot::Type::PS_CONST_BUFFER:
+				case ShaderSlot::Type::PS_TEXTURE:
+					parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+					break;
+				}
+
+				switch (ite.type)
+				{
+				case ShaderSlot::Type::VS_CONST_BUFFER:
+				case ShaderSlot::Type::PS_CONST_BUFFER:
+					range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+					break;
+				case ShaderSlot::Type::VS_TEXTURE:
+				case ShaderSlot::Type::PS_TEXTURE:
+					range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+					break;
+				}
+				range.NumDescriptors = 1;
+				range.OffsetInDescriptorsFromTableStart = heap_offset;
+				range.BaseShaderRegister = ite.slot_index;
+				range.RegisterSpace = ite.space;
+				last_type = ite.type;
+				heap_offset += heap_incread_size;
+				ranges_index += 1;
+				slot_index += 1;
 			}
 		}
+
+		D3D12_ROOT_PARAMETER root_parameter;
+		desc.NumParameters = parameters_index;
+		desc.NumStaticSamplers = 0;
+		desc.pParameters = parameters.data();
+		desc.pStaticSamplers = nullptr;
+		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 		ComPtr<ID3D10Blob> root_signature_code;
 		ComPtr<ID3D10Blob> error_code;

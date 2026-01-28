@@ -43,7 +43,7 @@ struct InputVertex
 Vertex VSMain(InputVertex in_vertex)
 {
 	Vertex vertex;
-	vertex.position = float4(in_vertex.Position.x, in_vertex.Position.y, in_vertex.Position.z, 1.0f) + PositionOffset + ColorOffset;
+	vertex.position = float4(in_vertex.Position.x, in_vertex.Position.y, in_vertex.Position.z, 1.0f) + PositionOffset;
 	vertex.color = float4(in_vertex.Color.x, in_vertex.Color.y, in_vertex.Color.z, 1.0f);
 	return vertex;
 };
@@ -56,7 +56,7 @@ struct Pixel
 Pixel PSMain(Vertex vertex)
 {
 	Pixel pixel;
-	pixel.Color = vertex.color;
+	pixel.Color = vertex.color + ColorOffset;
 	return pixel;
 };
 
@@ -209,6 +209,11 @@ int main()
 		description_heap->GetCPUDescriptorHandleForHeapStart()
 	);
 
+	raw_device.CreateConstantBufferView(
+		&desc,
+		D3D12_CPU_DESCRIPTOR_HANDLE{ description_heap->GetCPUDescriptorHandleForHeapStart().ptr + raw_device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) }
+	);
+
 	{
 		PassStreamer pass_streamer;
 		streamer.PopRequester(pass_streamer, {1, 0});
@@ -273,6 +278,7 @@ int main()
 			ID3D12DescriptorHeap* ppHeaps[] = { description_heap };
 			ren->SetDescriptorHeaps(1, ppHeaps);
 			ren->SetGraphicsRootDescriptorTable(0, description_heap->GetGPUDescriptorHandleForHeapStart());
+			ren->SetGraphicsRootDescriptorTable(1, description_heap->GetGPUDescriptorHandleForHeapStart());
 			ren->IASetVertexBuffers(0, 1, &view);
 			ren->IASetIndexBuffer(&index_view);
 			ren->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
