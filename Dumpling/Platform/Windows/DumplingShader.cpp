@@ -274,10 +274,10 @@ namespace Dumpling
 					{
 						auto current_buffer_index = out_slot.const_buffer.size();
 						out_slot.const_buffer.emplace_back(std::move(cbuffer_layout));
-						out_slot.slots.push_back({ slot_types[0], current_buffer_index, bind_sesc.BindPoint });
+						out_slot.slots.push_back({ slot_types[0], current_buffer_index, bind_sesc.BindPoint, bind_sesc.Space });
 					}
 					else {
-						out_slot.slots.push_back({ slot_types[0], exist_index, bind_sesc.BindPoint });
+						out_slot.slots.push_back({ slot_types[0], exist_index, bind_sesc.BindPoint, bind_sesc.Space });
 					}
 					out_slot.total_statics.bound_resource_count += 1;
 					out_slot.total_statics.const_buffer_count += 1;

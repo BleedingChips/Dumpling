@@ -29,6 +29,7 @@ export namespace Dumpling
 		ComPtr<ID3D10Blob> ps_shader;
 	};
 
-	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderStatistics const& statics);
+	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device& device, ShaderSlot const& shader_slot);
+	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderSlot const& shader_slot);
 	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, ID3D12RootSignature& root_signature, MaterialState const& material_state);
 }

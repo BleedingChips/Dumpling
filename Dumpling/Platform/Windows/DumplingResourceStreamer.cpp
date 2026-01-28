@@ -65,7 +65,8 @@ namespace Dumpling
 		{
 			if (ite)
 			{
-				ite.resource->Unmap(0, nullptr);
+				D3D12_RANGE range{0, ite.using_size};
+				ite.resource->Unmap(0, &range);
 				if (ite.using_size > 0)
 				{
 					heap_has_been_used = true;
@@ -116,12 +117,9 @@ namespace Dumpling
 			ite.Reset();
 	}
 
-	std::optional<D3D12_RESOURCE_STATES> PassStreamer::UploadResource(std::size_t buffer_category, void const* buffer, std::size_t buffer_size, ID3D12Resource& target_resource, std::size_t target_offset, std::size_t sub_resource, D3D12_RESOURCE_STATES original_state, bool recover_state)
+	std::optional<D3D12_RESOURCE_STATES> PassStreamer::UploadBufferResource( void const* buffer, std::size_t buffer_size, ID3D12Resource& target_resource, std::size_t target_offset, ResourceState state)
 	{
-		if (buffer_category >= upload_resource.size())
-			return std::nullopt;
-
-		auto& resource = upload_resource[buffer_category];
+		auto& resource = upload_resource[0];
 
 		if (!resource)
 			return std::nullopt;
@@ -133,29 +131,26 @@ namespace Dumpling
 
 		D3D12_RANGE range{ resource.using_size, resource.using_size + align_size };
 		void* target_adress = nullptr;
-		auto re = resource.resource->Map(sub_resource, nullptr, &target_adress);
+		auto re = resource.resource->Map(0, nullptr, &target_adress);
 		if (target_adress == nullptr)
 			return std::nullopt;
 		std::memcpy(reinterpret_cast<std::byte*>(target_adress) + resource.using_size, buffer, buffer_size);
-		resource.resource->Unmap(sub_resource, nullptr);
+		resource.resource->Unmap(0, nullptr);
 
-		auto current_state = original_state;
-		if (original_state != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST)
+		if (state.original != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST)
 		{
-			current_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST;
 			D3D12_RESOURCE_BARRIER barrier;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
 				&target_resource,
 				0,
-				original_state,
+				state.original,
 				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST
 			};
 
 			commands->ResourceBarrier(1, &barrier);
 		}
-
 		
 		commands->CopyBufferRegion(
 			&target_resource,
@@ -165,7 +160,7 @@ namespace Dumpling
 			buffer_size
 		);
 
-		if (recover_state && current_state != original_state)
+		if (state.target.has_value() && *state.target != D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST)
 		{
 			D3D12_RESOURCE_BARRIER barrier;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -173,110 +168,16 @@ namespace Dumpling
 			barrier.Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
 				&target_resource,
 				0,
-				current_state,
-				original_state
+				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST,
+				*state.target
 			};
-
-			current_state = original_state;
 
 			commands->ResourceBarrier(1, &barrier);
 		}
 		resource.using_size += align_size;
-		return current_state;
+
+		return state.target.has_value() ? *state.target : D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST;
 	}
-
-	/*
-	ComPtr<ID3D12Resource> PassStreamer::CreateVertexBuffer(void const* buffer, std::size_t size, ID3D12Heap& heap, std::size_t heap_offset)
-	{
-		size = Potato::MemLayout::AlignTo(size, sizeof(float) * 16);
-		if (size > 0 && using_heap_size + size <= heap_size)
-		{
-			D3D12_RESOURCE_DESC resource_desc;
-			resource_desc.Dimension = D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER;
-			resource_desc.Alignment = 0;
-			resource_desc.Width = size;
-			resource_desc.Height = 1;
-			resource_desc.DepthOrArraySize = 1;
-			resource_desc.MipLevels = 1;
-			resource_desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-			resource_desc.SampleDesc.Count = 1;
-			resource_desc.SampleDesc.Quality = 0;
-			resource_desc.Layout = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			resource_desc.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
-			D3D12_CLEAR_VALUE clear_value;
-
-			ComPtr<ID3D12Resource> upload_resource;
-
-			device->CreatePlacedResource(
-				upload_heap,
-				using_heap_size,
-				&resource_desc,
-				D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				__uuidof(decltype(upload_resource)::Type), upload_resource.GetPointerVoidAdress()
-			);
-
-			if (upload_heap)
-			{
-				ComPtr<ID3D12Resource> default_resource;
-
-				device->CreatePlacedResource(
-					&heap,
-					using_heap_size,
-					&resource_desc,
-					D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON,
-					nullptr,
-					__uuidof(decltype(default_resource)::Type), default_resource.GetPointerVoidAdress()
-				);
-
-				if (default_resource)
-				{
-					D3D12_RANGE range{
-						0,
-						size
-					};
-					void* target_buffer = nullptr;
-					upload_resource->Map(0, &range, &target_buffer);
-					std::memcpy(target_buffer, buffer, size);
-					upload_resource->Unmap(0, &range);
-					using_heap_size += size;
-
-					std::array<D3D12_RESOURCE_BARRIER, 2> barrier;
-					barrier[0].Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					barrier[0].Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
-					barrier[0].Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
-						upload_resource,
-						0,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE
-					};
-					barrier[1].Type = D3D12_RESOURCE_BARRIER_TYPE::D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					barrier[1].Flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
-					barrier[1].Transition = D3D12_RESOURCE_TRANSITION_BARRIER{
-						default_resource,
-						0,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON,
-						D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST
-					};
-
-					commands->ResourceBarrier(1, barrier.data() + 1);
-					commands->CopyBufferRegion(
-						default_resource,
-						0,
-						upload_resource,
-						0,
-						size
-					);
-					std::swap(barrier[0].Transition.StateAfter, barrier[0].Transition.StateBefore);
-					std::swap(barrier[1].Transition.StateAfter, barrier[1].Transition.StateBefore);
-					commands->ResourceBarrier(1, barrier.data() + 1);
-					return default_resource;
-				}
-			}
-		}
-		return {};
-	}
-	*/
 
 	ComPtr<ID3D12GraphicsCommandList> ResourceStreamer::GetCommandList(ID3D12CommandAllocator& allocator)
 	{

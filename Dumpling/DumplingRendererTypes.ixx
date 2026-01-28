@@ -340,7 +340,7 @@ export namespace Dumpling
 
 	constexpr std::optional<Potato::MemLayout::Layout> HLSLConstBufferCompleteLayoutFunc(Potato::MemLayout::Layout layout) {
 		auto max_align = std::max(layout.align, std::size_t{ 16 });
-		return Potato::MemLayout::Layout{max_align, Potato::MemLayout::AlignTo(layout.size, max_align)};
+		return Potato::MemLayout::Layout{max_align, Potato::MemLayout::AlignTo(layout.size, 256)};
 	}
 
 	Potato::MemLayout::LayoutPolicyRef GetHLSLConstBufferPolicy() { return Potato::MemLayout::LayoutPolicyRef(HLSLConstBufferCombineMemberFunc, HLSLConstBufferCompleteLayoutFunc); }

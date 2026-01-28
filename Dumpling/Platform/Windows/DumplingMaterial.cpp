@@ -86,14 +86,60 @@ namespace Dumpling
 		return view;
 	}
 
-	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderStatistics const& statics)
+	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device& device, ShaderSlot const& shader_slot)
 	{
+		D3D12_DESCRIPTOR_HEAP_DESC desc{
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			static_cast<UINT>(shader_slot.slots.size()),
+			D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+			1
+		};
+
+		ComPtr<ID3D12DescriptorHeap> target;
+
+		device.CreateDescriptorHeap(
+			&desc, __uuidof(decltype(target)::Type), target.GetPointerVoidAdress()
+		);
+
+		return target;
+	}
+
+	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderSlot const& shader_slot)
+	{
+		D3D12_ROOT_PARAMETER root_parameter;
 		D3D12_ROOT_SIGNATURE_DESC desc;
-		desc.NumParameters = 0;
+		desc.NumParameters = shader_slot.slots.empty() ? 0 : 1;
 		desc.NumStaticSamplers = 0;
-		desc.pParameters = nullptr;
+		desc.pParameters = &root_parameter;
 		desc.pStaticSamplers = nullptr;
 		desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+		root_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		std::array<D3D12_DESCRIPTOR_RANGE, 256> ranges;
+
+		root_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		root_parameter.DescriptorTable.pDescriptorRanges = ranges.data();
+		root_parameter.DescriptorTable.NumDescriptorRanges = shader_slot.slots.size();
+
+		std::size_t description_heap_offset = 0;
+		std::size_t offset = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		for (std::size_t i = 0; i < shader_slot.slots.size(); ++i)
+		{
+			auto& slot = shader_slot.slots[i];
+			auto& tar = ranges[i];
+			switch (slot.type)
+			{
+			case ShaderSlot::Type::VS_CONST_BUFFER:
+				tar.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE::D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+				tar.OffsetInDescriptorsFromTableStart = description_heap_offset;
+				tar.BaseShaderRegister = slot.slot_index;
+				tar.NumDescriptors = 1;
+				tar.RegisterSpace = slot.space;
+				description_heap_offset += offset;
+				break;
+			}
+		}
 
 		ComPtr<ID3D10Blob> root_signature_code;
 		ComPtr<ID3D10Blob> error_code;

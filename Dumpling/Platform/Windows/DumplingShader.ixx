@@ -58,6 +58,7 @@ export namespace Dumpling
 			Type type;
 			std::size_t slot_index;
 			std::size_t resource_index;
+			std::size_t space;
 		};
 
 		std::pmr::vector<ConstBuffer> const_buffer;

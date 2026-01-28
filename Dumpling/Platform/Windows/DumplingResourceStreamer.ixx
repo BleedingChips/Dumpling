@@ -18,6 +18,12 @@ export namespace Dumpling
 	constexpr std::size_t heap_align = 64 * 1024;
 	constexpr std::size_t resource_buffer_align = 64;
 
+	struct ResourceState
+	{
+		D3D12_RESOURCE_STATES original = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+		std::optional<D3D12_RESOURCE_STATES> target = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+	};
+
 	struct PassStreamer
 	{
 		struct Config
@@ -33,16 +39,12 @@ export namespace Dumpling
 		}
 		operator bool() const { return commands && allocator && device; }
 
-		std::optional<D3D12_RESOURCE_STATES> UploadBuffer(void const* buffer, std::size_t size, ID3D12Resource& target_resource, std::size_t target_offset = 0, D3D12_RESOURCE_STATES original_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, bool recover_state = true)
-		{
-			return UploadResource(0, buffer, size, target_resource, target_offset, 0, original_state, true);
-		}
-		std::optional<D3D12_RESOURCE_STATES> UploadBuffer(std::span<std::byte> buffer, ID3D12Resource& target_resource, std::size_t target_offset = 0, D3D12_RESOURCE_STATES original_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, bool recover_state = true) { return UploadBuffer(buffer.data(), buffer.size(), target_resource, target_offset, original_state, recover_state); }
+		std::optional<D3D12_RESOURCE_STATES> UploadBufferResource(void const* buffer, std::size_t size, ID3D12Resource& target_resource, std::size_t target_offset = 0, ResourceState state = {});
+
+		std::optional<D3D12_RESOURCE_STATES> UploadBufferResource(std::span<std::byte> buffer, ID3D12Resource& target_resource, std::size_t target_offset = 0, ResourceState state = {}) { return UploadBufferResource(buffer.data(), buffer.size(), target_resource, target_offset, state); }
 		//ComPtr<ID3D12Resource> CreateVertexBuffer(void const* buffer, std::size_t size, ID3D12Heap& heap, std::size_t heap_offset = 0);
 
 	protected:
-
-		std::optional<D3D12_RESOURCE_STATES> UploadResource(std::size_t buffer_category, void const* buffer, std::size_t buffer_size, ID3D12Resource& target_resource, std::size_t target_offset, std::size_t sub_resource, D3D12_RESOURCE_STATES original_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON, bool recover_state = true);
 
 		void PreCommited();
 		void PosCommited();
