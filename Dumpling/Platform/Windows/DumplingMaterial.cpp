@@ -1,6 +1,7 @@
 module;
 #include <d3d12.h>
 #include <cassert>
+#undef max
 
 module DumplingMaterial;
 
@@ -90,7 +91,7 @@ namespace Dumpling
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc{
 			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			static_cast<UINT>(shader_slot.slots.size()),
+			static_cast<UINT>(shader_slot.const_buffer.size()),
 			D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 			1
 		};
@@ -104,8 +105,32 @@ namespace Dumpling
 		return target;
 	}
 
-	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device& device, ShaderSlot const& shader_slot)
+	ComPtr<ID3D12RootSignature> CreateRootSignature(
+		ID3D12Device& device,
+		ShaderSlot const& shader_slot,
+		DescriptorTableDescription& description_table_description,
+		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(std::size_t identity)> context_defined_descriptor_mapping
+	)
 	{
+
+		struct DescriptorState
+		{
+			D3D12_SHADER_VISIBILITY visibility;
+			D3D12_DESCRIPTOR_HEAP_TYPE type;
+			ShaderSlot::Source source;
+			std::size_t description_table_offset;
+		};
+
+		std::array<DescriptorState, 64> slot_descirptr_state;
+		std::size_t index = 0;
+
+		for (auto& ite : shader_slot.slots)
+		{
+			if(ite.)
+		}
+
+
+
 		std::array<D3D12_ROOT_PARAMETER, 32> parameters;
 		std::size_t parameters_index = 0;
 		ShaderSlot::Type last_type;
@@ -113,8 +138,24 @@ namespace Dumpling
 		std::size_t ranges_index = 0;
 		std::size_t last_range_index = 0;
 		D3D12_ROOT_SIGNATURE_DESC desc;
-		std::size_t heap_offset = 0;
+		std::array<DescriptorTableDescription::DescriptorTable, 64> table;
+		
+		std::size_t out_descriptor_table_count = 0;
 		std::size_t heap_incread_size = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		
+		std::size_t current_finied_slot_count = 0;
+
+		while (current_finied_slot_count < shader_slot.slots.size())
+		{
+
+		}
+		
+		
+		
+		
+		
+		
+		
 		{
 			std::size_t slot_index = 0;
 			for (auto& ite : shader_slot.slots)
@@ -157,11 +198,10 @@ namespace Dumpling
 					break;
 				}
 				range.NumDescriptors = 1;
-				range.OffsetInDescriptorsFromTableStart = heap_offset;
+				range.OffsetInDescriptorsFromTableStart = slot_index * heap_incread_size;
 				range.BaseShaderRegister = ite.slot_index;
 				range.RegisterSpace = ite.space;
 				last_type = ite.type;
-				heap_offset += heap_incread_size;
 				ranges_index += 1;
 				slot_index += 1;
 			}

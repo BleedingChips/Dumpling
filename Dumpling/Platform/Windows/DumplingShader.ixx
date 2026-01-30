@@ -41,10 +41,16 @@ export namespace Dumpling
 			PS_TEXTURE
 		};
 
+		enum class SourceType
+		{
+			SHADER_DEFINE,
+			CONTEXT_DEFINE
+		};
+
 		struct Source
 		{
-			std::size_t source_type = std::numeric_limits<std::size_t>::max();
-			std::size_t source_index = std::numeric_limits<std::size_t>::max();
+			SourceType source_type = SourceType::SHADER_DEFINE;
+			std::size_t context_define_id = std::numeric_limits<std::size_t>::max();
 		};
 
 		struct ConstBuffer
@@ -70,7 +76,6 @@ export namespace Dumpling
 
 	struct ShaderReflectionConstBufferContext
 	{
-		ShaderSlot::Source default_source;
 		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override;
 		std::pmr::memory_resource* layout_resource = std::pmr::get_default_resource();
 		std::pmr::memory_resource* temporary_resource = std::pmr::get_default_resource();

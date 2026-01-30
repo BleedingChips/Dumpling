@@ -169,7 +169,7 @@ int main()
 
 	auto p1 = cb->MemberAs<CBFloat4>(0);
 	auto p2 = cb->MemberAs<CBFloat4>(1);
-	*p1 = CBFloat4{ -0.5f, -0.5f, -0.5f };
+	*p1 = CBFloat4{ -0.5f, -0.5f, 0.0f };
 	*p2 = CBFloat4{ 0.5f, 0.5f, 0.5f, 0.0f };
 
 	CBFloat4* typ = reinterpret_cast<CBFloat4*>(cb->GetObject());
@@ -207,11 +207,6 @@ int main()
 	raw_device.CreateConstantBufferView(
 		&desc,
 		description_heap->GetCPUDescriptorHandleForHeapStart()
-	);
-
-	raw_device.CreateConstantBufferView(
-		&desc,
-		D3D12_CPU_DESCRIPTOR_HANDLE{ description_heap->GetCPUDescriptorHandleForHeapStart().ptr + raw_device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) }
 	);
 
 	{

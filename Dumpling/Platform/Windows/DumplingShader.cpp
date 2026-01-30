@@ -200,7 +200,7 @@ namespace Dumpling
 			}
 		}
 
-		return { struct_layout, context.default_source };
+		return { struct_layout, {} };
 	}
 
 	bool GetShaderSlot(
@@ -211,7 +211,6 @@ namespace Dumpling
 		ShaderReflectionConstBufferContext const& context
 		)
 	{
-
 		std::array<ShaderSlot::Type, 2> slot_types;
 		switch (type)
 		{
