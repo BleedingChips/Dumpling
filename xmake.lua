@@ -20,13 +20,20 @@ end
 target("Dumpling")
 
     set_kind("static")
-    add_files("Dumpling/*.cpp")
     add_files("Dumpling/*.ixx", {public=true})
     add_deps("Potato")
-    
+
+    add_files("Dumpling/Form/*.ixx", {public=true})
+    add_files("Dumpling/Renderer/*.ixx", {public=true})
+    add_files("Dumpling/Renderer/*.cpp")
+    add_files("Dumpling/Math/*.ixx", {public=true})
+    add_files("Dumpling/Math/*.cpp")
+
     if is_plat("windows") then
-        add_files("Dumpling/Platform/Windows/*.ixx", {public=true})
-        add_files("Dumpling/Platform/Windows/*.cpp")
+        add_files("Dumpling/Form/Win32/*.ixx", {public=true})
+        add_files("Dumpling/Form/Win32/*.cpp")
+        add_files("Dumpling/Renderer/Dx12/*.ixx", {public=true})
+        add_files("Dumpling/Renderer/Dx12/*.cpp")
         add_links("user32.lib")
         add_links("d3d12.lib")
         add_links("dxgi.lib")
@@ -54,7 +61,6 @@ target("Dumpling")
         end
         add_packages("directxshadercomplier")
     end
-
     
 target_end()
 

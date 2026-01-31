@@ -6,14 +6,13 @@ module;
 #undef interface
 #undef max
 
-export module DumplingShader;
+export module DumplingDx12Shader;
 
 import std;
 import Potato;
-import DumplingPlatform;
-import DumplingRendererTypes;
+import DumplingDx12Define;
 
-export namespace Dumpling
+export namespace Dumpling::Dx12
 {
 
 	struct ShaderStatistics
@@ -24,33 +23,15 @@ export namespace Dumpling
 		std::size_t const_buffer_count = 0;
 	};
 
-	enum class ShaderType
-	{
-		VS,
-		PS,
-	};
-
 	struct ShaderSlot
 	{
 
-		enum class Type
-		{
-			VS_CONST_BUFFER,
-			VS_TEXTURE,
-			PS_CONST_BUFFER,
-			PS_TEXTURE
-		};
-
-		enum class SourceType
-		{
-			SHADER_DEFINE,
-			CONTEXT_DEFINE
-		};
-
 		struct Source
 		{
-			SourceType source_type = SourceType::SHADER_DEFINE;
-			std::size_t context_define_id = std::numeric_limits<std::size_t>::max();
+			std::size_t context_define_index = std::numeric_limits<std::size_t>::max();
+			std::size_t context_define_sub_index = std::numeric_limits<std::size_t>::max();
+			bool IsShaderDefine() const { return context_define_index == std::numeric_limits<std::size_t>::max(); }
+			bool IsContextDefine() const { return !IsShaderDefine(); }
 		};
 
 		struct ConstBuffer
@@ -61,10 +42,11 @@ export namespace Dumpling
 
 		struct Slot
 		{
-			Type type;
-			std::size_t slot_index;
+			ShaderType shader_type;
+			ShaderResourceType resource_type;
 			std::size_t resource_index;
-			std::size_t space;
+			std::size_t register_index;
+			std::size_t space_index;
 		};
 
 		std::pmr::vector<ConstBuffer> const_buffer;
@@ -90,7 +72,7 @@ export namespace Dumpling
 	);
 
 	bool GetShaderSlot(
-		ShaderType type, 
+		ShaderType type,
 		ID3D12ShaderReflection& reflection, 
 		ShaderSlot& out_slot,
 		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> layout_override = {},

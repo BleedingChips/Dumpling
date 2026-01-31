@@ -4,10 +4,10 @@ module;
 #include <cassert>
 #undef max
 
-module DumplingResourceStreamer;
+module DumplingDx12ResourceStreamer;
 
 
-namespace Dumpling
+namespace Dumpling::Dx12
 {
 	bool ResourceStreamer::Init(ComPtr<ID3D12Device> in_device)
 	{

@@ -1,17 +1,16 @@
 module;
 #include <d3d12.h>
 #undef max
-export module DumplingMaterial;
+export module DumplingDx12Material;
 
 import std;
 import Potato;
-import DumplingPlatform;
-import DumplingRendererTypes;
-import DumplingShader;
-import DumplingResourceStreamer;
-import DumplingRenderer;
+import DumplingDx12Define;
+import DumplingDx12Shader;
+import DumplingDx12ResourceStreamer;
+import DumplingDx12Renderer;
 
-export namespace Dumpling
+export namespace Dumpling::Dx12
 {
 	std::optional<std::size_t> CreateInputDescription(Potato::IR::StructLayout const& vertex_layout, std::span<D3D12_INPUT_ELEMENT_DESC> desc, std::span<char8_t> temporary_str);
 	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(std::size_t buffer_size, Potato::MemLayout::ArrayLayout array_layout, ID3D12Resource& vertex_resource, std::size_t offset = 0);
@@ -23,13 +22,34 @@ export namespace Dumpling
 		TRIANGLE = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 	};
 
+	struct ShaderDefineDescriptorTable
+	{
+		struct Index
+		{
+			ShaderResourceType resource_type;
+			std::size_t resource_index;
+			std::size_t descriptor_heap_offset;
+		};
+		std::pmr::vector<Index> resource_index;
+		std::pmr::vector<Index> sampler_index;
+	};
+
+	struct DescriptorTableMapping
+	{
+		struct Mapping
+		{
+			D3D12_DESCRIPTOR_HEAP_TYPE type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+			std::size_t descriptor_table_identity = std::numeric_limits<std::size_t>::max();
+		};
+		std::pmr::vector<Mapping> mappings;
+	};
+
 	struct DescriptorTableDescription
 	{
 		struct DescriptorTable
 		{
 			D3D12_DESCRIPTOR_HEAP_TYPE type;
-			ShaderSlot::SourceType source_type = ShaderSlot::SourceType::SHADER_DEFINE;
-			std::size_t identity = std::numeric_limits<std::size_t>::max();
+			ShaderSlot::Source source;
 		};
 		std::pmr::vector<DescriptorTable> descriptor_table;
 		std::size_t shader_define_count = 0;
@@ -62,14 +82,16 @@ export namespace Dumpling
 		D3D12_DESCRIPTOR_HEAP_TYPE type;
 		std::size_t identity = std::numeric_limits<std::size_t>::max();
 		std::size_t descriptor_table_offset = 0;
+		operator bool() const { return identity != std::numeric_limits<std::size_t>::max(); }
 	};
 
 
 	ComPtr<ID3D12RootSignature> CreateRootSignature(
 		ID3D12Device& device, 
 		ShaderSlot const& shader_slot, 
-		DescriptorTableDescription& description_table_description, 
-		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(std::size_t identity)> context_defined_descriptor_mapping = {}
+		ShaderDefineDescriptorTable& shader_define_descriptor,
+		DescriptorTableMapping& descriptor_table_mapping,
+		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(ShaderSlot::Source)> context_defined_descriptor_mapping = {}
 	);
 	
 	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, ID3D12RootSignature& root_signature, MaterialState const& material_state);

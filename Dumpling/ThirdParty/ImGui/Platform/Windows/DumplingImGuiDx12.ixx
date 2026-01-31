@@ -8,21 +8,20 @@ module;
 export module DumplingImGuiDx12;
 
 import Potato;
-import DumplingFormEvent;
+import DumplingForm;
 import DumplingImGuiHUD;
 import DumplingDX12;
-import DumplingPlatform;
 
-export namespace Dumpling
+export namespace Dumpling::IMGUI
 {
 	struct ImGuiHeadUpDisplayWin32Dx12 : public IGHeadUpDisplay, public Potato::IR::MemoryResourceRecordIntrusiveInterface
 	{
-		static Ptr Create(Form& form, FrameRenderer& device, IGWidget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		static FormEvent::Respond FormEventHook(FormEvent& event);
+		static Ptr Create(Win32::Form& form, Dx12::FrameRenderer& device, IGWidget::Ptr top_widget, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		static Win32::FormEvent::Respond FormEventHook(Win32::FormEvent& event);
 
 	protected:
 
-		virtual bool DrawTo(PassRenderer& renderer) override;
+		virtual bool DrawTo(Dx12::PassRenderer& renderer) override;
 
 		void AddIGHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::AddRef(); }
 		void SubIGHeadUpDisplayRef() const override { MemoryResourceRecordIntrusiveInterface::SubRef(); }

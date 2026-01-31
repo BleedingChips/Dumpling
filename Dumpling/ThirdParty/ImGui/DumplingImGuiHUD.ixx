@@ -4,11 +4,10 @@ export module DumplingImGuiHUD;
 
 import std;
 import Potato;
-import DumplingFormEvent;
 import DumplingForm;
 import DumplingRenderer;
 
-export namespace Dumpling
+export namespace Dumpling::IMGUI
 {
 	struct IGHeadUpDisplay;
 
@@ -21,7 +20,7 @@ export namespace Dumpling
 		};
 		using Ptr = Potato::Pointer::IntrusivePtr<IGWidget, Wrapper>;
 
-		virtual void Draw(PassRenderer& render) = 0;
+		virtual void Draw(Dx12::PassRenderer& render) = 0;
 
 	protected:
 
@@ -40,15 +39,15 @@ export namespace Dumpling
 		};
 		using Ptr = Potato::Pointer::IntrusivePtr<IGHeadUpDisplay, Wrapper>;
 
-		bool Draw(PassRenderer& renderer);
+		bool Draw(Dx12::PassRenderer& renderer);
 		static FormEvent::Respond FormEventHook(FormEvent& event);
 
-		static Ptr Create(Form& form, FrameRenderer& renderer, IGWidget::Ptr top_weight, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
+		static Ptr Create(Win32::Form& form, Dx12::FrameRenderer& renderer, IGWidget::Ptr top_weight, std::pmr::memory_resource* resource = std::pmr::get_default_resource());
 
 	protected:
 
 		IGHeadUpDisplay(IGWidget::Ptr top_widget) : top_widget(std::move(top_widget)) { }
-		virtual bool DrawTo(PassRenderer& renderer) = 0;
+		virtual bool DrawTo(Dx12::PassRenderer& renderer) = 0;
 		virtual ~IGHeadUpDisplay() = default;
 		virtual void AddIGHeadUpDisplayRef() const = 0;
 		virtual void SubIGHeadUpDisplayRef() const = 0;

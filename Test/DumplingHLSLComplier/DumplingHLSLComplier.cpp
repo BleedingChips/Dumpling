@@ -77,7 +77,7 @@ int main()
 
 	{
 		HLSLCompiler::MaterialShaderOutput shader_output;
-		ShaderSlot shader_slot;
+		Dx12::ShaderSlot shader_slot;
 		bool result = instance.CompileMaterial(
 			compiler,
 			shader_slot,

@@ -5,11 +5,11 @@ module;
 #include "d3d12shader.h"
 #undef max
 
-module DumplingShader;
-import DumplingRendererTypes;
+module DumplingDx12Shader;
+import DumplingDX12StructLayout;
 
 
-namespace Dumpling
+namespace Dumpling::Dx12
 {
 	using Potato::IR::StructLayout;
 
@@ -211,18 +211,6 @@ namespace Dumpling
 		ShaderReflectionConstBufferContext const& context
 		)
 	{
-		std::array<ShaderSlot::Type, 2> slot_types;
-		switch (type)
-		{
-		case ShaderType::PS:
-			slot_types[0] = ShaderSlot::Type::PS_CONST_BUFFER;
-			slot_types[1] = ShaderSlot::Type::PS_TEXTURE;
-			break;
-		default:
-			slot_types[0] = ShaderSlot::Type::VS_CONST_BUFFER;
-			slot_types[1] = ShaderSlot::Type::VS_TEXTURE;
-			break;
-		}
 
 		D3D12_SHADER_DESC desc;
 		if (!SUCCEEDED(reflection.GetDesc(&desc)))
@@ -273,10 +261,10 @@ namespace Dumpling
 					{
 						auto current_buffer_index = out_slot.const_buffer.size();
 						out_slot.const_buffer.emplace_back(std::move(cbuffer_layout));
-						out_slot.slots.push_back({ slot_types[0], current_buffer_index, bind_sesc.BindPoint, bind_sesc.Space });
+						out_slot.slots.push_back({ type, ShaderResourceType::CONST_BUFFER, current_buffer_index, bind_sesc.BindPoint, bind_sesc.Space });
 					}
 					else {
-						out_slot.slots.push_back({ slot_types[0], exist_index, bind_sesc.BindPoint, bind_sesc.Space });
+						out_slot.slots.push_back({ type, ShaderResourceType::CONST_BUFFER, exist_index, bind_sesc.BindPoint, bind_sesc.Space });
 					}
 					out_slot.total_statics.bound_resource_count += 1;
 					out_slot.total_statics.const_buffer_count += 1;

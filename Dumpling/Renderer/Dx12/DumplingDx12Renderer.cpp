@@ -11,10 +11,10 @@ module;
 #undef interface
 #undef max
 
-module DumplingRenderer;
+module DumplingDx12Renderer;
 
 
-namespace Dumpling
+namespace Dumpling::Dx12
 {
 
 
@@ -578,16 +578,15 @@ namespace Dumpling
 		frame = std::numeric_limits<std::size_t>::max();
 	}
 
-	bool PassRenderer::ClearRendererTarget(std::size_t index, Color color)
+	bool PassRenderer::ClearRendererTarget(std::size_t index, Float4 color)
 	{
 		if(index < cache_render_target.size())
 		{
 			auto ref = cache_render_target[index];
 			if(ref.ptr == 0)
 			{
-				std::array<float, 4> co =  {color.R, color.G, color.B, color.A};
 				command->ClearRenderTargetView(
-					cache_render_target[index + 1], co.data(), 0, nullptr);
+					cache_render_target[index + 1], color.data(), 0, nullptr);
 				return true;
 			}
 		}

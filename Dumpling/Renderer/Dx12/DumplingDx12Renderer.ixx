@@ -8,18 +8,17 @@ module;
 #undef max
 #undef GetObject
 
-export module DumplingRenderer;
+export module DumplingDx12Renderer;
 
 import std;
 import Potato;
 import DumplingForm;
 import DumplingPipeline;
-import DumplingRendererTypes;
-import DumplingDX12;
-import DumplingPlatform;
-import DumplingResourceStreamer;
+import DumplingMath;
+import DumplingDx12Define;
+import DumplingDx12ResourceStreamer;
 
-export namespace Dumpling
+export namespace Dumpling::Dx12
 {
 	export struct Renderer;
 
@@ -130,7 +129,7 @@ export namespace Dumpling
 		ID3D12GraphicsCommandList* GetCommandList() { assert(*this); return command.GetPointer(); }
 
 		void SetRenderTargets(RenderTargetSet const& render_targets);
-		bool ClearRendererTarget(std::size_t index, Color color = Color::black);
+		bool ClearRendererTarget(std::size_t index, Float4 color = Color::black_rgba);
 		//bool ClearDepthStencil(RendererTargetCarrier const& render_target, float depth, uint8_t stencil);
 		operator bool() const { return command && allocator; }
 

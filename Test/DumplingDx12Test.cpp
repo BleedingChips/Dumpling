@@ -7,7 +7,7 @@ import Potato;
 using namespace Dumpling;
 
 
-struct TopHook : public Dumpling::FormEventHook
+struct TopHook : public FormEventHook
 {
 	virtual FormEvent::Respond Hook(FormEvent& event) override
 	{
@@ -64,9 +64,9 @@ Pixel PSMain(Vertex vertex)
 
 int main()
 {
-	Device::InitDebugLayer();
+	Dx12::Device::InitDebugLayer();
 
-	Device device;
+	Dx12::Device device;
 	device.Init();
 
 	Form::Config config;
@@ -77,7 +77,7 @@ int main()
 	auto compiler = instance.CreateCompiler();
 
 	HLSLCompiler::MaterialShaderOutput shader_output;
-	ShaderSlot shader_slot;
+	Dx12::ShaderSlot shader_slot;
 
 	HLSLCompiler::ComplieContext context;
 	context.error_capture = [](std::u8string_view message, HLSLCompiler::ShaderTarget target) {
@@ -102,7 +102,7 @@ int main()
 
 	auto form = Form::Create(config);
 
-	FrameRenderer form_renderer;
+	Dx12::FrameRenderer form_renderer;
 
 	device.InitFrameRenderer(form_renderer);
 
@@ -112,18 +112,18 @@ int main()
 		u8"default_vertex_layout",
 		std::initializer_list<StructLayout::Member>{
 			{
-				GetHLSLConstBufferStructLayout<CBFloat3>(),
+				Dx12::GetHLSLConstBufferStructLayout<Float3>(),
 				u8"POSITION"
 			},
 			{
-				GetHLSLConstBufferStructLayout<CBFloat3>(),
+				Dx12::GetHLSLConstBufferStructLayout<Float3>(),
 				u8"COLOR"
 			}
 		},
-		GetHLSLConstBufferPolicy()
+		Dx12::GetHLSLConstBufferPolicy()
 	);
 
-	auto vertex_object = Potato::IR::StructLayoutObject::DefaultConstruct(vertex_layout, 3, GetHLSLConstBufferPolicy());
+	auto vertex_object = Potato::IR::StructLayoutObject::DefaultConstruct(vertex_layout, 3, Dx12::GetHLSLConstBufferPolicy());
 	
 	auto p = vertex_object->GetObject(0);
 
@@ -143,38 +143,41 @@ int main()
 	};
 
 
-	CBFloat3& v1 = *vertex_object->MemberAs<CBFloat3>(0, 0);
-	CBFloat3& v2 = *vertex_object->MemberAs<CBFloat3>(0, 1);
-	CBFloat3& v3 = *vertex_object->MemberAs<CBFloat3>(0, 2);
-	CBFloat3& c1 = *vertex_object->MemberAs<CBFloat3>(1, 0);
-	CBFloat3& c2 = *vertex_object->MemberAs<CBFloat3>(1, 1);
-	CBFloat3& c3 = *vertex_object->MemberAs<CBFloat3>(1, 2);
-	v1 = CBFloat3{ 0.0f, 0.5f, 0.0f };
-	v2 = CBFloat3{ 0.0f, 0.0f, 0.0f };
-	v3 = CBFloat3{ 0.5f, 0.0f, 0.0f };
-	c1 = CBFloat3{ 1.0f, 0.5f, 0.0f };
-	c2 = CBFloat3{ 1.0f, 0.0f, 1.0f };
-	c3 = CBFloat3{ 0.0f, 0.0f, 1.0f };
+	Float3& v1 = *vertex_object->MemberAs<Float3>(0, 0);
+	Float3& v2 = *vertex_object->MemberAs<Float3>(0, 1);
+	Float3& v3 = *vertex_object->MemberAs<Float3>(0, 2);
+	Float3& c1 = *vertex_object->MemberAs<Float3>(1, 0);
+	Float3& c2 = *vertex_object->MemberAs<Float3>(1, 1);
+	Float3& c3 = *vertex_object->MemberAs<Float3>(1, 2);
+	v1 = Float3{ 0.0f, 0.5f, 0.0f };
+	v2 = Float3{ 0.0f, 0.0f, 0.0f };
+	v3 = Float3{ 0.5f, 0.0f, 0.0f };
+	c1 = Float3{ 1.0f, 0.5f, 0.0f };
+	c2 = Float3{ 1.0f, 0.0f, 1.0f };
+	c3 = Float3{ 0.0f, 0.0f, 1.0f };
 
 	std::uint32_t index_object[3] = {2, 1, 0};
 
-	auto index_buffer_offset = Potato::MemLayout::AlignTo(vertex_object->GetBuffer().size(), resource_buffer_align);
+	auto index_buffer_offset = Potato::MemLayout::AlignTo(vertex_object->GetBuffer().size(), Dx12::resource_buffer_align);
 	auto cb_offset = Potato::MemLayout::AlignTo(index_buffer_offset + sizeof(std::uint32_t) * 3, 256);
 	
 	auto size_in_byte = vertex_object->GetBuffer().size();
 
-	auto root_signature = CreateRootSignature(device, shader_slot);
+	Dx12::ShaderDefineDescriptorTable description_table_description;
+	Dx12::DescriptorTableMapping description_mapping;
+
+	auto root_signature = CreateRootSignature(device, shader_slot, description_table_description, description_mapping);
 
 	auto cb = Potato::IR::StructLayoutObject::DefaultConstruct(shader_slot.const_buffer[0].layout);
 
-	auto p1 = cb->MemberAs<CBFloat4>(0);
-	auto p2 = cb->MemberAs<CBFloat4>(1);
-	*p1 = CBFloat4{ -0.5f, -0.5f, 0.0f };
-	*p2 = CBFloat4{ 0.5f, 0.5f, 0.5f, 0.0f };
+	auto p1 = cb->MemberAs<Float4>(0);
+	auto p2 = cb->MemberAs<Float4>(1);
+	*p1 = Float4{ -0.5f, -0.5f, 0.0f };
+	*p2 = Float4{ 0.5f, 0.5f, 0.5f, 0.0f };
 
-	CBFloat4* typ = reinterpret_cast<CBFloat4*>(cb->GetObject());
+	Float4* typ = reinterpret_cast<Float4*>(cb->GetObject());
 
-	MaterialState material_state;
+	Dx12::MaterialState material_state;
 	material_state.vs_layout = vertex_layout;
 	material_state.vs_shader = shader_output.vs;
 	material_state.ps_shader = shader_output.ps;
@@ -188,13 +191,13 @@ int main()
 
 	bool need_loop = true;
 
-	ResourceStreamer streamer;
+	Dx12::ResourceStreamer streamer;
 
 	device.InitResourceStreamer(streamer);
 
-	auto heap = streamer.CreateDefaultHeap(heap_align);
+	auto heap = streamer.CreateDefaultHeap(Dx12::heap_align);
 
-	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, heap_align);
+	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, Dx12::heap_align);
 
 	auto description_heap = CreateDescriptorHeap(device, shader_slot);
 
@@ -210,7 +213,7 @@ int main()
 	);
 
 	{
-		PassStreamer pass_streamer;
+		Dx12::PassStreamer pass_streamer;
 		streamer.PopRequester(pass_streamer, {1, 0});
 
 		auto current_state = pass_streamer.UploadBufferResource(
@@ -240,8 +243,8 @@ int main()
 		streamer.Commited(pass_streamer);
 	}
 
-	auto view = GetVertexBufferView(*vertex_object, *vertex_buffer);
-	auto index_view = GetIndexBufferView(*vertex_buffer, 3, index_buffer_offset);
+	auto view = Dx12::GetVertexBufferView(*vertex_object, *vertex_buffer);
+	auto index_view = Dx12::GetIndexBufferView(*vertex_buffer, 3, index_buffer_offset);
 
 	while(need_loop)
 	{
@@ -259,12 +262,12 @@ int main()
 			}
 		}
 
-		PassRenderer ren;
+		Dx12::PassRenderer ren;
 		PassRequest request;
 
 		if (form_renderer.PopPassRenderer(ren, request))
 		{
-			RenderTargetSet sets;
+			Dx12::RenderTargetSet sets;
 			sets.AddRenderTarget(*output);
 			ren.SetRenderTargets(sets);
 			ren.ClearRendererTarget(0, { R, G, B, 1.0f });

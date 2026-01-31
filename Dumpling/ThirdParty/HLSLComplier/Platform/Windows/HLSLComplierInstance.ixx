@@ -9,11 +9,8 @@ export module DumplingHLSLComplierInstance;
 
 import std;
 import Potato;
-import DumplingPlatform;
-import DumplingRendererTypes;
-import DumplingShader;
-import DumplingMaterial;
-import DumplingRenderer;
+import DumplingDx12Define;
+import DumplingDx12Shader;
 
 
 namespace Dumpling::HLSLCompiler
@@ -109,7 +106,7 @@ export namespace Dumpling::HLSLCompiler
 	{
 		ComplieTargetVersion version = ComplieTargetVersion::VERSION_5;
 		ComplierFlag flag = ComplierFlag::None;
-		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> cbuffer_layout_override;
+		Potato::TMP::FunctionRef<Dx12::ShaderSlot::ConstBuffer(std::u8string_view)> cbuffer_layout_override;
 		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override;
 		Potato::TMP::FunctionRef<void(std::u8string_view, ShaderTarget)> error_capture;
 	};
@@ -152,11 +149,11 @@ export namespace Dumpling::HLSLCompiler
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
 		static Instance Create();
 
-		bool CompileMaterial(CompilerPtr& compiler, ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext  const& material_context, ComplieContext const& context);
+		bool CompileMaterial(CompilerPtr& compiler, Dx12::ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext  const& material_context, ComplieContext const& context);
 
 	protected:
 
-		ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context);
+		ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, Dx12::ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context);
 
 		using Ptr = Potato::Pointer::IntrusivePtr<void, UtilsWrapper>;
 

@@ -269,7 +269,7 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	ComPtr<ID3D10Blob> Instance::CompileShader(CompilerPtr& compiler, ShaderTarget shader_target, ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context)
+	ComPtr<ID3D10Blob> Instance::CompileShader(CompilerPtr& compiler, ShaderTarget shader_target, Dx12::ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context)
 	{
 		auto encoded_code = EncodeShader(entry_point.code);
 		auto argument = CreateArguments(shader_target, entry_point.entry_point, entry_point.file_path, context.flag);
@@ -295,7 +295,7 @@ namespace Dumpling::HLSLCompiler
 
 		ShaderType shader_type = TranslateShaderType(shader_target);
 
-		ShaderReflectionConstBufferContext reflection_context;
+		Dx12::ShaderReflectionConstBufferContext reflection_context;
 		reflection_context.type_layout_override = context.type_layout_override;
 
 		if (!GetShaderSlot(shader_type, *reflection, out_slot, context.cbuffer_layout_override, reflection_context))
@@ -304,7 +304,7 @@ namespace Dumpling::HLSLCompiler
 		return GetShaderObject(compiler_result);
 	}
 
-	bool Instance::CompileMaterial(CompilerPtr& compiler, ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext const& material_context, ComplieContext const& context)
+	bool Instance::CompileMaterial(CompilerPtr& compiler, Dx12::ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext const& material_context, ComplieContext const& context)
 	{
 		if (!compiler)
 			return false;

@@ -6,14 +6,13 @@ module;
 #undef interface
 #undef max
 
-export module DumplingResourceStreamer;
+export module DumplingDx12ResourceStreamer;
 
 import std;
 import Potato;
-import DumplingPlatform;
-import DumplingRendererTypes;
+import DumplingDx12Define;
 
-export namespace Dumpling
+export namespace Dumpling::Dx12
 {
 	constexpr std::size_t heap_align = 64 * 1024;
 	constexpr std::size_t resource_buffer_align = 64;

@@ -13,7 +13,7 @@ module DumplingImGuiDx12;
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 
-namespace Dumpling
+namespace Dumpling::IMGUI
 {
 	ImGuiHeadUpDisplayWin32Dx12::ImGuiHeadUpDisplayWin32Dx12(
 		Potato::IR::MemoryResourceRecord record,
@@ -28,7 +28,7 @@ namespace Dumpling
 	{
 
 	}
-	auto ImGuiHeadUpDisplayWin32Dx12::Create(Form& form, FrameRenderer& renderer, IGWidget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
+	auto ImGuiHeadUpDisplayWin32Dx12::Create(Form& form, Dx12::FrameRenderer& renderer, IGWidget::Ptr top_widget, std::pmr::memory_resource* resource) -> Ptr
 	{
 		IMGUI_CHECKVERSION();
 
@@ -125,7 +125,7 @@ namespace Dumpling
 		io_context = nullptr;
 	}
 
-	bool ImGuiHeadUpDisplayWin32Dx12::DrawTo(PassRenderer& renderer)
+	bool ImGuiHeadUpDisplayWin32Dx12::DrawTo(Dx12::PassRenderer& renderer)
 	{
 		if (io_context != nullptr)
 		{
