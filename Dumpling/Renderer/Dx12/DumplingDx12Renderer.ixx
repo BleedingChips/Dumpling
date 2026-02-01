@@ -132,7 +132,7 @@ export namespace Dumpling::Dx12
 
 		void SetRenderTargets(RenderTargetSet const& render_targets);
 		bool ClearRendererTarget(std::size_t index, Float4 color = Color::black_rgba);
-		bool SetDescriptorTable(
+		bool SetGraphicDescriptorTable(
 			DescriptorTableMapping const& descriptor_table_mapping, 
 			ShaderDefineDescriptorTable& shader_define_descriptor, 
 			Potato::TMP::FunctionRef<ID3D12DescriptorHeap* (D3D12_DESCRIPTOR_HEAP_TYPE, std::size_t identity)> func = {}

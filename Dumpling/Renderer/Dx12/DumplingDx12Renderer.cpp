@@ -546,7 +546,7 @@ namespace Dumpling::Dx12
 		}
 	}
 
-	bool PassRenderer::SetDescriptorTable(
+	bool PassRenderer::SetGraphicDescriptorTable(
 		DescriptorTableMapping const& descriptor_table_mapping,
 		ShaderDefineDescriptorTable& shader_define_descriptor,
 		Potato::TMP::FunctionRef<ID3D12DescriptorHeap* (D3D12_DESCRIPTOR_HEAP_TYPE, std::size_t identity)> func
@@ -554,6 +554,9 @@ namespace Dumpling::Dx12
 	{
 		std::array<ID3D12DescriptorHeap*, 32> storage_descriptor;
 		std::size_t storage_descriptor_index = 0;
+		std::array<ID3D12DescriptorHeap*, 64> current_descriptor;
+		std::size_t current_descriptor_index = 0;
+
 		for (std::size_t index = 0; index < descriptor_table_mapping.mappings.size(); ++index)
 		{
 			auto& ref = descriptor_table_mapping.mappings[index];
@@ -586,17 +589,34 @@ namespace Dumpling::Dx12
 			);
 
 			if (finded == storage_descriptor.data() + storage_descriptor_index)
-				storage_descriptor[storage_descriptor_index] += 1;
-
-			command->SetGraphicsRootDescriptorTable(
-				index, using_heap->GetGPUDescriptorHandleForHeapStart()
-			);
+			{
+				if (storage_descriptor_index >= storage_descriptor.size())
+				{
+					assert(false);
+					return false;
+				}
+				storage_descriptor[storage_descriptor_index++] = using_heap;
+			}
+			
+			if (current_descriptor_index >= current_descriptor.size())
+			{
+				assert(false);
+				return false;
+			}
+			current_descriptor[current_descriptor_index++] = using_heap;
 		}
 
 		command->SetDescriptorHeaps(
 			storage_descriptor_index,
 			storage_descriptor.data()
 		);
+
+		for (std::size_t i = 0; i < current_descriptor_index; ++i)
+		{
+			command->SetGraphicsRootDescriptorTable(
+				i, current_descriptor[i]->GetGPUDescriptorHandleForHeapStart()
+			);
+		}
 
 		return true;
 	}

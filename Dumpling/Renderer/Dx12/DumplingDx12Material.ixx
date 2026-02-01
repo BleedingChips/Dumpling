@@ -65,7 +65,7 @@ export namespace Dumpling::Dx12
 	{
 		ComPtr<ID3D12DescriptorHeap> resource_heap;
 		ComPtr<ID3D12DescriptorHeap> sampler_heap;
-		bool CreateConstBufferView(ID3D12Device& device, ID3D12Resource& resource, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, Potato::Misc::IndexSpan<> span);
+		bool CreateConstBufferView(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, ID3D12Resource& resource, Potato::Misc::IndexSpan<> span);
 	};
 
 	std::optional<ShaderDefineDescriptorTable> CreateDescriptorHeap(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& shader_slot);
@@ -93,7 +93,7 @@ export namespace Dumpling::Dx12
 	{
 		void ResetVertexLayout(Potato::IR::StructLayout layout, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology_type = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		std::size_t CalculateResource_size() const;
-		bool UploadResource(PassStreamer& streamer);
+		//bool UploadResource(PassStreamer& streamer);
 		//bool Draw(struct PassRenderer& renderer);
 	protected:
 		Potato::IR::StructLayout::Ptr vertex_layout;

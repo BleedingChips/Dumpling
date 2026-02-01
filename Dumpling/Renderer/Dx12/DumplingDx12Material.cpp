@@ -135,7 +135,7 @@ namespace Dumpling::Dx12
 		return result;
 	}
 
-	bool ShaderDefineDescriptorTable::CreateConstBufferView(ID3D12Device& device, ID3D12Resource& resource, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, Potato::Misc::IndexSpan<> span)
+	bool ShaderDefineDescriptorTable::CreateConstBufferView(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, ID3D12Resource& resource, Potato::Misc::IndexSpan<> span)
 	{
 		if (resource_heap && info.srv_descriptor_table.size() > resource_index)
 		{

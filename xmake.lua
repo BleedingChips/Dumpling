@@ -30,8 +30,8 @@ target("Dumpling")
     add_files("Dumpling/Math/*.cpp")
 
     if is_plat("windows") then
-        add_files("Dumpling/Form/Win32/*.ixx", {public=true})
-        add_files("Dumpling/Form/Win32/*.cpp")
+        add_files("Dumpling/Form/Windows/*.ixx", {public=true})
+        add_files("Dumpling/Form/Windows/*.cpp")
         add_files("Dumpling/Renderer/Dx12/*.ixx", {public=true})
         add_files("Dumpling/Renderer/Dx12/*.cpp")
         add_links("user32.lib")
