@@ -163,10 +163,10 @@ int main()
 	
 	auto size_in_byte = vertex_object->GetBuffer().size();
 
-	Dx12::ShaderDefineDescriptorTable description_table_description;
+	Dx12::ShaderDefineDescriptorTableInfo description_table_description_info;
 	Dx12::DescriptorTableMapping description_mapping;
 
-	auto root_signature = CreateRootSignature(device, shader_slot, description_table_description, description_mapping);
+	auto root_signature = CreateRootSignature(device, shader_slot, description_table_description_info, description_mapping);
 
 	auto cb = Potato::IR::StructLayoutObject::DefaultConstruct(shader_slot.const_buffer[0].layout);
 
@@ -199,18 +199,8 @@ int main()
 
 	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, Dx12::heap_align);
 
-	auto description_heap = CreateDescriptorHeap(device, shader_slot);
-
-	ID3D12Device& raw_device = device;
-
-	D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
-	desc.BufferLocation = vertex_buffer->GetGPUVirtualAddress() + cb_offset;
-	desc.SizeInBytes = cb->GetBuffer().size();
-
-	raw_device.CreateConstantBufferView(
-		&desc,
-		description_heap->GetCPUDescriptorHandleForHeapStart()
-	);
+	auto description_heap = CreateDescriptorHeap(device, description_table_description_info);
+	description_heap->CreateConstBufferView(device, *vertex_buffer, description_table_description_info, 0, { cb_offset, cb->GetBuffer().size() + cb_offset });
 
 	{
 		Dx12::PassStreamer pass_streamer;
@@ -273,10 +263,7 @@ int main()
 			ren.ClearRendererTarget(0, { R, G, B, 1.0f });
 			ren->SetPipelineState(pipeline_object.GetPointer());
 			ren->SetGraphicsRootSignature(root_signature.GetPointer());
-			ID3D12DescriptorHeap* ppHeaps[] = { description_heap };
-			ren->SetDescriptorHeaps(1, ppHeaps);
-			ren->SetGraphicsRootDescriptorTable(0, description_heap->GetGPUDescriptorHandleForHeapStart());
-			ren->SetGraphicsRootDescriptorTable(1, description_heap->GetGPUDescriptorHandleForHeapStart());
+			ren.SetDescriptorTable(description_mapping, *description_heap);
 			ren->IASetVertexBuffers(0, 1, &view);
 			ren->IASetIndexBuffer(&index_view);
 			ren->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

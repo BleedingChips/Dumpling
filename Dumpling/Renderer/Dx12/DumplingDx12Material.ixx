@@ -8,7 +8,6 @@ import Potato;
 import DumplingDx12Define;
 import DumplingDx12Shader;
 import DumplingDx12ResourceStreamer;
-import DumplingDx12Renderer;
 
 export namespace Dumpling::Dx12
 {
@@ -22,7 +21,7 @@ export namespace Dumpling::Dx12
 		TRIANGLE = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 	};
 
-	struct ShaderDefineDescriptorTable
+	struct ShaderDefineDescriptorTableInfo
 	{
 		struct Index
 		{
@@ -30,8 +29,8 @@ export namespace Dumpling::Dx12
 			std::size_t resource_index;
 			std::size_t descriptor_heap_offset;
 		};
-		std::pmr::vector<Index> resource_index;
-		std::pmr::vector<Index> sampler_index;
+		std::pmr::vector<Index> srv_descriptor_table;
+		std::pmr::vector<Index> sampler_descriptor_table;
 	};
 
 	struct DescriptorTableMapping
@@ -52,19 +51,6 @@ export namespace Dumpling::Dx12
 			ShaderSlot::Source source;
 		};
 		std::pmr::vector<DescriptorTable> descriptor_table;
-		std::size_t shader_define_count = 0;
-	};
-
-	struct ShaderDescriptorTable
-	{
-		struct Info
-		{
-			ComPtr<ID3D12DescriptorHeap> heap;
-			D3D12_DESCRIPTOR_HEAP_TYPE type;
-			std::size_t count;
-			std::size_t offset;
-		};
-		std::pmr::vector<Info> descriptor_heaps;
 	};
 
 	struct MaterialState
@@ -75,7 +61,14 @@ export namespace Dumpling::Dx12
 		ComPtr<ID3D10Blob> ps_shader;
 	};
 
-	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device& device, ShaderSlot const& shader_slot);
+	struct ShaderDefineDescriptorTable
+	{
+		ComPtr<ID3D12DescriptorHeap> resource_heap;
+		ComPtr<ID3D12DescriptorHeap> sampler_heap;
+		bool CreateConstBufferView(ID3D12Device& device, ID3D12Resource& resource, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, Potato::Misc::IndexSpan<> span);
+	};
+
+	std::optional<ShaderDefineDescriptorTable> CreateDescriptorHeap(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& shader_slot);
 	
 	struct ContextDefinedDescriptorTable
 	{
@@ -89,7 +82,7 @@ export namespace Dumpling::Dx12
 	ComPtr<ID3D12RootSignature> CreateRootSignature(
 		ID3D12Device& device, 
 		ShaderSlot const& shader_slot, 
-		ShaderDefineDescriptorTable& shader_define_descriptor,
+		ShaderDefineDescriptorTableInfo& shader_define_descriptor,
 		DescriptorTableMapping& descriptor_table_mapping,
 		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(ShaderSlot::Source)> context_defined_descriptor_mapping = {}
 	);
@@ -101,7 +94,7 @@ export namespace Dumpling::Dx12
 		void ResetVertexLayout(Potato::IR::StructLayout layout, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology_type = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		std::size_t CalculateResource_size() const;
 		bool UploadResource(PassStreamer& streamer);
-		bool Draw(PassRenderer& renderer);
+		//bool Draw(struct PassRenderer& renderer);
 	protected:
 		Potato::IR::StructLayout::Ptr vertex_layout;
 		Potato::IR::StructLayoutObject::Ptr vertex;

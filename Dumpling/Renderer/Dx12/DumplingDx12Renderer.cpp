@@ -546,6 +546,61 @@ namespace Dumpling::Dx12
 		}
 	}
 
+	bool PassRenderer::SetDescriptorTable(
+		DescriptorTableMapping const& descriptor_table_mapping,
+		ShaderDefineDescriptorTable& shader_define_descriptor,
+		Potato::TMP::FunctionRef<ID3D12DescriptorHeap* (D3D12_DESCRIPTOR_HEAP_TYPE, std::size_t identity)> func
+	)
+	{
+		std::array<ID3D12DescriptorHeap*, 32> storage_descriptor;
+		std::size_t storage_descriptor_index = 0;
+		for (std::size_t index = 0; index < descriptor_table_mapping.mappings.size(); ++index)
+		{
+			auto& ref = descriptor_table_mapping.mappings[index];
+			ID3D12DescriptorHeap* using_heap = nullptr;
+
+			if(ref.descriptor_table_identity != std::numeric_limits<std::size_t>::max())
+			{
+				using_heap = func(ref.type, ref.descriptor_table_identity);
+			}
+			else {
+				switch (ref.type)
+				{
+				case D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+					using_heap = shader_define_descriptor.resource_heap;
+					break;
+				case D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+					using_heap = shader_define_descriptor.sampler_heap;
+					break;
+				}
+			}
+			if (using_heap == nullptr)
+			{
+				return false;
+			}
+
+			auto finded = std::find(
+				storage_descriptor.data(),
+				storage_descriptor.data() + storage_descriptor_index,
+				using_heap
+			);
+
+			if (finded == storage_descriptor.data() + storage_descriptor_index)
+				storage_descriptor[storage_descriptor_index] += 1;
+
+			command->SetGraphicsRootDescriptorTable(
+				index, using_heap->GetGPUDescriptorHandleForHeapStart()
+			);
+		}
+
+		command->SetDescriptorHeaps(
+			storage_descriptor_index,
+			storage_descriptor.data()
+		);
+
+		return true;
+	}
+
 	void PassRenderer::PreFinishRender()
 	{
 		if(render_target_barriers_count != 0)
