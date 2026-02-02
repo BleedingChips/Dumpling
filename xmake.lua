@@ -7,6 +7,7 @@ end
 
 local var require_imgui = true
 local var require_hlsl_complier = true
+local var require_texture_encoder = true
 
 if is_plat("windows") then
     if require_imgui then
@@ -15,6 +16,9 @@ if is_plat("windows") then
     if require_hlsl_complier then
         add_requires("directxshadercompiler")
     end
+end
+
+if require_texture_encoder then
 end
 
 target("Dumpling")
@@ -27,7 +31,6 @@ target("Dumpling")
     add_files("Dumpling/Renderer/*.ixx", {public=true})
     add_files("Dumpling/Renderer/*.cpp")
     add_files("Dumpling/Math/*.ixx", {public=true})
-    add_files("Dumpling/Math/*.cpp")
 
     if is_plat("windows") then
         add_files("Dumpling/Form/Windows/*.ixx", {public=true})
@@ -61,6 +64,12 @@ target("Dumpling")
         end
         add_packages("directxshadercomplier")
     end
+
+    if require_texture_encoder then
+        add_defines("DUMPLING_WITH_TEXTURE_ENCODER")
+        add_files("Dumpling/ThirdParty/TextureEncoder/*.ixx", {public=true})
+        add_files("Dumpling/ThirdParty/TextureEncoder/*.cpp")
+    end
     
 target_end()
 
@@ -89,6 +98,17 @@ if os.scriptdir() == os.projectdir() then
 
     if require_hlsl_complier then
         for _, file in ipairs(os.files("Test/DumplingHLSLComplier/*.cpp")) do
+            local var name = "ZTest_" .. path.basename(file)
+            target(name)
+                set_kind("binary")
+                add_files(file)
+                add_deps("Dumpling")
+            target_end()
+        end
+    end
+
+    if require_texture_encoder then
+        for _, file in ipairs(os.files("Test/DumplingTextureEncoder/*.cpp")) do
             local var name = "ZTest_" .. path.basename(file)
             target(name)
                 set_kind("binary")

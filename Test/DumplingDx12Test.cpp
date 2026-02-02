@@ -64,6 +64,7 @@ Pixel PSMain(Vertex vertex)
 
 int main()
 {
+
 	Dx12::Device::InitDebugLayer();
 
 	Dx12::Device device;

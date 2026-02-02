@@ -15,12 +15,16 @@ namespace Dumpling::Dx12
 
 	DXGI_FORMAT Translate(StructLayout const& layout)
 	{
-		if (layout == *GetHLSLConstBufferStructLayout<Float2>())
+		if (layout.SupportNativeReference(typeid(Float2)))
 			return DXGI_FORMAT_R32G32_FLOAT;
-		if (layout == *GetHLSLConstBufferStructLayout<Float3>())
+		if (layout.SupportNativeReference(typeid(Float3)))
 			return DXGI_FORMAT_R32G32B32_FLOAT;
-		if (layout == *GetHLSLConstBufferStructLayout<Float4>())
+		if (layout.SupportNativeReference(typeid(Float4)))
 			return DXGI_FORMAT_R32G32B32A32_FLOAT;
+		if (layout.SupportNativeReference(typeid(float)) || layout.SupportNativeReference(typeid(Float1)))
+			return DXGI_FORMAT_R32_FLOAT;
+		if (layout.SupportNativeReference(typeid(std::uint32_t)))
+			return DXGI_FORMAT_R32_UINT;
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
