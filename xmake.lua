@@ -19,6 +19,7 @@ if is_plat("windows") then
 end
 
 if require_texture_encoder then
+    add_requires("freeimage")
 end
 
 target("Dumpling")
@@ -69,6 +70,7 @@ target("Dumpling")
         add_defines("DUMPLING_WITH_TEXTURE_ENCODER")
         add_files("Dumpling/ThirdParty/TextureEncoder/*.ixx", {public=true})
         add_files("Dumpling/ThirdParty/TextureEncoder/*.cpp")
+        add_packages("freeimage")
     end
     
 target_end()

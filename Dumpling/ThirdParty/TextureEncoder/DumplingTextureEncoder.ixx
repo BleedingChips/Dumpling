@@ -7,17 +7,39 @@ import Potato;
 
 export namespace Dumpling::TextureEncoder
 {
-	enum class TextureEncodeFormat
+	enum class EncodeFormat
 	{
-		TGA,
-		UNKNOW,
+		TARGA,
+		JPEG,
+		BMP,
+		HDR,
+		DDS,
+		UNKNOW
 	};
 
 	struct TextureInfo
 	{
-		TextureEncodeFormat format = TextureEncodeFormat::UNKNOW;
+		std::size_t width = 0;
+		std::size_t height = 0;
 		
-		operator bool() const { return format != TextureEncodeFormat::UNKNOW; }
+		operator bool() const { return width > 0 && height > 0; }
+	};
+
+	struct TextureBitMap
+	{
+		TextureBitMap() = default;
+		~TextureBitMap();
+		TextureBitMap(TextureBitMap&& wrapper);
+		TextureBitMap& operator=(TextureBitMap&& wrapper);
+		operator bool() const;
+		TextureInfo GetTextureInfo() const;
+		void Clear();
+	protected:
+		TextureBitMap(void* bitmap, EncodeFormat original_format = EncodeFormat::UNKNOW);
+		void* bitmap = nullptr;
+		EncodeFormat original_format = EncodeFormat::UNKNOW;
+
+		friend struct TexEncoder;
 	};
 
 	struct TexEncoder
@@ -32,9 +54,8 @@ export namespace Dumpling::TextureEncoder
 		using Ptr = Potato::Pointer::IntrusivePtr<TexEncoder, Wrapper>;
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		
-		TextureInfo DetectTextureInfo(std::span<std::byte const> file_binary, TextureEncodeFormat suggest_format = TextureEncodeFormat::UNKNOW);
-		TextureInfo GetTGATextureInfo(std::span<std::byte const> file_binary);
+		EncodeFormat GetTextureFormat(std::span<std::byte const> texture_binary);
+		TextureBitMap LoadToBitMapTexture(std::span<std::byte const> texture_binary);
 
 
 	protected:
