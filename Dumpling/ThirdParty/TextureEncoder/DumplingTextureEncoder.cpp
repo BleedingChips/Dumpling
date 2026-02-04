@@ -22,11 +22,100 @@ namespace Dumpling::TextureEncoder
 			return EncodeFormat::TARGA;
 		case FREE_IMAGE_FORMAT::FIF_DDS:
 			return EncodeFormat::DDS;
+		case FREE_IMAGE_FORMAT::FIF_PNG:
+			return EncodeFormat::PNG;
 		default:
 			return EncodeFormat::UNKNOW;
 		}
 	}
+
+	FREE_IMAGE_FORMAT Translate(EncodeFormat format)
+	{
+		switch (format)
+		{
+		case EncodeFormat::BMP:
+			return FREE_IMAGE_FORMAT::FIF_BMP;
+		case EncodeFormat::JPEG:
+			return FREE_IMAGE_FORMAT::FIF_JPEG;
+		case EncodeFormat::HDR:
+			return FREE_IMAGE_FORMAT::FIF_HDR;
+		case EncodeFormat::TARGA:
+			return FREE_IMAGE_FORMAT::FIF_TARGA;
+		case EncodeFormat::DDS:
+			return FREE_IMAGE_FORMAT::FIF_DDS;
+		case EncodeFormat::PNG :
+			return FREE_IMAGE_FORMAT::FIF_PNG;
+		default:
+			return FREE_IMAGE_FORMAT::FIF_UNKNOWN;
+		}
+	}
+
+	TextureWrapper::TextureWrapper(TextureWrapper&& wrapper)
+		: wrapper(wrapper.wrapper), encode_format(wrapper.encode_format)
+	{
+		wrapper.wrapper = nullptr;
+		wrapper.encode_format = EncodeFormat::UNKNOW;
+	}
+
+	TextureWrapper::~TextureWrapper()
+	{
+		Reset();
+	}
+
+	void TextureWrapper::Reset()
+	{
+		if (wrapper != nullptr)
+		{
+			FreeImage_CloseMemory(reinterpret_cast<FIMEMORY*>(wrapper));
+			wrapper = nullptr;
+		}
+		encode_format = EncodeFormat::UNKNOW;
+	}
 	
+	TextureWrapper::operator bool() const
+	{
+		return wrapper != nullptr && encode_format != EncodeFormat::UNKNOW;
+	}
+
+	std::span<std::byte const> TextureWrapper::GetByteData() const
+	{
+		BYTE* byte = nullptr;
+		DWORD size = 0;
+		if (FreeImage_AcquireMemory(reinterpret_cast<FIMEMORY*>(wrapper), &byte, &size))
+		{
+			return {reinterpret_cast<std::byte const*>(byte), size};
+		}
+		return {};
+	}
+
+	TextureBitMap TextureWrapper::CoverToBitMap()
+	{
+		auto bitmap = FreeImage_LoadFromMemory(
+			Translate(encode_format), 
+			reinterpret_cast<FIMEMORY*>(wrapper)
+		);
+		if (bitmap != nullptr)
+		{
+			FreeImage_SeekMemory(
+				reinterpret_cast<FIMEMORY*>(wrapper),
+				0,
+				SEEK_SET
+			);
+			return TextureBitMap{bitmap, encode_format };
+		}
+		return {};
+	}
+
+	TextureWrapper& TextureWrapper::operator=(TextureWrapper&& wrapper)
+	{
+		Reset();
+		this->wrapper = wrapper.wrapper;
+		wrapper.wrapper = nullptr;
+		this->encode_format = wrapper.encode_format;
+		wrapper.encode_format = EncodeFormat::UNKNOW;
+		return *this;
+	}
+
 	TextureBitMap::operator bool() const
 	{
 		return bitmap != nullptr;
@@ -39,15 +128,9 @@ namespace Dumpling::TextureEncoder
 		wrapper.original_format = EncodeFormat::UNKNOW;
 	}
 
-	TextureBitMap::TextureBitMap(void* bitmap, EncodeFormat original_format)
-		: bitmap(bitmap), original_format(original_format)
-	{
-
-	}
-
 	TextureBitMap& TextureBitMap::operator=(TextureBitMap&& wrapper)
 	{
-		Clear();
+		Reset();
 		bitmap = wrapper.bitmap;
 		original_format = wrapper.original_format;
 		wrapper.bitmap = nullptr;
@@ -55,7 +138,7 @@ namespace Dumpling::TextureEncoder
 		return *this;
 	}
 
-	void TextureBitMap::Clear()
+	void TextureBitMap::Reset()
 	{
 		if (bitmap != nullptr)
 		{
@@ -67,7 +150,7 @@ namespace Dumpling::TextureEncoder
 	
 	TextureBitMap::~TextureBitMap()
 	{
-		Clear();
+		Reset();
 	}
 
 	TextureInfo TextureBitMap::GetTextureInfo() const
@@ -76,64 +159,85 @@ namespace Dumpling::TextureEncoder
 
 		TextureInfo info;
 
-		info.height = FreeImage_GetHeight(reinterpret_cast<FIBITMAP*>(bitmap));
-		info.width = FreeImage_GetWidth(reinterpret_cast<FIBITMAP*>(bitmap));
-		auto k = FreeImage_GetColorType(reinterpret_cast<FIBITMAP*>(bitmap));
-		FreeImage_SaveToMemory(FREE_IMAGE_FORMAT::);
+		auto header = FreeImage_GetInfoHeader(
+			reinterpret_cast<FIBITMAP*>(bitmap)
+		);
+
+		if (header != nullptr)
+		{
+			info.height = header->biHeight;
+			info.width = header->biWidth;
+			info.pixel_size = header->biBitCount;
+			info.total_size = info.height * info.width * info.pixel_size;
+		}
 
 		return info;
 	}
 
-	EncodeFormat TexEncoder::GetTextureFormat(std::span<std::byte const> texture_binary)
+	std::span<std::byte const> TextureBitMap::GetByte() const
 	{
-		auto memory = FreeImage_OpenMemory(
-			const_cast<BYTE*>(reinterpret_cast<BYTE const*>(texture_binary.data())),
-			texture_binary.size()
-		);
-
-		if (memory == nullptr)
-			return EncodeFormat::UNKNOW;
-
-		auto format_type = Translate(FreeImage_GetFileTypeFromMemory(memory));
-
-		FreeImage_CloseMemory(memory);
-
-		return format_type;
-
+		auto info = GetTextureInfo();
+		if (info)
+		{
+			auto byte = FreeImage_GetBits(
+				reinterpret_cast<FIBITMAP*>(bitmap)
+			);
+			if (byte != nullptr)
+			{
+				return {
+					reinterpret_cast<std::byte const*>(byte),
+					info.total_size
+				};
+			}
+		}
+		return {};
 	}
 
-	TextureBitMap TexEncoder::LoadToBitMapTexture(std::span<std::byte const> texture_binary)
+	TextureWrapper TextureBitMap::CoverToEncodedTexture(EncodeFormat target_format)
+	{
+		if (target_format != EncodeFormat::UNKNOW)
+		{
+			auto mem = FreeImage_OpenMemory();
+			if (mem == nullptr)
+			{
+				return {};
+			}
+			if (FreeImage_SaveToMemory(
+				Translate(target_format),
+				reinterpret_cast<FIBITMAP*>(bitmap),
+				mem
+			))
+			{
+				FreeImage_SeekMemory(mem, 0, SEEK_SET);
+				return TextureWrapper{ mem, target_format };
+			}
+			FreeImage_CloseMemory(mem);
+		}
+		return {};
+	}
+
+	TextureWrapper TexEncoder::CreateWrapper(std::span<std::byte const> encoded_texture)
 	{
 		auto memory = FreeImage_OpenMemory(
-			const_cast<BYTE*>(reinterpret_cast<BYTE const*>(texture_binary.data())),
-			texture_binary.size()
+			const_cast<BYTE*>(reinterpret_cast<BYTE const*>(encoded_texture.data())),
+			encoded_texture.size()
 		);
 
-		if (memory == nullptr)
-			return {};
-
-		auto freeimage_type = FreeImage_GetFileTypeFromMemory(memory);
-		auto type = Translate(freeimage_type);
-
-		if (type == EncodeFormat::UNKNOW)
+		if (memory != nullptr)
 		{
-			FreeImage_CloseMemory(memory);
-			return {};
+			auto encode_format = Translate(
+				FreeImage_GetFileTypeFromMemory(memory)
+			);
+
+			if (encode_format != EncodeFormat::UNKNOW)
+			{
+				return TextureWrapper{memory, encode_format };
+			}
 		}
-			
-		auto bitmap = FreeImage_LoadFromMemory(freeimage_type, memory);
-
-		if (bitmap == nullptr)
-		{
-			FreeImage_CloseMemory(memory);
-			return {};
-		}
-
-		FreeImage_CloseMemory(memory);
-
-		TextureBitMap ref{ reinterpret_cast<void*>(bitmap), type};
-		return ref;
+		return {};
 	}
+
+	
 
 	
 

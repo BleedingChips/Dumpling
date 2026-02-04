@@ -14,6 +14,7 @@ export namespace Dumpling::TextureEncoder
 		BMP,
 		HDR,
 		DDS,
+		PNG,
 		UNKNOW
 	};
 
@@ -21,8 +22,31 @@ export namespace Dumpling::TextureEncoder
 	{
 		std::size_t width = 0;
 		std::size_t height = 0;
+		std::size_t pixel_size = 0;
+		std::size_t total_size = 0;
 		
 		operator bool() const { return width > 0 && height > 0; }
+	};
+
+	struct TextureBitMap;
+
+	struct TextureWrapper
+	{
+		TextureWrapper() = default;
+		~TextureWrapper();
+		TextureWrapper(TextureWrapper&& wrapper);
+		TextureWrapper& operator=(TextureWrapper&& wrapper);
+		operator bool() const;
+		void Reset();
+		std::span<std::byte const> GetByteData() const;
+		TextureBitMap CoverToBitMap();
+	protected:
+		TextureWrapper(void* wrapper, EncodeFormat encode_format) : wrapper(wrapper), encode_format(encode_format) {}
+		void* wrapper = nullptr;
+		EncodeFormat encode_format = EncodeFormat::UNKNOW;
+
+		friend struct TexEncoder;
+		friend struct TextureBitMap;
 	};
 
 	struct TextureBitMap
@@ -33,13 +57,16 @@ export namespace Dumpling::TextureEncoder
 		TextureBitMap& operator=(TextureBitMap&& wrapper);
 		operator bool() const;
 		TextureInfo GetTextureInfo() const;
-		void Clear();
+		void Reset();
+		std::span<std::byte const> GetByte() const;
+		TextureWrapper CoverToEncodedTexture(EncodeFormat target_format);
 	protected:
-		TextureBitMap(void* bitmap, EncodeFormat original_format = EncodeFormat::UNKNOW);
+		TextureBitMap(void* bitmap, EncodeFormat original_format = EncodeFormat::UNKNOW) : bitmap(bitmap), original_format(original_format) {}
 		void* bitmap = nullptr;
 		EncodeFormat original_format = EncodeFormat::UNKNOW;
 
 		friend struct TexEncoder;
+		friend struct TextureWrapper;
 	};
 
 	struct TexEncoder
@@ -54,9 +81,7 @@ export namespace Dumpling::TextureEncoder
 		using Ptr = Potato::Pointer::IntrusivePtr<TexEncoder, Wrapper>;
 
 		static Ptr Create(std::pmr::memory_resource* resource = std::pmr::get_default_resource());
-		EncodeFormat GetTextureFormat(std::span<std::byte const> texture_binary);
-		TextureBitMap LoadToBitMapTexture(std::span<std::byte const> texture_binary);
-
+		TextureWrapper CreateWrapper(std::span<std::byte const> encoded_texture);
 
 	protected:
 
