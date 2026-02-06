@@ -206,7 +206,7 @@ namespace Dumpling::HLSLCompiler
 	{
 		if (result)
 		{
-			ComPtr<IDxcBlobUtf8> error_message;
+			Dx12::ComPtr<IDxcBlobUtf8> error_message;
 			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
 			auto re = real_result->GetOutput(
 				DXC_OUT_ERRORS,
@@ -230,7 +230,7 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	ComPtr<ID3D12ShaderReflection> Instance::CreateReflection(ResultPtr const& result)
+	Dx12::ComPtr<ID3D12ShaderReflection> Instance::CreateReflection(ResultPtr const& result)
 	{
 		if (!result)
 			return {};
@@ -244,7 +244,7 @@ namespace Dumpling::HLSLCompiler
 
 		auto real_blob = static_cast<IDxcBlob*>(blob.GetPointer());
 		auto real_utils = static_cast<IDxcUtils*>(utils.GetPointer());
-		ComPtr<ID3D12ShaderReflection> reflection;
+		Dx12::ComPtr<ID3D12ShaderReflection> reflection;
 		DxcBuffer buffer;
 		buffer.Encoding = DXC_CP_ACP;
 		buffer.Ptr = real_blob->GetBufferPointer();
@@ -257,11 +257,11 @@ namespace Dumpling::HLSLCompiler
 		return reflection;
 	}
 
-	ComPtr<ID3D10Blob> Instance::GetShaderObject(ResultPtr const& result)
+	Dx12::ComPtr<ID3D10Blob> Instance::GetShaderObject(ResultPtr const& result)
 	{
 		if (result)
 		{
-			ComPtr<ID3D10Blob> blob;
+			Dx12::ComPtr<ID3D10Blob> blob;
 			auto real_result = static_cast<IDxcResult*>(result.GetPointer());
 			real_result->GetOutput(DXC_OUT_OBJECT, __uuidof(decltype(blob)::Type), blob.GetPointerVoidAdress(), nullptr);
 			return blob;
@@ -269,7 +269,7 @@ namespace Dumpling::HLSLCompiler
 		return {};
 	}
 
-	ComPtr<ID3D10Blob> Instance::CompileShader(CompilerPtr& compiler, ShaderTarget shader_target, Dx12::ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context)
+	Dx12::ComPtr<ID3D10Blob> Instance::CompileShader(CompilerPtr& compiler, ShaderTarget shader_target, Dx12::ShaderSlot& out_slot, Dx12::ShaderSharedResource& shared_resource, ShaderEnterPointView entry_point, ComplieContext const& context)
 	{
 		auto encoded_code = EncodeShader(entry_point.code);
 		auto argument = CreateArguments(shader_target, entry_point.entry_point, entry_point.file_path, context.flag);
@@ -293,28 +293,29 @@ namespace Dumpling::HLSLCompiler
 		if (!reflection)
 			return {};
 
-		ShaderType shader_type = TranslateShaderType(shader_target);
+		Dx12::ShaderType shader_type = TranslateShaderType(shader_target);
 
-		Dx12::ShaderReflectionConstBufferContext reflection_context;
-		reflection_context.type_layout_override = context.type_layout_override;
+		Dx12::ShaderReflectionContext reflection_context;
+		reflection_context.const_buffer_struct_layout_override = context.cbuffer_layout_override;
+		reflection_context.context_define_resource = context.context_define_override;
 
-		if (!GetShaderSlot(shader_type, *reflection, out_slot, context.cbuffer_layout_override, reflection_context))
+		if (!GetShaderSlot(shader_type, *reflection, out_slot, shared_resource, reflection_context))
 			return {};
 
 		return GetShaderObject(compiler_result);
 	}
 
-	bool Instance::CompileMaterial(CompilerPtr& compiler, Dx12::ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext const& material_context, ComplieContext const& context)
+	bool Instance::CompileMaterial(CompilerPtr& compiler, Dx12::ShaderSlot& out_slot, Dx12::ShaderSharedResource& shared_resource, MaterialShaderOutput& out_shader, MaterialShaderContext const& material_context, ComplieContext const& context)
 	{
 		if (!compiler)
 			return false;
 
-		ComPtr<ID3D10Blob> vs_code;
+		Dx12::ComPtr<ID3D10Blob> vs_code;
 
 		if (material_context.vs_entry_point)
 		{
 			auto target = ShaderTarget::VS_6_0;
-			auto block = CompileShader(compiler, target, out_slot, material_context.vs_entry_point, context);
+			auto block = CompileShader(compiler, target, out_slot, shared_resource, material_context.vs_entry_point, context);
 			if (!block)
 			{
 				return false;
@@ -322,12 +323,12 @@ namespace Dumpling::HLSLCompiler
 			vs_code = std::move(block);
 		}
 
-		ComPtr<ID3D10Blob> ps_code;
+		Dx12::ComPtr<ID3D10Blob> ps_code;
 
 		if (material_context.ps_entry_point)
 		{
 			auto target = ShaderTarget::PS_6_0;
-			auto block = CompileShader(compiler, target, out_slot, material_context.ps_entry_point, context);
+			auto block = CompileShader(compiler, target, out_slot, shared_resource, material_context.ps_entry_point, context);
 			if (!block)
 			{
 				return false;

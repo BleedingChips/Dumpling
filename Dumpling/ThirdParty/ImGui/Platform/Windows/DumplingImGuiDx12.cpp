@@ -17,7 +17,7 @@ namespace Dumpling::IMGUI
 {
 	ImGuiHeadUpDisplayWin32Dx12::ImGuiHeadUpDisplayWin32Dx12(
 		Potato::IR::MemoryResourceRecord record,
-		ComPtr<ID3D12DescriptorHeap> heap,
+		Dx12::ComPtr<ID3D12DescriptorHeap> heap,
 		IGWidget::Ptr top_widget,
 		std::size_t heap_handle_increment_size,
 		ImGuiContext* context
@@ -46,7 +46,7 @@ namespace Dumpling::IMGUI
 				0
 			};
 			
-			ComPtr<ID3D12DescriptorHeap> heap;
+			Dx12::ComPtr<ID3D12DescriptorHeap> heap;
 			auto re = renderer.GetDevice()->CreateDescriptorHeap(
 				&desc, __uuidof(decltype(heap)::Type), heap.GetPointerVoidAdress()
 			);

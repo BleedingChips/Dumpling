@@ -575,10 +575,14 @@ namespace Dumpling::Dx12
 				case D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
 					using_heap = shader_define_descriptor.sampler_heap;
 					break;
+				default:
+					assert(false);
+					return false;
 				}
 			}
 			if (using_heap == nullptr)
 			{
+				assert(false);
 				return false;
 			}
 

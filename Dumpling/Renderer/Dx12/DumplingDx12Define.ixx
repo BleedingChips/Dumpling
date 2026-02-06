@@ -8,7 +8,7 @@ export module DumplingDx12Define;
 import std;
 import Potato;
 
-export namespace Dumpling
+export namespace Dumpling::Dx12
 {
 	using StructLayout = Potato::IR::StructLayout;
 
@@ -33,7 +33,8 @@ export namespace Dumpling
 		CONST_BUFFER,
 		TEXTURE,
 		UNORDER_ACCED,
-		SAMPLER
+		SAMPLER,
+		UNKNOW
 	};
 
 	/*

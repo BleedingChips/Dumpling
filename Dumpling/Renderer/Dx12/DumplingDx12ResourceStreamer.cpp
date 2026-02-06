@@ -61,23 +61,20 @@ namespace Dumpling::Dx12
 
 		bool heap_has_been_used = false;
 
-		for (auto& ite : request.upload_resource)
+		if (request.upload_resource)
 		{
-			if (ite)
+			D3D12_RANGE range{ 0, request.upload_resource.using_size };
+			request.upload_resource.resource->Unmap(0, &range);
+			if (request.upload_resource.using_size > 0)
 			{
-				D3D12_RANGE range{0, ite.using_size};
-				ite.resource->Unmap(0, &range);
-				if (ite.using_size > 0)
-				{
-					heap_has_been_used = true;
-					waitting_object.emplace_back(
-						current_flush_frame,
-						std::move(ite.resource)
-					);
-				}
-				ite.Reset();
+				heap_has_been_used = true;
+				waitting_object.emplace_back(
+					current_flush_frame,
+					std::move(request.upload_resource.resource)
+				);
 			}
 		}
+		request.upload_resource.Reset();
 
 		if (heap)
 		{
@@ -113,13 +110,12 @@ namespace Dumpling::Dx12
 		device.Reset(); 
 		allocator.Reset();
 		upload_heap.Reset();
-		for (auto& ite : upload_resource)
-			ite.Reset();
+		upload_resource.Reset();
 	}
 
 	std::optional<D3D12_RESOURCE_STATES> PassStreamer::UploadBufferResource( void const* buffer, std::size_t buffer_size, ID3D12Resource& target_resource, std::size_t target_offset, ResourceState state)
 	{
-		auto& resource = upload_resource[0];
+		auto& resource = upload_resource;
 
 		if (!resource)
 			return std::nullopt;
@@ -270,7 +266,7 @@ namespace Dumpling::Dx12
 
 		ComPtr<ID3D12CommandAllocator> current_allocator;
 		ComPtr<ID3D12GraphicsCommandList> current_command_list;
-		bool need_heap = (config.buffer_size + config.texture_size) > 0;
+		bool need_heap = config.buffer_size > 0;
 		ComPtr<ID3D12Heap> current_heap;
 		std::size_t heap_size = 0;
 
@@ -284,8 +280,7 @@ namespace Dumpling::Dx12
 		if (current_command_list && need_heap)
 		{
 			std::tie(current_heap, heap_size) = GetUploadHeap(
-				Potato::MemLayout::AlignTo(config.buffer_size, heap_align) +
-				Potato::MemLayout::AlignTo(config.texture_size, heap_align)
+				Potato::MemLayout::AlignTo(config.buffer_size, heap_align)
 			);
 		}
 
@@ -308,14 +303,9 @@ namespace Dumpling::Dx12
 				{
 					auto [upload_resource, resource_size] = CreateBufferResource(*request.upload_heap, config.buffer_size);
 					assert(upload_resource);
-					request.upload_resource[0].resource = std::move(upload_resource);
-					request.upload_resource[0].resource->Map(0, nullptr, nullptr);
-					request.upload_resource[0].max_size = resource_size;
-				}
-
-				if (config.texture_size > 0)
-				{
-					assert(false);
+					request.upload_resource.resource = std::move(upload_resource);
+					request.upload_resource.resource->Map(0, nullptr, nullptr);
+					request.upload_resource.max_size = resource_size;
 				}
 			}
 

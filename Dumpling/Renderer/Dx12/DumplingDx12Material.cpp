@@ -94,15 +94,15 @@ namespace Dumpling::Dx12
 		return view;
 	}
 
-	std::optional<ShaderDefineDescriptorTable> CreateDescriptorHeap(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& shader_slot)
+	std::optional<ShaderDefineDescriptorTable> CreateDescriptorHeap(ID3D12Device& device, ShaderSharedResource const& shared_resource)
 	{
 		ShaderDefineDescriptorTable result;
 
-		if (shader_slot.srv_descriptor_table.size() > 0)
+		if (shared_resource.descriptor_table.size() > 0)
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC desc{
 				D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-				static_cast<UINT>(shader_slot.srv_descriptor_table.size()),
+				static_cast<UINT>(shared_resource.descriptor_table.size()),
 				D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				1
 			};
@@ -117,11 +117,11 @@ namespace Dumpling::Dx12
 			}
 		}
 
-		if (shader_slot.sampler_descriptor_table.size() > 0)
+		if (shared_resource.sampler_descriptor_table.size() > 0)
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC desc{
 				D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-				static_cast<UINT>(shader_slot.sampler_descriptor_table.size()),
+				static_cast<UINT>(shared_resource.sampler_descriptor_table.size()),
 				D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				1
 			};
@@ -139,12 +139,13 @@ namespace Dumpling::Dx12
 		return result;
 	}
 
-	bool ShaderDefineDescriptorTable::CreateConstBufferView(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, ID3D12Resource& resource, Potato::Misc::IndexSpan<> span)
+	bool ShaderDefineDescriptorTable::CreateConstBufferView(ID3D12Device& device, ShaderSharedResource const& shared_resource, std::size_t resource_index, ID3D12Resource& resource, Potato::Misc::IndexSpan<> span)
 	{
-		if (resource_heap && info.srv_descriptor_table.size() > resource_index)
+		auto descriptor_offset = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		if (resource_heap && shared_resource.descriptor_table.size() > resource_index)
 		{
-			auto& target_info = info.srv_descriptor_table[resource_index];
-			if (target_info.resource_type != ShaderResourceType::CONST_BUFFER)
+			auto& target_info = shared_resource.descriptor_table[resource_index];
+			if (target_info.type != ShaderResourceType::CONST_BUFFER)
 				return false;
 
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
@@ -152,7 +153,7 @@ namespace Dumpling::Dx12
 			cbv_desc.SizeInBytes = span.Size();
 			device.CreateConstantBufferView(
 				&cbv_desc,
-				D3D12_CPU_DESCRIPTOR_HANDLE{ resource_heap->GetCPUDescriptorHandleForHeapStart().ptr + target_info.descriptor_heap_offset }
+				D3D12_CPU_DESCRIPTOR_HANDLE{ resource_heap->GetCPUDescriptorHandleForHeapStart().ptr + target_info.resource_index * descriptor_offset }
 			);
 			return true;
 			
@@ -162,6 +163,7 @@ namespace Dumpling::Dx12
 
 	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device& device, ShaderSlot const& shader_slot)
 	{
+		/*
 		D3D12_DESCRIPTOR_HEAP_DESC desc{
 			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 			static_cast<UINT>(shader_slot.const_buffer.size()),
@@ -176,30 +178,27 @@ namespace Dumpling::Dx12
 		);
 
 		return target;
+		*/
+		return { };
 	}
 
 	ComPtr<ID3D12RootSignature> CreateRootSignature(
 		ID3D12Device& device,
 		ShaderSlot const& shader_slot,
-		ShaderDefineDescriptorTableInfo& shader_define_descriptor,
 		DescriptorTableMapping& descriptor_table_mapping,
-		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(ShaderSlot::Source)> context_defined_descriptor_mapping
+		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(ShaderSlotLocate)> context_defined_descriptor_mapping
 	)
 	{
-
 		struct ShaderResourceDescriptorInfo
 		{
 			ShaderResourceType resource_type;
-			std::size_t resource_index;
 			ContextDefinedDescriptorTable context_defined_table;
 		};
 
-		std::array<ShaderResourceDescriptorInfo, 64> shader_resource_descriptor_info;
+		std::array<ShaderResourceDescriptorInfo, 128> shader_resource_descriptor_info;
 		std::size_t shader_resource_descriptor_info_count = 0;
 
-		auto total_resource_size = (
-			shader_slot.const_buffer.size()
-			);
+		auto total_resource_size = shader_slot.slots.size();
 
 		if (total_resource_size >= shader_resource_descriptor_info.size())
 		{
@@ -210,53 +209,40 @@ namespace Dumpling::Dx12
 		{
 			auto heap_incread_size = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			auto heap_sampler_incread_size = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-			std::size_t heap_cbv_srv_uav_offset = 0;
-			std::size_t heap_sampler_offset = 0;
 
-			auto map_descriptor_table = [&](ShaderSlot::Source source, ShaderResourceType type, std::size_t resource_index) -> bool
-				{
-					auto& tar = shader_resource_descriptor_info[shader_resource_descriptor_info_count];
-					tar.resource_type = type;
-					tar.resource_index = resource_index;
-					shader_resource_descriptor_info_count += 1;
-					if (source.IsContextDefine())
-					{
-						tar.context_defined_table = context_defined_descriptor_mapping(source);
-						assert(tar.context_defined_table);
-						if (!tar.context_defined_table)
-							return false;
-					}
-					else {
-						switch (type)
-						{
-						case ShaderResourceType::CONST_BUFFER:
-						case ShaderResourceType::TEXTURE:
-						case ShaderResourceType::UNORDER_ACCED:
-							tar.context_defined_table = {D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, std::numeric_limits<std::size_t>::max(), heap_cbv_srv_uav_offset };
-							shader_define_descriptor.srv_descriptor_table.emplace_back(type, resource_index, heap_cbv_srv_uav_offset);
-							heap_cbv_srv_uav_offset += heap_incread_size;
-							break;
-						case ShaderResourceType::SAMPLER:
-							tar.context_defined_table = {D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, std::numeric_limits<std::size_t>::max(), heap_sampler_offset };
-							shader_define_descriptor.sampler_descriptor_table.emplace_back(type, resource_index, heap_sampler_offset);
-							heap_sampler_offset += heap_sampler_incread_size;
-							break;
-						default:
-							assert(false);
-						}
-					}
-					return true;
-				};
-
+			for (auto& ite : shader_slot.slots)
 			{
-				std::size_t const_buffer_index = 0;
-				for (auto& ite : shader_slot.const_buffer)
+				auto& tar = shader_resource_descriptor_info[shader_resource_descriptor_info_count];
+				tar.resource_type = ite.resource_type;
+				shader_resource_descriptor_info_count += 1;
+				if (ite.located.IsContextDefine())
 				{
-					if (!map_descriptor_table(ite.source, ShaderResourceType::CONST_BUFFER, const_buffer_index))
+					tar.context_defined_table = context_defined_descriptor_mapping(ite.located);
+					assert(tar.context_defined_table);
+					if (!tar.context_defined_table)
+						return {};
+				}
+				else {
+					switch (ite.resource_type)
 					{
+					case ShaderResourceType::CONST_BUFFER:
+					case ShaderResourceType::TEXTURE:
+					case ShaderResourceType::UNORDER_ACCED:
+					{
+						auto descriptor_offset = ite.located.context_index * heap_incread_size;
+						tar.context_defined_table = { D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, std::numeric_limits<std::size_t>::max(), descriptor_offset };
+						break;
+					}
+					case ShaderResourceType::SAMPLER:
+					{
+						auto descriptor_offset = ite.located.context_index * heap_sampler_incread_size;
+						tar.context_defined_table = { D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, std::numeric_limits<std::size_t>::max(), descriptor_offset };
+						break;
+					}
+					default:
+						assert(false);
 						return {};
 					}
-					++const_buffer_index;
 				}
 			}
 			
@@ -274,6 +260,7 @@ namespace Dumpling::Dx12
 		std::array<ShaderSlotDescriptorInfo, 128> shader_slot_descriptor_info;
 		std::size_t shader_slot_descriptor_info_count = 0;
 		bool need_input = true;
+		std::size_t index = 0;
 		for (auto& ite : shader_slot.slots)
 		{
 			auto& tar = shader_slot_descriptor_info[shader_slot_descriptor_info_count++];
@@ -287,26 +274,11 @@ namespace Dumpling::Dx12
 				break;
 			default:
 				assert(false);
-			}
-
-			auto finded = std::find_if(
-				shader_resource_descriptor_info.begin(),
-				shader_resource_descriptor_info.begin() + shader_resource_descriptor_info_count,
-				[&](ShaderResourceDescriptorInfo& in) {
-					return in.resource_type == ite.resource_type && in.resource_index == ite.resource_index;
-				}
-			);
-
-			if (finded == shader_resource_descriptor_info.begin() + shader_resource_descriptor_info_count)
-			{
-				assert(false);
 				return {};
 			}
-
-			std::size_t index = static_cast<std::size_t>(finded - shader_resource_descriptor_info.begin());
-
-			tar.descriptor = finded->context_defined_table;
+			tar.descriptor = shader_resource_descriptor_info[index].context_defined_table;
 			tar.shader_resource_descriptor_info_index = index;
+			++index;
 		}
 
 		std::sort(

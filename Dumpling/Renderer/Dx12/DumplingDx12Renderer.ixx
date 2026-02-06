@@ -134,7 +134,7 @@ export namespace Dumpling::Dx12
 		bool ClearRendererTarget(std::size_t index, Float4 color = Color::black_rgba);
 		bool SetGraphicDescriptorTable(
 			DescriptorTableMapping const& descriptor_table_mapping, 
-			ShaderDefineDescriptorTable& shader_define_descriptor, 
+			ShaderDefineDescriptorTable& shared_resource,
 			Potato::TMP::FunctionRef<ID3D12DescriptorHeap* (D3D12_DESCRIPTOR_HEAP_TYPE, std::size_t identity)> func = {}
 		);
 		//bool ClearDepthStencil(RendererTargetCarrier const& render_target, float depth, uint8_t stencil);

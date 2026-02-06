@@ -21,18 +21,6 @@ export namespace Dumpling::Dx12
 		TRIANGLE = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 	};
 
-	struct ShaderDefineDescriptorTableInfo
-	{
-		struct Index
-		{
-			ShaderResourceType resource_type;
-			std::size_t resource_index;
-			std::size_t descriptor_heap_offset;
-		};
-		std::pmr::vector<Index> srv_descriptor_table;
-		std::pmr::vector<Index> sampler_descriptor_table;
-	};
-
 	struct DescriptorTableMapping
 	{
 		struct Mapping
@@ -48,7 +36,7 @@ export namespace Dumpling::Dx12
 		struct DescriptorTable
 		{
 			D3D12_DESCRIPTOR_HEAP_TYPE type;
-			ShaderSlot::Source source;
+			ShaderSlotLocate locate;
 		};
 		std::pmr::vector<DescriptorTable> descriptor_table;
 	};
@@ -65,10 +53,10 @@ export namespace Dumpling::Dx12
 	{
 		ComPtr<ID3D12DescriptorHeap> resource_heap;
 		ComPtr<ID3D12DescriptorHeap> sampler_heap;
-		bool CreateConstBufferView(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& info, std::size_t resource_index, ID3D12Resource& resource, Potato::Misc::IndexSpan<> span);
+		bool CreateConstBufferView(ID3D12Device& device, ShaderSharedResource const& shared_resource, std::size_t resource_index, ID3D12Resource& resource, Potato::Misc::IndexSpan<> span);
 	};
 
-	std::optional<ShaderDefineDescriptorTable> CreateDescriptorHeap(ID3D12Device& device, ShaderDefineDescriptorTableInfo const& shader_slot);
+	std::optional<ShaderDefineDescriptorTable> CreateDescriptorHeap(ID3D12Device& device, ShaderSharedResource const& shared_resource);
 	
 	struct ContextDefinedDescriptorTable
 	{
@@ -81,10 +69,9 @@ export namespace Dumpling::Dx12
 
 	ComPtr<ID3D12RootSignature> CreateRootSignature(
 		ID3D12Device& device, 
-		ShaderSlot const& shader_slot, 
-		ShaderDefineDescriptorTableInfo& shader_define_descriptor,
+		ShaderSlot const& shader_slot,
 		DescriptorTableMapping& descriptor_table_mapping,
-		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(ShaderSlot::Source)> context_defined_descriptor_mapping = {}
+		Potato::TMP::FunctionRef<ContextDefinedDescriptorTable(ShaderSlotLocate)> context_defined_descriptor_mapping = {}
 	);
 	
 	ComPtr<ID3D12PipelineState> CreatePipelineState(ID3D12Device& device, ID3D12RootSignature& root_signature, MaterialState const& material_state);

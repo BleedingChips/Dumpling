@@ -4,6 +4,7 @@ module;
 #include "Windows.h"
 #include "d3d12shader.h"
 #undef max
+#undef FindResource
 
 module DumplingDx12Shader;
 import DumplingDX12StructLayout;
@@ -13,7 +14,7 @@ namespace Dumpling::Dx12
 {
 	using Potato::IR::StructLayout;
 
-
+	/*
 	std::optional<ShaderStatistics> GetShaderStatistics(ID3D12ShaderReflection& target_reflection)
 	{
 		D3D12_SHADER_DESC desc;
@@ -27,6 +28,7 @@ namespace Dumpling::Dx12
 		}
 		return std::nullopt;
 	}
+	*/
 
 	template<typename ElementT> struct MappingToScalarWrapper
 	{
@@ -65,6 +67,105 @@ namespace Dumpling::Dx12
 			assert(false);
 			return {};
 		}
+	}
+
+	std::pmr::vector<ShaderSharedResource::ResourceDescriptor>* ShaderSharedResource::GetDescriptorTable(ShaderResourceType type)
+	{
+		switch (type)
+		{
+		case ShaderResourceType::TEXTURE:
+		case ShaderResourceType::CONST_BUFFER:
+			return &descriptor_table;
+			break;
+		case ShaderResourceType::SAMPLER:
+			return &sampler_descriptor_table;
+			break;
+		default:
+			assert(false);
+			return nullptr;
+		}
+	}
+
+	std::optional<std::size_t> ShaderSharedResource::FindResource(ShaderResourceType type, std::u8string_view name) const
+	{
+		std::pmr::vector<ResourceDescriptor> const* tar_descriptor = GetDescriptorTable(type);
+
+		if (tar_descriptor != nullptr)
+		{
+			std::size_t index = 0;
+			for (auto& ite : *tar_descriptor)
+			{
+				if (ite.type == ShaderResourceType::CONST_BUFFER)
+				{
+					auto ite_name = std::u8string_view{
+						name_buffer.data() + ite.name.Begin(),
+						name_buffer.data() + ite.name.End()
+					};
+
+					if (ite_name == name)
+					{
+						return index;
+					}
+				}
+				index++;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	ShaderSharedResource::ResourceDescriptor const* ShaderSharedResource::GetResourceDescriptor(ShaderResourceType type, std::size_t index)
+	{
+		std::pmr::vector<ResourceDescriptor> const* tar_descriptor = GetDescriptorTable(type);
+
+		if (tar_descriptor != nullptr)
+		{
+			if (tar_descriptor->size() > index)
+			{
+				auto tar = tar_descriptor->data() + index;
+				if (tar->type == type)
+				{
+					return tar;
+				}
+			}
+		}
+		return nullptr;
+	}
+
+	std::optional<std::size_t> ShaderSharedResource::AddResource(ShaderResourceType type, std::u8string_view name, ResourceProperty property)
+	{
+		assert(!FindResource(type, name).has_value());
+		std::pmr::vector<ResourceDescriptor>* tar_descriptor = GetDescriptorTable(type);
+		if (tar_descriptor != nullptr)
+		{
+			auto old_name_buffer = name_buffer.size();
+			name_buffer.append_range(name);
+			Potato::Misc::IndexSpan<> name_index = { old_name_buffer, name_buffer.size() };
+			std::size_t resource_index = 0;
+			switch (type)
+			{
+			case ShaderResourceType::CONST_BUFFER:
+				resource_index = const_buffer_count++;
+				break;
+			case ShaderResourceType::TEXTURE:
+				resource_index = texture_count++;
+				break;
+			case ShaderResourceType::SAMPLER:
+				resource_index = sampler_descriptor_table.size();
+				break;
+			default:
+				assert(false);
+				return std::nullopt;
+			}
+			tar_descriptor->emplace_back(
+				type,
+				name_index,
+				std::move(property),
+				resource_index
+			);
+			return tar_descriptor->size() - 1;
+		}
+		return std::nullopt;
 	}
 
 	std::tuple<StructLayout::Ptr, std::size_t> CreateLayoutFromReflectionType(
@@ -142,105 +243,219 @@ namespace Dumpling::Dx12
 	}
 
 
-	ShaderSlot::ConstBuffer CreateLayoutFromCBuffer(
+	ShaderSlotLocate CreateLayoutFromCBuffer(
 		ID3D12ShaderReflectionConstantBuffer& target_const_buffer,
-		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> layout_override,
-		ShaderReflectionConstBufferContext const& context
+		std::size_t array_count,
+		ShaderSharedResource& shared_resource,
+		ShaderReflectionContext const& context
 	)
 	{
 		D3D12_SHADER_BUFFER_DESC buffer_desc;
 		target_const_buffer.GetDesc(&buffer_desc);
 		std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
-		if (layout_override)
+
+		auto finded_index = shared_resource.FindResource(ShaderResourceType::CONST_BUFFER, cbuffer_name);
+
+		if (finded_index.has_value())
 		{
-			auto cbuffer_source = layout_override(cbuffer_name);
-			if (cbuffer_source.layout && cbuffer_source.layout->GetLayout().size >= buffer_desc.Size)
+			auto property = shared_resource.GetResourceDescriptor(ShaderResourceType::CONST_BUFFER, *finded_index);
+			if (property == nullptr)
 			{
-				return cbuffer_source;
+				assert(property != nullptr);
+				return {};
 			}
+			if (property->property.bind_count != array_count)
+			{
+				assert(property->property.bind_count == array_count);
+				return {};
+			}
+			ShaderSlotLocate locate;
+			locate.context_index = *finded_index;
+			return locate;
 		}
 
-		std::pmr::vector<Potato::IR::StructLayout::Member> members(context.temporary_resource);
-		members.reserve(buffer_desc.Variables);
-		for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
+		if (context.context_define_resource)
 		{
-			auto ver = target_const_buffer.GetVariableByIndex(index);
-			assert(ver != nullptr);
-			auto [layout, array_count] = CreateLayoutFromVariable(*ver, context.type_layout_override, context.layout_resource, context.temporary_resource);
-			Potato::IR::StructLayout::Member current_member;
-			current_member.struct_layout = std::move(layout);
-			current_member.array_count = array_count;
-			D3D12_SHADER_VARIABLE_DESC var_desc;
-			bool re = SUCCEEDED(ver->GetDesc(&var_desc));
-			assert(re);
-			current_member.name = reinterpret_cast<char8_t const*>(var_desc.Name);
-			members.push_back(current_member);
-		}
-		auto struct_layout = StructLayout::CreateDynamic(
-			reinterpret_cast<char8_t const*>(buffer_desc.Name),
-			std::span(members.data(), members.size()), GetHLSLConstBufferPolicy(),
-			context.layout_resource
-		);
+			auto locate = context.context_define_resource(
+				cbuffer_name,
+				ShaderResourceType::CONST_BUFFER,
+				array_count
+			);
 
+			if (locate)
+				return locate;
+		}
+
+		Potato::IR::StructLayout::Ptr cbuffer_layout;
+
+		if (context.const_buffer_struct_layout_override)
 		{
-			auto mvs = struct_layout->GetMemberView();
-			std::vector<D3D12_SHADER_VARIABLE_DESC> des;
+			cbuffer_layout = context.const_buffer_struct_layout_override(cbuffer_name);
+		}
+
+		if (!cbuffer_layout)
+		{
+			std::pmr::vector<Potato::IR::StructLayout::Member> members(context.temporary_resource);
+			members.reserve(buffer_desc.Variables);
 			for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
 			{
-				auto mv = mvs[index];
 				auto ver = target_const_buffer.GetVariableByIndex(index);
 				assert(ver != nullptr);
-				D3D12_SHADER_VARIABLE_DESC ver_desc;
-				auto re = ver->GetDesc(&ver_desc);
-				assert(SUCCEEDED(re));
-				des.push_back(ver_desc);
-				auto layout = mvs[index].member_layout;
-				assert(layout.offset == ver_desc.StartOffset);
-				assert((layout.array_layout.each_element_offset * std::max(layout.array_layout.count, std::size_t{ 1 })) >= ver_desc.Size);
+				auto [layout, array_count] = CreateLayoutFromVariable(*ver, context.const_buffer_struct_layout_override, context.layout_resource, context.temporary_resource);
+				Potato::IR::StructLayout::Member current_member;
+				current_member.struct_layout = std::move(layout);
+				current_member.array_count = array_count;
+				D3D12_SHADER_VARIABLE_DESC var_desc;
+				bool re = SUCCEEDED(ver->GetDesc(&var_desc));
+				assert(re);
+				current_member.name = reinterpret_cast<char8_t const*>(var_desc.Name);
+				members.push_back(current_member);
+			}
+			cbuffer_layout = StructLayout::CreateDynamic(
+				reinterpret_cast<char8_t const*>(buffer_desc.Name),
+				std::span(members.data(), members.size()), GetHLSLConstBufferPolicy(),
+				context.layout_resource
+			);
+		}
+
+		if (cbuffer_layout)
+		{
+			// for_debug
+			{
+				auto mvs = cbuffer_layout->GetMemberView();
+				std::vector<D3D12_SHADER_VARIABLE_DESC> des;
+				for (std::size_t index = 0; index < buffer_desc.Variables; ++index)
+				{
+					auto mv = mvs[index];
+					auto ver = target_const_buffer.GetVariableByIndex(index);
+					assert(ver != nullptr);
+					D3D12_SHADER_VARIABLE_DESC ver_desc;
+					auto re = ver->GetDesc(&ver_desc);
+					assert(SUCCEEDED(re));
+					des.push_back(ver_desc);
+					auto layout = mvs[index].member_layout;
+					assert(layout.offset == ver_desc.StartOffset);
+					assert((layout.array_layout.each_element_offset * std::max(layout.array_layout.count, std::size_t{ 1 })) >= ver_desc.Size);
+				}
+			}
+
+			auto added_index = shared_resource.AddResource(
+				ShaderResourceType::CONST_BUFFER,
+				cbuffer_name,
+				{std::move(cbuffer_layout), array_count }
+			);
+
+			if (!added_index.has_value())
+			{
+				assert(false);
+				return {};
+			}
+
+			ShaderSlotLocate locate;
+			locate.context_index = *added_index;
+			return locate;
+		}
+		return {};
+	}
+
+	bool InserShaderSlot(
+		ShaderType type,
+		ShaderResourceType resource_type,
+		D3D12_SHADER_INPUT_BIND_DESC bind_sesc,
+		ShaderSlot& out_slot,
+		ShaderSharedResource& shared_resource,
+		ShaderReflectionContext const& context
+	)
+	{
+		std::u8string_view name = { reinterpret_cast<char8_t const*>(bind_sesc.Name) };
+
+		auto finded_index = shared_resource.FindResource(resource_type, name);
+
+		if (finded_index.has_value())
+		{
+			auto pro = shared_resource.GetResourceDescriptor(resource_type, *finded_index);
+			if (pro == nullptr)
+			{
+				assert(false);
+				return false;
+			}
+			if (pro->property.bind_count != bind_sesc.BindCount)
+			{
+				assert(false);
+				return false;
+			}
+
+			ShaderSlotLocate slot;
+			slot.context_index = *finded_index;
+			out_slot.slots.emplace_back(
+				type,
+				resource_type,
+				slot,
+				bind_sesc.BindPoint, bind_sesc.Space
+			);
+
+			return true;
+		}
+
+		if (context.context_define_resource)
+		{
+			auto locate = context.context_define_resource(
+				name,
+				resource_type,
+				bind_sesc.BindCount
+			);
+			if (locate)
+			{
+				out_slot.slots.emplace_back(
+					type,
+					resource_type,
+					locate,
+					bind_sesc.BindPoint, bind_sesc.Space
+				);
+				return true;
 			}
 		}
 
-		return { struct_layout, {} };
+		auto added_index = shared_resource.AddResource(
+			resource_type,
+			name,
+			{
+				{},
+				bind_sesc.BindCount
+			}
+		);
+
+		if (!added_index)
+		{
+			assert(false);
+			return false;
+		}
+
+		ShaderSlotLocate locate;
+		locate.context_index = *added_index;
+
+		out_slot.slots.emplace_back(
+			type,
+			resource_type,
+			locate,
+			bind_sesc.BindPoint, bind_sesc.Space
+		);
+
+		return true;
 	}
 
 	bool GetShaderSlot(
-		ShaderType type, 
-		ID3D12ShaderReflection& reflection, 
+		ShaderType type,
+		ID3D12ShaderReflection& reflection,
 		ShaderSlot& out_slot,
-		Potato::TMP::FunctionRef<ShaderSlot::ConstBuffer(std::u8string_view)> layout_override,
-		ShaderReflectionConstBufferContext const& context
+		ShaderSharedResource& shared_resource,
+		ShaderReflectionContext const& context
 		)
 	{
 
 		D3D12_SHADER_DESC desc;
 		if (!SUCCEEDED(reflection.GetDesc(&desc)))
 			return false;
-
-		std::size_t exist_index = std::numeric_limits<std::size_t>::max();
-
-		auto reference_context = context;
-
-		auto layout_exist_override = [&](std::u8string_view name) mutable -> ShaderSlot::ConstBuffer
-			{
-				std::size_t index = 0;
-
-				for (auto& ite : out_slot.const_buffer)
-				{
-					if (name == ite.layout->GetName())
-					{
-						exist_index = index;
-						return ite;
-					}
-					++index;
-				}
-
-				if (layout_override)
-				{
-					return layout_override(name);
-				}
-
-				return {};
-			};
 
 		for (std::size_t i = 0; i < desc.BoundResources; ++i)
 		{
@@ -253,24 +468,54 @@ namespace Dumpling::Dx12
 				auto buffer = reflection.GetConstantBufferByName(bind_sesc.Name);
 				if (buffer != nullptr)
 				{
-					exist_index = std::numeric_limits<std::size_t>::max();
-					auto cbuffer_layout = CreateLayoutFromCBuffer(*buffer, layout_exist_override, context);
-					if (!cbuffer_layout.layout)
+					auto locate = CreateLayoutFromCBuffer(*buffer, bind_sesc.BindCount, shared_resource, context);
+					if (!locate)
 						return false;
-					if (exist_index == std::numeric_limits<std::size_t>::max())
-					{
-						auto current_buffer_index = out_slot.const_buffer.size();
-						out_slot.const_buffer.emplace_back(std::move(cbuffer_layout));
-						out_slot.slots.push_back({ type, ShaderResourceType::CONST_BUFFER, current_buffer_index, bind_sesc.BindPoint, bind_sesc.Space });
-					}
-					else {
-						out_slot.slots.push_back({ type, ShaderResourceType::CONST_BUFFER, exist_index, bind_sesc.BindPoint, bind_sesc.Space });
-					}
-					out_slot.total_statics.bound_resource_count += 1;
-					out_slot.total_statics.const_buffer_count += 1;
+					out_slot.slots.emplace_back(
+						type,
+						ShaderResourceType::CONST_BUFFER,
+						locate,
+						bind_sesc.BindPoint, bind_sesc.Space
+					);
 				}
 				break;
 			}
+				
+			case D3D_SHADER_INPUT_TYPE::D3D_SIT_TEXTURE:
+			{
+				if (!InserShaderSlot(
+					type,
+					ShaderResourceType::TEXTURE,
+					bind_sesc,
+					out_slot,
+					shared_resource,
+					context
+				))
+				{
+					assert(false);
+					return false;
+				}
+				break;
+			}
+				
+			case D3D_SHADER_INPUT_TYPE::D3D_SIT_SAMPLER:
+			{
+				if (!InserShaderSlot(
+					type,
+					ShaderResourceType::SAMPLER,
+					bind_sesc,
+					out_slot,
+					shared_resource,
+					context
+				))
+				{
+					assert(false);
+					return false;
+				}
+				break;
+			}
+			default:
+				assert(false);
 			}
 		}
 

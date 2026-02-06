@@ -82,14 +82,14 @@ export namespace Dumpling::HLSLCompiler
 		PS_Lastest = PS_6_0,
 	};
 
-	constexpr ShaderType TranslateShaderType(ShaderTarget target)
+	constexpr Dx12::ShaderType TranslateShaderType(ShaderTarget target)
 	{
 		switch (target)
 		{
 		case ShaderTarget::VS_6_0:
-			return ShaderType::VS;
+			return Dx12::ShaderType::VS;
 		}
-		return ShaderType::PS;
+		return Dx12::ShaderType::PS;
 	}
 
 	enum class ComplieTargetVersion
@@ -106,8 +106,8 @@ export namespace Dumpling::HLSLCompiler
 	{
 		ComplieTargetVersion version = ComplieTargetVersion::VERSION_5;
 		ComplierFlag flag = ComplierFlag::None;
-		Potato::TMP::FunctionRef<Dx12::ShaderSlot::ConstBuffer(std::u8string_view)> cbuffer_layout_override;
-		Potato::TMP::FunctionRef<StructLayout::Ptr(std::u8string_view)> type_layout_override;
+		Potato::TMP::FunctionRef<Dx12::ShaderSlotLocate(std::u8string_view, Dx12::ShaderResourceType, std::size_t)> context_define_override;
+		Potato::TMP::FunctionRef<Dx12::StructLayout::Ptr(std::u8string_view)> cbuffer_layout_override;
 		Potato::TMP::FunctionRef<void(std::u8string_view, ShaderTarget)> error_capture;
 	};
 
@@ -127,8 +127,8 @@ export namespace Dumpling::HLSLCompiler
 
 	struct MaterialShaderOutput
 	{
-		ComPtr<ID3D10Blob> vs;
-		ComPtr<ID3D10Blob> ps;
+		Dx12::ComPtr<ID3D10Blob> vs;
+		Dx12::ComPtr<ID3D10Blob> ps;
 	};
 
 	struct Instance
@@ -140,8 +140,8 @@ export namespace Dumpling::HLSLCompiler
 		Instance() = default;
 		operator bool() const { return utils; }
 
-		ComPtr<ID3D10Blob> GetShaderObject(ResultPtr const& result);
-		ComPtr<ID3D12ShaderReflection> CreateReflection(ResultPtr const& result);
+		Dx12::ComPtr<ID3D10Blob> GetShaderObject(ResultPtr const& result);
+		Dx12::ComPtr<ID3D12ShaderReflection> CreateReflection(ResultPtr const& result);
 		bool GetErrorMessage(ResultPtr const& result, Potato::TMP::FunctionRef<void(std::u8string_view)> receive_function = {});
 		EncodingBlobPtr EncodeShader(std::u8string_view shader_code);
 		ArgumentPtr CreateArguments(ShaderTarget target, std::u8string_view entry_point, std::u8string_view file_path, ComplierFlag flag = ComplierFlag::None);
@@ -149,11 +149,11 @@ export namespace Dumpling::HLSLCompiler
 		ResultPtr Compile(CompilerPtr& compiler, EncodingBlobPtr const& code, ArgumentPtr const& arguments);
 		static Instance Create();
 
-		bool CompileMaterial(CompilerPtr& compiler, Dx12::ShaderSlot& out_slot, MaterialShaderOutput& out_shader, MaterialShaderContext  const& material_context, ComplieContext const& context);
+		bool CompileMaterial(CompilerPtr& compiler, Dx12::ShaderSlot& out_slot, Dx12::ShaderSharedResource& shared_resource, MaterialShaderOutput& out_shader, MaterialShaderContext  const& material_context, ComplieContext const& context);
 
 	protected:
 
-		ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, Dx12::ShaderSlot& out_slot, ShaderEnterPointView entry_point, ComplieContext const& context);
+		Dx12::ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, Dx12::ShaderSlot& out_slot, Dx12::ShaderSharedResource& shared_resource, ShaderEnterPointView entry_point, ComplieContext const& context);
 
 		using Ptr = Potato::Pointer::IntrusivePtr<void, UtilsWrapper>;
 

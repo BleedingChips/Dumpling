@@ -28,16 +28,21 @@ cbuffer UserDefine  {
 	float4 ColorOffset;
 };
 
+Texture2D<float4> text;
+sampler text_sampler;
+
 struct Vertex
 {
 	float4 position : SV_POSITION;
 	float4 color : COLOR;
+	float2 uv : TEXTURE;
 };
 
 struct InputVertex
 {
 	float3 Position : POSITION;
 	float3 Color : COLOR;
+	float2 UV : TEXTURE;
 };
 
 Vertex VSMain(InputVertex in_vertex)
@@ -45,6 +50,7 @@ Vertex VSMain(InputVertex in_vertex)
 	Vertex vertex;
 	vertex.position = float4(in_vertex.Position.x, in_vertex.Position.y, in_vertex.Position.z, 1.0f) + PositionOffset;
 	vertex.color = float4(in_vertex.Color.x, in_vertex.Color.y, in_vertex.Color.z, 1.0f);
+	vertex.uv = in_vertex.UV;
 	return vertex;
 };
 
@@ -56,7 +62,7 @@ struct Pixel
 Pixel PSMain(Vertex vertex)
 {
 	Pixel pixel;
-	pixel.Color = vertex.color + ColorOffset;
+	pixel.Color = vertex.color + ColorOffset * text.Sample(text_sampler, vertex.uv);
 	return pixel;
 };
 
@@ -64,7 +70,7 @@ Pixel PSMain(Vertex vertex)
 
 int main()
 {
-
+	using Potato::IR::StructLayout;
 	Dx12::Device::InitDebugLayer();
 
 	Dx12::Device device;
@@ -79,6 +85,7 @@ int main()
 
 	HLSLCompiler::MaterialShaderOutput shader_output;
 	Dx12::ShaderSlot shader_slot;
+	Dx12::ShaderSharedResource shader_shader_slot;
 
 	HLSLCompiler::ComplieContext context;
 	context.error_capture = [](std::u8string_view message, HLSLCompiler::ShaderTarget target) {
@@ -88,6 +95,7 @@ int main()
 	bool result = instance.CompileMaterial(
 		compiler,
 		shader_slot,
+		shader_shader_slot,
 		shader_output,
 		{
 			{shader, u8"VSMain", u8"Test.hlsl"},
@@ -119,6 +127,10 @@ int main()
 			{
 				Dx12::GetHLSLConstBufferStructLayout<Float3>(),
 				u8"COLOR"
+			},
+			{
+				Dx12::GetHLSLConstBufferStructLayout<Float2>(),
+				u8"TEXTURE"
 			}
 		}
 	);
@@ -163,12 +175,11 @@ int main()
 	
 	auto size_in_byte = vertex_object->GetBuffer().size();
 
-	Dx12::ShaderDefineDescriptorTableInfo description_table_description_info;
 	Dx12::DescriptorTableMapping description_mapping;
 
-	auto root_signature = CreateRootSignature(device, shader_slot, description_table_description_info, description_mapping);
+	auto root_signature = CreateRootSignature(device, shader_slot, description_mapping);
 
-	auto cb = Potato::IR::StructLayoutObject::DefaultConstruct(shader_slot.const_buffer[0].layout);
+	auto cb = Potato::IR::StructLayoutObject::Ptr{}; //Potato::IR::StructLayoutObject::DefaultConstruct(shader_shader_slot.const_buffer[0]);
 
 	auto p1 = cb->MemberAs<Float4>(0);
 	auto p2 = cb->MemberAs<Float4>(1);
@@ -199,12 +210,12 @@ int main()
 
 	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, Dx12::heap_align);
 
-	auto description_heap = CreateDescriptorHeap(device, description_table_description_info);
-	description_heap->CreateConstBufferView(device, description_table_description_info, 0, *vertex_buffer, { cb_offset, cb->GetBuffer().size() + cb_offset });
+	auto description_heap = CreateDescriptorHeap(device, shader_shader_slot);
+	description_heap->CreateConstBufferView(device, shader_shader_slot, 0, *vertex_buffer, { cb_offset, cb->GetBuffer().size() + cb_offset });
 
 	{
 		Dx12::PassStreamer pass_streamer;
-		streamer.PopRequester(pass_streamer, {1, 0});
+		streamer.PopRequester(pass_streamer, {1});
 
 		auto current_state = pass_streamer.UploadBufferResource(
 			vertex_object->GetBuffer(),
@@ -304,6 +315,8 @@ int main()
 			B -= 1.0f;
 	}
 	
+	output->LogicPresent();
+	output->Present();
 
 	return 0;
 }

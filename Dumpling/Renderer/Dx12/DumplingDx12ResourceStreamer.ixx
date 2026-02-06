@@ -28,7 +28,6 @@ export namespace Dumpling::Dx12
 		struct Config
 		{
 			std::size_t buffer_size = 0;
-			std::size_t texture_size = 0;
 		};
 
 		PassStreamer() = default;
@@ -60,8 +59,7 @@ export namespace Dumpling::Dx12
 			operator bool() const { return resource; }
 		};
 
-		std::array<ResourceDescription, 2> upload_resource;
-
+		ResourceDescription upload_resource;
 		ComPtr<ID3D12Heap> upload_heap;
 
 		friend struct ResourceStreamer;

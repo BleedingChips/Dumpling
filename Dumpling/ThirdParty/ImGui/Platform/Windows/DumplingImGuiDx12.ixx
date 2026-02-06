@@ -28,7 +28,7 @@ export namespace Dumpling::IMGUI
 		
 		ImGuiHeadUpDisplayWin32Dx12(
 			Potato::IR::MemoryResourceRecord record,
-			ComPtr<ID3D12DescriptorHeap> heap,
+			Dx12::ComPtr<ID3D12DescriptorHeap> heap,
 			IGWidget::Ptr top_widget,
 			std::size_t heap_handle_increment_size,
 			ImGuiContext* context
@@ -36,7 +36,7 @@ export namespace Dumpling::IMGUI
 		~ImGuiHeadUpDisplayWin32Dx12();
 
 		ImGuiContext* io_context = nullptr;
-		ComPtr<ID3D12DescriptorHeap> heap;
+		Dx12::ComPtr<ID3D12DescriptorHeap> heap;
 		std::uint64_t available_heap_mark = 0;
 		std::size_t heap_handle_increment_size = 0;
 	};
