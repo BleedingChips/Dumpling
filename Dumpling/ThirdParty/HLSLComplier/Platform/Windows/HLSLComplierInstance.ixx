@@ -11,6 +11,7 @@ import std;
 import Potato;
 import DumplingDx12Define;
 import DumplingDx12Shader;
+import DumplingWin32Define;
 
 
 namespace Dumpling::HLSLCompiler
@@ -65,6 +66,7 @@ export namespace Dumpling::HLSLCompiler
 	using Potato::IR::Layout;
 	using Potato::IR::StructLayout;
 	using Potato::IR::StructLayoutObject;
+	using Win32::ComPtr;
 
 	using BlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
 	using EncodingBlobPtr = Potato::Pointer::IntrusivePtr<void, EncodingBlobWrapper>;
@@ -127,8 +129,8 @@ export namespace Dumpling::HLSLCompiler
 
 	struct MaterialShaderOutput
 	{
-		Dx12::ComPtr<ID3D10Blob> vs;
-		Dx12::ComPtr<ID3D10Blob> ps;
+		ComPtr<ID3D10Blob> vs;
+		ComPtr<ID3D10Blob> ps;
 	};
 
 	struct Instance
@@ -140,8 +142,8 @@ export namespace Dumpling::HLSLCompiler
 		Instance() = default;
 		operator bool() const { return utils; }
 
-		Dx12::ComPtr<ID3D10Blob> GetShaderObject(ResultPtr const& result);
-		Dx12::ComPtr<ID3D12ShaderReflection> CreateReflection(ResultPtr const& result);
+		ComPtr<ID3D10Blob> GetShaderObject(ResultPtr const& result);
+		ComPtr<ID3D12ShaderReflection> CreateReflection(ResultPtr const& result);
 		bool GetErrorMessage(ResultPtr const& result, Potato::TMP::FunctionRef<void(std::u8string_view)> receive_function = {});
 		EncodingBlobPtr EncodeShader(std::u8string_view shader_code);
 		ArgumentPtr CreateArguments(ShaderTarget target, std::u8string_view entry_point, std::u8string_view file_path, ComplierFlag flag = ComplierFlag::None);
@@ -153,7 +155,7 @@ export namespace Dumpling::HLSLCompiler
 
 	protected:
 
-		Dx12::ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, Dx12::ShaderSlot& out_slot, Dx12::ShaderSharedResource& shared_resource, ShaderEnterPointView entry_point, ComplieContext const& context);
+		ComPtr<ID3D10Blob> CompileShader(CompilerPtr& compiler, ShaderTarget shader_type, Dx12::ShaderSlot& out_slot, Dx12::ShaderSharedResource& shared_resource, ShaderEnterPointView entry_point, ComplieContext const& context);
 
 		using Ptr = Potato::Pointer::IntrusivePtr<void, UtilsWrapper>;
 

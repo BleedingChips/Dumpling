@@ -59,7 +59,6 @@ export namespace Dumpling::Dx12
 		}
 	};
 
-
 	struct ShaderSlot
 	{
 		struct Slot

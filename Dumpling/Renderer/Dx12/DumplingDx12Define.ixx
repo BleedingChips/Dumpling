@@ -7,20 +7,12 @@ export module DumplingDx12Define;
 
 import std;
 import Potato;
+import DumplingWin32Define;
 
 export namespace Dumpling::Dx12
 {
 	using StructLayout = Potato::IR::StructLayout;
-
-	struct ComWrapper
-	{
-		void AddRef(IUnknown* ptr) { ptr->AddRef(); }
-		void SubRef(IUnknown* ptr) { ptr->Release(); }
-		using PotatoPointerEnablePointerAccess = void;
-	};
-
-	template<typename PointerT>
-	using ComPtr = Potato::Pointer::IntrusivePtr<PointerT, ComWrapper>;
+	using Win32::ComPtr;
 
 	enum class ShaderType
 	{

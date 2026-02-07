@@ -179,7 +179,10 @@ int main()
 
 	auto root_signature = CreateRootSignature(device, shader_slot, description_mapping);
 
-	auto cb = Potato::IR::StructLayoutObject::Ptr{}; //Potato::IR::StructLayoutObject::DefaultConstruct(shader_shader_slot.const_buffer[0]);
+	Dx12::ShaderSharedResourceInstance inst;
+	inst.Init(shader_shader_slot);
+
+	auto cb = inst.const_buffers[0].const_buffer;
 
 	auto p1 = cb->MemberAs<Float4>(0);
 	auto p2 = cb->MemberAs<Float4>(1);
