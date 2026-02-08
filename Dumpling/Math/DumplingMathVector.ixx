@@ -124,8 +124,8 @@ export namespace Dumpling::Math
 	}
 
 	template <class First, class... Rest>
-	requires(Potato::TMP::IsRepeat<First, Rest...>::value)
-	Vector(First, Rest...) -> Vector<First, 1 + sizeof...(Rest)>;
+	requires(std::is_same_v<std::remove_cvref_t<First>, std::remove_cvref_t<Rest>> && ... && true)
+	Vector(First, Rest...) -> Vector<std::remove_cvref_t<First>, 1 + sizeof...(Rest)>;
 
 	using Float1 = Math::Vector<float, 1>;
 	using Float2 = Math::Vector<float, 2>;

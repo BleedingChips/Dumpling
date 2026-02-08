@@ -10,28 +10,28 @@ namespace Dumpling::Renderer
 
 	StructLayout::Ptr CreateDefaultPresetVertexLayout()
 	{
-		static auto vertex_layout = Potato::IR::StructLayout::CreateDynamic(
+
+		static auto vertex_layout = Potato::IR::StaticReferenceStructLayout{
 			u8"preset_default_vertex_layout",
-			std::initializer_list<StructLayout::Member>{
-				{
-					Potato::IR::StructLayout::GetStatic<Math::Float3>(),
-					u8"POSITION"
-				},
-				{
-					Potato::IR::StructLayout::GetStatic<Math::Float3>(),
-					u8"COLOR"
-				},
-				{
-					Potato::IR::StructLayout::GetStatic<Math::Float3>(),
-					u8"NORMAL"
-				},
-				{
-					Potato::IR::StructLayout::GetStatic<Math::Float2>(),
-					u8"TEXTURE"
-				}
+			{},
+			StructLayout::Member{
+				Potato::IR::StructLayout::GetStatic<Math::Float3>(),
+				u8"POSITION"
+			},
+			StructLayout::Member{
+				Potato::IR::StructLayout::GetStatic<Math::Float3>(),
+				u8"COLOR"
+			},
+			StructLayout::Member{
+				Potato::IR::StructLayout::GetStatic<Math::Float3>(),
+				u8"NORMAL"
+			},
+			StructLayout::Member{
+				Potato::IR::StructLayout::GetStatic<Math::Float2>(),
+				u8"TEXTURE"
 			}
-		);
-		return vertex_layout;
+		};
+		return &vertex_layout;
 	}
 
 	StructLayout::Ptr CreateDefaultPresetIndexLayout()
@@ -46,8 +46,6 @@ namespace Dumpling::Renderer
 		Math::Float3 normal;
 		Math::Float2 texture;
 	};
-
-	
 
 	PresetGeometry PresetGeometry::GetTriangle()
 	{
