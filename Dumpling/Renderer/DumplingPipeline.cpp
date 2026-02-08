@@ -1,10 +1,10 @@
 module;
 
 #include <cassert>
-module DumplingPipeline;
+module DumplingRendererPipeline;
 
 
-namespace Dumpling
+namespace Dumpling::Renderer
 {
 	PassIndex PassDistributor::RegisterPass(PassScription scription)
 	{

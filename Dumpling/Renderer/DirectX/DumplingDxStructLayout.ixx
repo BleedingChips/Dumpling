@@ -1,23 +1,20 @@
 module;
 
-#include "d3d12.h"
-#include "dxgi1_6.h"
+#include "dxgi.h"
 #include <cassert>
-#include "wrl.h"
 
 #undef interface
 #undef max
 
-export module DumplingDX12StructLayout;
+export module DumplingDxStructLayout;
 
 import std;
 import Potato;
 import DumplingMathVector;
+import DumplingDxDefine;
 
-export namespace Dumpling::Dx12
+export namespace Dumpling::Dx
 {
-
-	using StructLayout = Potato::IR::StructLayout;
 
 	template<typename Type>
 	struct HLSLConstBufferAcceptableType;
@@ -261,4 +258,6 @@ export namespace Dumpling::Dx12
 	}
 
 	Potato::MemLayout::LayoutPolicyRef GetHLSLConstBufferPolicy() { return Potato::MemLayout::LayoutPolicyRef(HLSLConstBufferCombineMemberFunc, HLSLConstBufferCompleteLayoutFunc); }
+
+	DXGI_FORMAT GetDXGIFormat(Potato::IR::StructLayout const& layout);
 }

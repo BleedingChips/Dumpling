@@ -5,11 +5,12 @@ import Potato;
 #undef GetObject
 
 using namespace Dumpling;
+using namespace Dumpling::Dx12;
 
 
-struct TopHook : public FormEventHook
+struct TopHook : public Win32::FormEventHook
 {
-	virtual FormEvent::Respond Hook(FormEvent& event) override
+	virtual Win32::FormEvent::Respond Hook(FormEvent& event) override
 	{
 		if (event.IsMessage(FormMessage::DESTORY))
 		{
@@ -21,55 +22,27 @@ struct TopHook : public FormEventHook
 	virtual void SubFormEventHookRef() const {};
 } hook;
 
-std::u8string_view shader = u8R"(
-
-cbuffer UserDefine  {
-	float4 PositionOffset;
-	float4 ColorOffset;
-};
-
-Texture2D<float4> text;
-sampler text_sampler;
-
-struct Vertex
-{
-	float4 position : SV_POSITION;
-	float4 color : COLOR;
-	float2 uv : TEXTURE;
-};
-
-struct InputVertex
-{
-	float3 Position : POSITION;
-	float3 Color : COLOR;
-	float2 UV : TEXTURE;
-};
-
-Vertex VSMain(InputVertex in_vertex)
-{
-	Vertex vertex;
-	vertex.position = float4(in_vertex.Position.x, in_vertex.Position.y, in_vertex.Position.z, 1.0f) + PositionOffset;
-	vertex.color = float4(in_vertex.Color.x, in_vertex.Color.y, in_vertex.Color.z, 1.0f);
-	vertex.uv = in_vertex.UV;
-	return vertex;
-};
-
-struct Pixel
-{
-	float4 Color : SV_TARGET0;
-};
-
-Pixel PSMain(Vertex vertex)
-{
-	Pixel pixel;
-	pixel.Color = vertex.color + ColorOffset * text.Sample(text_sampler, vertex.uv);
-	return pixel;
-};
-
-)";
 
 int main()
 {
+
+	auto finded_path = Potato::Path::ReverseRecursiveSearchDirectory(u8"Test");
+	if (!finded_path.empty())
+	{
+		std::filesystem::current_path(finded_path);
+	}
+
+	std::pmr::u8string shader_code;
+
+	auto read_code = Potato::Document::BinaryStreamReader::ReadToBuffer(u8"TestShaderTexture.hlsl", [&](std::size_t size) -> std::span<std::byte> {
+		shader_code.resize(size);
+		return std::span(reinterpret_cast<std::byte*>(shader_code.data()), shader_code.size() * sizeof(char8_t));
+	});
+
+	if (!read_code.has_value())
+		return 0;
+
+
 	using Potato::IR::StructLayout;
 	Dx12::Device::InitDebugLayer();
 
@@ -98,8 +71,8 @@ int main()
 		shader_shader_slot,
 		shader_output,
 		{
-			{shader, u8"VSMain", u8"Test.hlsl"},
-			{shader, u8"PSMain", u8"Test.hlsl"}
+			{shader_code, u8"VSMain", u8"Test.hlsl"},
+			{shader_code, u8"PSMain", u8"Test.hlsl"}
 		},
 		context
 	);
@@ -117,27 +90,7 @@ int main()
 
 	auto output = device.CreateFormWrapper(form, form_renderer);
 
-	auto vertex_layout = Potato::IR::StructLayout::CreateDynamic(
-		u8"default_vertex_layout",
-		std::initializer_list<StructLayout::Member>{
-			{
-				Dx12::GetHLSLConstBufferStructLayout<Float3>(),
-				u8"POSITION"
-			},
-			{
-				Dx12::GetHLSLConstBufferStructLayout<Float3>(),
-				u8"COLOR"
-			},
-			{
-				Dx12::GetHLSLConstBufferStructLayout<Float2>(),
-				u8"TEXTURE"
-			}
-		}
-	);
-
-	auto vertex_object = Potato::IR::StructLayoutObject::DefaultConstruct(vertex_layout, 3, Dx12::GetHLSLConstBufferPolicy());
-	
-	auto p = vertex_object->GetObject(0);
+	auto presets_geometry = Dumpling::Renderer::PresetGeometry::GetTriangle();
 
 	D3D12_VIEWPORT view_port{
 		0.0f,
@@ -147,6 +100,7 @@ int main()
 		0.0f,
 		1.0f
 	};
+
 	D3D12_RECT rect{
 		0,
 		0,
@@ -154,26 +108,10 @@ int main()
 		768
 	};
 
-
-	Float3& v1 = *vertex_object->MemberAs<Float3>(0, 0);
-	Float3& v2 = *vertex_object->MemberAs<Float3>(0, 1);
-	Float3& v3 = *vertex_object->MemberAs<Float3>(0, 2);
-	Float3& c1 = *vertex_object->MemberAs<Float3>(1, 0);
-	Float3& c2 = *vertex_object->MemberAs<Float3>(1, 1);
-	Float3& c3 = *vertex_object->MemberAs<Float3>(1, 2);
-	v1 = Float3{ 0.0f, 0.5f, 0.0f };
-	v2 = Float3{ 0.0f, 0.0f, 0.0f };
-	v3 = Float3{ 0.5f, 0.0f, 0.0f };
-	c1 = Float3{ 1.0f, 0.5f, 0.0f };
-	c2 = Float3{ 1.0f, 0.0f, 1.0f };
-	c3 = Float3{ 0.0f, 0.0f, 1.0f };
-
-	std::uint32_t index_object[3] = {2, 1, 0};
-
-	auto index_buffer_offset = Potato::MemLayout::AlignTo(vertex_object->GetBuffer().size(), Dx12::resource_buffer_align);
+	auto index_buffer_offset = Potato::MemLayout::AlignTo(presets_geometry.vertex_data->GetBuffer().size(), Dx12::resource_buffer_align);
 	auto cb_offset = Potato::MemLayout::AlignTo(index_buffer_offset + sizeof(std::uint32_t) * 3, 256);
 	
-	auto size_in_byte = vertex_object->GetBuffer().size();
+	auto size_in_byte = presets_geometry.vertex_data->GetBuffer().size();
 
 	Dx12::DescriptorTableMapping description_mapping;
 
@@ -184,15 +122,15 @@ int main()
 
 	auto cb = inst.const_buffers[0].const_buffer;
 
-	auto p1 = cb->MemberAs<Float4>(0);
-	auto p2 = cb->MemberAs<Float4>(1);
-	*p1 = Float4{ -0.5f, -0.5f, 0.0f };
-	*p2 = Float4{ 0.5f, 0.5f, 0.5f, 0.0f };
+	auto p1 = cb->MemberAs<Math::Float4>(0);
+	auto p2 = cb->MemberAs<Math::Float4>(1);
+	*p1 = Math::Float4{ 0.0f, 0.0f, 0.0f };
+	*p2 = Math::Float4{ 0.5f, 0.5f, 0.5f, 0.0f };
 
-	Float4* typ = reinterpret_cast<Float4*>(cb->GetObject());
+	Math::Float4* typ = reinterpret_cast<Math::Float4*>(cb->GetObject());
 
 	Dx12::MaterialState material_state;
-	material_state.vs_layout = vertex_layout;
+	material_state.vs_layout = presets_geometry.vertex_data->GetStructLayout();
 	material_state.vs_shader = shader_output.vs;
 	material_state.ps_shader = shader_output.ps;
 
@@ -221,13 +159,13 @@ int main()
 		streamer.PopRequester(pass_streamer, {1});
 
 		auto current_state = pass_streamer.UploadBufferResource(
-			vertex_object->GetBuffer(),
+			presets_geometry.vertex_data->GetBuffer(),
 			*vertex_buffer
 		);
 
 		
 		auto state_change2 = pass_streamer.UploadBufferResource(
-			&index_object, sizeof(std::uint32_t) * 3,
+			presets_geometry.index_data->GetBuffer(),
 			*vertex_buffer,
 			index_buffer_offset
 		);
@@ -247,7 +185,7 @@ int main()
 		streamer.Commited(pass_streamer);
 	}
 
-	auto view = Dx12::GetVertexBufferView(*vertex_object, *vertex_buffer);
+	auto view = Dx12::GetVertexBufferView(*presets_geometry.vertex_data, *vertex_buffer);
 	auto index_view = Dx12::GetIndexBufferView(*vertex_buffer, 3, index_buffer_offset);
 
 	while(need_loop)

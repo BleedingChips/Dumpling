@@ -657,7 +657,7 @@ namespace Dumpling::Dx12
 		frame = std::numeric_limits<std::size_t>::max();
 	}
 
-	bool PassRenderer::ClearRendererTarget(std::size_t index, Float4 color)
+	bool PassRenderer::ClearRendererTarget(std::size_t index, Math::Float4 color)
 	{
 		if(index < cache_render_target.size())
 		{

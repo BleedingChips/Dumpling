@@ -11,10 +11,14 @@ export module DumplingDx12Shader;
 
 import std;
 import Potato;
+import DumplingDxDefine;
 import DumplingDx12Define;
 
 export namespace Dumpling::Dx12
 {
+	using Dx::ShaderResourceType;
+	using Dx::ShaderType;
+
 	struct ShaderSlotLocate
 	{
 		std::size_t context_id = std::numeric_limits<std::size_t>::max();

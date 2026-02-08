@@ -7,12 +7,14 @@ module;
 #undef FindResource
 
 module DumplingDx12Shader;
-import DumplingDX12StructLayout;
+
+import DumplingDxStructLayout;
 
 
 namespace Dumpling::Dx12
 {
 	using Potato::IR::StructLayout;
+	using namespace Dumpling::Dx;
 
 	/*
 	std::optional<ShaderStatistics> GetShaderStatistics(ID3D12ShaderReflection& target_reflection)

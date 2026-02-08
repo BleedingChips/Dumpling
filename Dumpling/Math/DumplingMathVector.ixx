@@ -126,10 +126,7 @@ export namespace Dumpling::Math
 	template <class First, class... Rest>
 	requires(Potato::TMP::IsRepeat<First, Rest...>::value)
 	Vector(First, Rest...) -> Vector<First, 1 + sizeof...(Rest)>;
-}
 
-export namespace Dumpling
-{
 	using Float1 = Math::Vector<float, 1>;
 	using Float2 = Math::Vector<float, 2>;
 	using Float3 = Math::Vector<float, 3>;

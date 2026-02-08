@@ -6,27 +6,14 @@ module;
 module DumplingDx12Material;
 
 import DumplingMath;
-import DumplingDX12StructLayout;
+import DumplingDxStructLayout;
 
 
 namespace Dumpling::Dx12
 {
 	using Potato::IR::StructLayout;
-
-	DXGI_FORMAT Translate(StructLayout const& layout)
-	{
-		if (layout.SupportNativeReference(typeid(Float2)))
-			return DXGI_FORMAT_R32G32_FLOAT;
-		if (layout.SupportNativeReference(typeid(Float3)))
-			return DXGI_FORMAT_R32G32B32_FLOAT;
-		if (layout.SupportNativeReference(typeid(Float4)))
-			return DXGI_FORMAT_R32G32B32A32_FLOAT;
-		if (layout.SupportNativeReference(typeid(float)) || layout.SupportNativeReference(typeid(Float1)))
-			return DXGI_FORMAT_R32_FLOAT;
-		if (layout.SupportNativeReference(typeid(std::uint32_t)))
-			return DXGI_FORMAT_R32_UINT;
-		return DXGI_FORMAT_UNKNOWN;
-	}
+	using namespace Dumpling::Dx;
+	
 
 	std::optional<std::size_t> CreateInputDescription(Potato::IR::StructLayout const& vertex_layout, std::span<D3D12_INPUT_ELEMENT_DESC> desc, std::span<char8_t> temporary_str)
 	{
@@ -66,7 +53,7 @@ namespace Dumpling::Dx12
 			target.SemanticName = reinterpret_cast<char*>(str_ite.data());
 			str_ite = str_ite.subspan(view.name.size() + 1);
 			target.SemanticIndex = semantic_index;
-			target.Format = Translate(*view.struct_layout);
+			target.Format = GetDXGIFormat(*view.struct_layout);
 			assert(target.Format != DXGI_FORMAT_UNKNOWN);
 			target.InputSlot = 0;
 			target.AlignedByteOffset = view.member_layout.offset;
@@ -192,27 +179,6 @@ namespace Dumpling::Dx12
 			}
 			++index;
 		}
-	}
-
-	ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device& device, ShaderSlot const& shader_slot)
-	{
-		/*
-		D3D12_DESCRIPTOR_HEAP_DESC desc{
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			static_cast<UINT>(shader_slot.const_buffer.size()),
-			D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			1
-		};
-
-		ComPtr<ID3D12DescriptorHeap> target;
-
-		device.CreateDescriptorHeap(
-			&desc, __uuidof(decltype(target)::Type), target.GetPointerVoidAdress()
-		);
-
-		return target;
-		*/
-		return { };
 	}
 
 	ComPtr<ID3D12RootSignature> CreateRootSignature(

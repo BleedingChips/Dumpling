@@ -10,7 +10,7 @@ export module DumplingImGuiDx12;
 import Potato;
 import DumplingForm;
 import DumplingImGuiHUD;
-import DumplingDX12;
+import DumplingDx12;
 
 export namespace Dumpling::IMGUI
 {

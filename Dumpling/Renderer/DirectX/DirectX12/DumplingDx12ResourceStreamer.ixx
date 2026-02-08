@@ -10,6 +10,7 @@ export module DumplingDx12ResourceStreamer;
 
 import std;
 import Potato;
+import DumplingDxDefine;
 import DumplingDx12Define;
 
 export namespace Dumpling::Dx12

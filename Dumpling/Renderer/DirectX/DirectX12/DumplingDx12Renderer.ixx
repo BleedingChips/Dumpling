@@ -13,7 +13,7 @@ export module DumplingDx12Renderer;
 import std;
 import Potato;
 import DumplingForm;
-import DumplingPipeline;
+import DumplingRendererPipeline;
 import DumplingMath;
 import DumplingDx12Define;
 import DumplingDx12Shader;
@@ -22,6 +22,13 @@ import DumplingDx12ResourceStreamer;
 
 export namespace Dumpling::Dx12
 {
+
+	using Dumpling::Renderer::PassDistributor;
+	using Dumpling::Renderer::PassIndex;
+	using Dumpling::Renderer::PassRequest;
+	using Dumpling::Renderer::PassScription;
+	using Dumpling::Renderer::PassSequencer;
+
 	export struct Renderer;
 
 	struct RendererResource
@@ -131,7 +138,7 @@ export namespace Dumpling::Dx12
 		ID3D12GraphicsCommandList* GetCommandList() { assert(*this); return command.GetPointer(); }
 
 		void SetRenderTargets(RenderTargetSet const& render_targets);
-		bool ClearRendererTarget(std::size_t index, Float4 color = Color::black_rgba);
+		bool ClearRendererTarget(std::size_t index, Math::Float4 color = Color::black_rgba);
 		bool SetGraphicDescriptorTable(
 			DescriptorTableMapping const& descriptor_table_mapping, 
 			ShaderDefineDescriptorTable& shared_resource,

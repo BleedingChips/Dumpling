@@ -1,13 +1,13 @@
 module;
 
 
-export module DumplingPipeline;
+export module DumplingRendererPipeline;
 
 import std;
 import Potato;
 
 
-export namespace Dumpling
+export namespace Dumpling::Renderer
 {
 	struct PassDistributor;
 
