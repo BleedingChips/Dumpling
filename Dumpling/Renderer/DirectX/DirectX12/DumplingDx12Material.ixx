@@ -83,35 +83,6 @@ export namespace Dumpling::Dx12
 		Potato::Misc::IndexSpan<> index_span;
 	};
 
-	struct ShaderSharedResourceInstance
-	{
-		std::pmr::vector<char8_t> name_buffers;
-		struct ConstBuffer
-		{
-			Potato::Misc::IndexSpan<> name;
-			std::size_t descriptor_index;
-			ShaderSharedResource::ResourceProperty property;
-			ResourceIndexSpan resource;
-			Potato::IR::StructLayoutObject::Ptr const_buffer;
-		};
-		std::pmr::vector<ConstBuffer> const_buffers;
-		struct Texture
-		{
-			Potato::Misc::IndexSpan<> name;
-			std::size_t descriptor_index;
-			ShaderSharedResource::ResourceProperty property;
-			ResourceIndexSpan resource;
-		};
-		std::pmr::vector<Texture> textures;
-		struct Sampler
-		{
-			Potato::Misc::IndexSpan<> name;
-			std::size_t descriptor_index;
-		};
-		std::pmr::vector<Sampler> sampler;
-		void Init(ShaderSharedResource const& shared_resource);
-	};
-
 	struct Vertex
 	{
 		void ResetVertexLayout(Potato::IR::StructLayout layout, D3D12_PRIMITIVE_TOPOLOGY_TYPE topology_type = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);

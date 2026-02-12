@@ -11,7 +11,7 @@ export module DumplingDxStructLayout;
 import std;
 import Potato;
 import DumplingMathVector;
-import DumplingDxDefine;
+export import DumplingDxDefine;
 
 export namespace Dumpling::Dx
 {

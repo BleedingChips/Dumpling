@@ -3,6 +3,7 @@ import Dumpling;
 import std;
 import Potato;
 #undef GetObject
+#undef FindResource
 
 using namespace Dumpling;
 using namespace Dumpling::Dx12;
@@ -58,7 +59,7 @@ int main()
 
 	HLSLCompiler::MaterialShaderOutput shader_output;
 	Dx12::ShaderSlot shader_slot;
-	Dx12::ShaderSharedResource shader_shader_slot;
+	Dx12::ShaderSharedResource shared_shader_resource;
 
 	HLSLCompiler::ComplieContext context;
 	context.error_capture = [](std::u8string_view message, HLSLCompiler::ShaderTarget target) {
@@ -68,7 +69,7 @@ int main()
 	bool result = instance.CompileMaterial(
 		compiler,
 		shader_slot,
-		shader_shader_slot,
+		shared_shader_resource,
 		shader_output,
 		{
 			{shader_code, u8"VSMain", u8"Test.hlsl"},
@@ -90,7 +91,7 @@ int main()
 
 	auto output = device.CreateFormWrapper(form, form_renderer);
 
-	auto presets_geometry = Dumpling::Renderer::PresetGeometry::GetTriangle();
+	auto presets_geometry = Dumpling::Renderer::GetPresetPrimitiveTriangle();
 
 	D3D12_VIEWPORT view_port{
 		0.0f,
@@ -117,17 +118,15 @@ int main()
 
 	auto root_signature = CreateRootSignature(device, shader_slot, description_mapping);
 
-	Dx12::ShaderSharedResourceInstance inst;
-	inst.Init(shader_shader_slot);
+	auto index = shared_shader_resource.Find(ShaderResourceType::CONST_BUFFER, u8"UserDefine");
+	auto property = shared_shader_resource.GetDescriptor(ShaderResourceType::CONST_BUFFER, *index);
 
-	auto cb = inst.const_buffers[0].const_buffer;
+	auto cb = Potato::IR::StructLayoutObject::DefaultConstruct(property->property.layout);
 
 	auto p1 = cb->MemberAs<Math::Float4>(0);
 	auto p2 = cb->MemberAs<Math::Float4>(1);
 	*p1 = Math::Float4{ 0.0f, 0.0f, 0.0f };
 	*p2 = Math::Float4{ 0.5f, 0.5f, 0.5f, 0.0f };
-
-	Math::Float4* typ = reinterpret_cast<Math::Float4*>(cb->GetObject());
 
 	Dx12::MaterialState material_state;
 	material_state.vs_layout = presets_geometry.vertex_data->GetStructLayout();
@@ -151,8 +150,8 @@ int main()
 
 	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, Dx12::heap_align);
 
-	auto description_heap = CreateDescriptorHeap(device, shader_shader_slot);
-	description_heap->CreateConstBufferView(device, shader_shader_slot, 0, *vertex_buffer, { cb_offset, cb->GetBuffer().size() + cb_offset });
+	auto description_heap = CreateDescriptorHeap(device, shared_shader_resource);
+	description_heap->CreateConstBufferView(device, shared_shader_resource, *index, *vertex_buffer, { cb_offset, cb->GetBuffer().size() + cb_offset });
 
 	{
 		Dx12::PassStreamer pass_streamer;

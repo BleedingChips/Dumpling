@@ -88,7 +88,7 @@ namespace Dumpling::Dx12
 		}
 	}
 
-	std::optional<std::size_t> ShaderSharedResource::FindResource(ShaderResourceType type, std::u8string_view name) const
+	std::optional<std::size_t> ShaderSharedResource::Find(ShaderResourceType type, std::u8string_view name) const
 	{
 		std::pmr::vector<ResourceDescriptor> const* tar_descriptor = GetDescriptorTable(type);
 
@@ -116,7 +116,7 @@ namespace Dumpling::Dx12
 		return std::nullopt;
 	}
 
-	ShaderSharedResource::ResourceDescriptor const* ShaderSharedResource::GetResourceDescriptor(ShaderResourceType type, std::size_t index)
+	ShaderSharedResource::ResourceDescriptor const* ShaderSharedResource::GetDescriptor(ShaderResourceType type, std::size_t index)
 	{
 		std::pmr::vector<ResourceDescriptor> const* tar_descriptor = GetDescriptorTable(type);
 
@@ -134,9 +134,9 @@ namespace Dumpling::Dx12
 		return nullptr;
 	}
 
-	std::optional<std::size_t> ShaderSharedResource::AddResource(ShaderResourceType type, std::u8string_view name, ResourceProperty property)
+	std::optional<std::size_t> ShaderSharedResource::Add(ShaderResourceType type, std::u8string_view name, ResourceProperty property)
 	{
-		assert(!FindResource(type, name).has_value());
+		assert(!Find(type, name).has_value());
 		std::pmr::vector<ResourceDescriptor>* tar_descriptor = GetDescriptorTable(type);
 		if (tar_descriptor != nullptr)
 		{
@@ -256,11 +256,11 @@ namespace Dumpling::Dx12
 		target_const_buffer.GetDesc(&buffer_desc);
 		std::u8string_view cbuffer_name{ reinterpret_cast<char8_t const*>(buffer_desc.Name) };
 
-		auto finded_index = shared_resource.FindResource(ShaderResourceType::CONST_BUFFER, cbuffer_name);
+		auto finded_index = shared_resource.Find(ShaderResourceType::CONST_BUFFER, cbuffer_name);
 
 		if (finded_index.has_value())
 		{
-			auto property = shared_resource.GetResourceDescriptor(ShaderResourceType::CONST_BUFFER, *finded_index);
+			auto property = shared_resource.GetDescriptor(ShaderResourceType::CONST_BUFFER, *finded_index);
 			if (property == nullptr)
 			{
 				assert(property != nullptr);
@@ -341,7 +341,7 @@ namespace Dumpling::Dx12
 				}
 			}
 
-			auto added_index = shared_resource.AddResource(
+			auto added_index = shared_resource.Add(
 				ShaderResourceType::CONST_BUFFER,
 				cbuffer_name,
 				{std::move(cbuffer_layout), array_count }
@@ -371,11 +371,11 @@ namespace Dumpling::Dx12
 	{
 		std::u8string_view name = { reinterpret_cast<char8_t const*>(bind_sesc.Name) };
 
-		auto finded_index = shared_resource.FindResource(resource_type, name);
+		auto finded_index = shared_resource.Find(resource_type, name);
 
 		if (finded_index.has_value())
 		{
-			auto pro = shared_resource.GetResourceDescriptor(resource_type, *finded_index);
+			auto pro = shared_resource.GetDescriptor(resource_type, *finded_index);
 			if (pro == nullptr)
 			{
 				assert(false);
@@ -418,7 +418,7 @@ namespace Dumpling::Dx12
 			}
 		}
 
-		auto added_index = shared_resource.AddResource(
+		auto added_index = shared_resource.Add(
 			resource_type,
 			name,
 			{

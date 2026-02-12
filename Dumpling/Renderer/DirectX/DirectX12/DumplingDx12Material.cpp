@@ -148,39 +148,6 @@ namespace Dumpling::Dx12
 		return false;
 	}
 
-	void ShaderSharedResourceInstance::Init(ShaderSharedResource const& shared_resource)
-	{
-		const_buffers.clear();
-		std::size_t index = 0;
-		name_buffers = shared_resource.name_buffer;
-		for (auto& ite : shared_resource.descriptor_table)
-		{
-			switch (ite.type)
-			{
-			case ShaderResourceType::CONST_BUFFER:
-				const_buffers.emplace_back(
-					ite.name,
-					index,
-					ite.property,
-					ResourceIndexSpan{},
-					Potato::IR::StructLayoutObject::DefaultConstruct(ite.property.layout)
-				);
-				break;
-			case ShaderResourceType::TEXTURE:
-				textures.emplace_back(
-					ite.name,
-					index,
-					ite.property,
-					ResourceIndexSpan{}
-				);
-				break;
-			case ShaderResourceType::SAMPLER:
-				break;
-			}
-			++index;
-		}
-	}
-
 	ComPtr<ID3D12RootSignature> CreateRootSignature(
 		ID3D12Device& device,
 		ShaderSlot const& shader_slot,

@@ -1,10 +1,6 @@
 module;
 
 #include <Windows.h>
-#include <wrl.h>
-
-#undef max
-#undef interface
 
 export module DumplingWin32FormEvent;
 
@@ -20,8 +16,6 @@ export namespace Dumpling::Win32
 		CLOSE = WM_CLOSE,
 		DESTORY = WM_DESTROY
 	};
-
-
 
 	struct FormEvent : public MSG
 	{

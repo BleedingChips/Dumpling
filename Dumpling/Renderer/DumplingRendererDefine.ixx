@@ -1,9 +1,13 @@
 module;
 
 export module DumplingRendererDefine;
+import Potato;
 
 export namespace Dumpling::Renderer
 {
+	using Potato::IR::StructLayout;
+	using Potato::IR::StructLayoutObject;
+
 	enum class ShaderType
 	{
 		VS,
@@ -22,5 +26,12 @@ export namespace Dumpling::Renderer
 	enum class PrimitiveTopology
 	{
 		TRIANGLE,
+	};
+
+	struct Primitive
+	{
+		StructLayoutObject::Ptr vertex;
+		StructLayoutObject::Ptr index;
+		PrimitiveTopology topology;
 	};
 }

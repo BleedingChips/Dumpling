@@ -2,8 +2,8 @@ module;
 
 export module DumplingDxDefine;
 import Potato;
-import DumplingWin32Define;
-import DumplingRendererDefine;
+export import DumplingWin32Define;
+export import DumplingRendererDefine;
 
 export namespace Dumpling::Dx
 {

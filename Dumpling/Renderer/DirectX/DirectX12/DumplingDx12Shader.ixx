@@ -49,12 +49,13 @@ export namespace Dumpling::Dx12
 		std::size_t const_buffer_count = 0;
 		std::size_t texture_count = 0;
 		std::pmr::vector<char8_t> name_buffer;
+
 		std::pmr::vector<ResourceDescriptor> descriptor_table;
 		std::pmr::vector<ResourceDescriptor> sampler_descriptor_table;
 		// return descriptor_index; property; resource_index
-		std::optional<std::size_t> FindResource(ShaderResourceType type, std::u8string_view name) const;
-		ResourceDescriptor const* GetResourceDescriptor(ShaderResourceType type, std::size_t index);
-		std::optional<std::size_t> AddResource(ShaderResourceType type, std::u8string_view name,  ResourceProperty property);
+		std::optional<std::size_t> Find(ShaderResourceType type, std::u8string_view name) const;
+		ResourceDescriptor const* GetDescriptor(ShaderResourceType type, std::size_t index);
+		std::optional<std::size_t> Add(ShaderResourceType type, std::u8string_view name,  ResourceProperty property);
 	protected:
 		std::pmr::vector<ResourceDescriptor>* GetDescriptorTable(ShaderResourceType type);
 		std::pmr::vector<ResourceDescriptor> const* GetDescriptorTable(ShaderResourceType type) const

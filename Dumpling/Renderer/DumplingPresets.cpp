@@ -47,7 +47,7 @@ namespace Dumpling::Renderer
 		Math::Float2 texture;
 	};
 
-	PresetGeometry PresetGeometry::GetTriangle()
+	Primitive GetPresetPrimitiveTriagle()
 	{
 		static std::array<NativeDefaultPresetVertex, 3> vertex = {
 			NativeDefaultPresetVertex{
@@ -86,7 +86,6 @@ namespace Dumpling::Renderer
 					Potato::MemLayout::ArrayLayout{3, sizeof(std::uint32_t), sizeof(std::uint32_t)}
 				),
 				PrimitiveTopology::TRIANGLE,
-				3
 		};
 	}
 }

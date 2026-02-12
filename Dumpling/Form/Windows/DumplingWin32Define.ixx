@@ -1,10 +1,6 @@
 module;
 
-#include <Windows.h>
-#include <wrl.h>
 
-#undef max
-#undef interface
 
 export module DumplingWin32Define;
 
@@ -16,8 +12,10 @@ export namespace Dumpling::Win32
 {
 	struct ComWrapper
 	{
-		void AddRef(IUnknown* ptr) { ptr->AddRef(); }
-		void SubRef(IUnknown* ptr) { ptr->Release(); }
+		template<typename PointerT>
+		void AddRef(PointerT* ptr) { ptr->AddRef(); }
+		template<typename PointerT>
+		void SubRef(PointerT* ptr) { ptr->Release(); }
 		using PotatoPointerEnablePointerAccess = void;
 	};
 
