@@ -12,17 +12,10 @@ import std;
 import Potato;
 import DumplingDxDefine;
 import DumplingDx12Define;
+import DumplingDx12Resource;
 
 export namespace Dumpling::Dx12
 {
-	constexpr std::size_t heap_align = 64 * 1024;
-	constexpr std::size_t resource_buffer_align = 64;
-
-	struct ResourceState
-	{
-		D3D12_RESOURCE_STATES original = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
-		std::optional<D3D12_RESOURCE_STATES> target = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
-	};
 
 	struct PassStreamer
 	{
@@ -68,14 +61,23 @@ export namespace Dumpling::Dx12
 
 	struct ResourceStreamer
 	{
+
+		struct Config
+		{
+			std::size_t start_up_upload_heap_size = heap_align * 16;
+		};
+
 		bool Init(ComPtr<ID3D12Device> device);
 		std::uint64_t Commited(PassStreamer& request);
 		bool PopRequester(PassStreamer& request, PassStreamer::Config config);
 		operator bool() const { return device && fence && command_queue; }
 		std::uint64_t Flush();
 		bool TryFlushTo(std::uint64_t target_fence_value) { return Flush() >= target_fence_value; }
-		ComPtr<ID3D12Heap> CreateDefaultHeap(std::size_t heap_size);
-		std::tuple<ComPtr<ID3D12Resource>, std::size_t> CreateBufferResource(ID3D12Heap& heap, std::size_t buffer_size);
+		HeapIndexed CreateDefaultHeap(std::size_t heap_size)
+		{
+			return Dx12::CreatedResourceHeapIndexed(*device, D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, heap_size);
+		}
+		ResourceIndexed CreateBufferResource(HeapIndexed& heap);
 
 	protected:
 

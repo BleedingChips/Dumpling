@@ -91,7 +91,7 @@ int main()
 
 	auto output = device.CreateFormWrapper(form, form_renderer);
 
-	auto presets_geometry = Dumpling::Renderer::GetPresetPrimitiveTriangle();
+	auto presets_geometry = Dumpling::Renderer::GetPresetPrimitiveTriagle();
 
 	D3D12_VIEWPORT view_port{
 		0.0f,
@@ -109,10 +109,10 @@ int main()
 		768
 	};
 
-	auto index_buffer_offset = Potato::MemLayout::AlignTo(presets_geometry.vertex_data->GetBuffer().size(), Dx12::resource_buffer_align);
+	auto index_buffer_offset = Potato::MemLayout::AlignTo(presets_geometry.vertex->GetBuffer().size(), Dx12::resource_buffer_align);
 	auto cb_offset = Potato::MemLayout::AlignTo(index_buffer_offset + sizeof(std::uint32_t) * 3, 256);
 	
-	auto size_in_byte = presets_geometry.vertex_data->GetBuffer().size();
+	auto size_in_byte = presets_geometry.vertex->GetBuffer().size();
 
 	Dx12::DescriptorTableMapping description_mapping;
 
@@ -129,7 +129,7 @@ int main()
 	*p2 = Math::Float4{ 0.5f, 0.5f, 0.5f, 0.0f };
 
 	Dx12::MaterialState material_state;
-	material_state.vs_layout = presets_geometry.vertex_data->GetStructLayout();
+	material_state.vs_layout = presets_geometry.vertex->GetStructLayout();
 	material_state.vs_shader = shader_output.vs;
 	material_state.ps_shader = shader_output.ps;
 
@@ -158,13 +158,13 @@ int main()
 		streamer.PopRequester(pass_streamer, {1});
 
 		auto current_state = pass_streamer.UploadBufferResource(
-			presets_geometry.vertex_data->GetBuffer(),
+			presets_geometry.vertex->GetBuffer(),
 			*vertex_buffer
 		);
 
 		
 		auto state_change2 = pass_streamer.UploadBufferResource(
-			presets_geometry.index_data->GetBuffer(),
+			presets_geometry.index->GetBuffer(),
 			*vertex_buffer,
 			index_buffer_offset
 		);
@@ -184,7 +184,7 @@ int main()
 		streamer.Commited(pass_streamer);
 	}
 
-	auto view = Dx12::GetVertexBufferView(*presets_geometry.vertex_data, *vertex_buffer);
+	auto view = Dx12::GetVertexBufferView(*presets_geometry.vertex, *vertex_buffer);
 	auto index_view = Dx12::GetIndexBufferView(*vertex_buffer, 3, index_buffer_offset);
 
 	while(need_loop)

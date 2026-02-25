@@ -301,9 +301,9 @@ namespace Dumpling::Dx12
 
 				if (config.buffer_size > 0)
 				{
-					auto [upload_resource, resource_size] = CreateBufferResource(*request.upload_heap, config.buffer_size);
+					auto upload_resource = CreateBufferResource(*request.upload_heap, config.buffer_size);
 					assert(upload_resource);
-					request.upload_resource.resource = std::move(upload_resource);
+					request.upload_resource.resource = std::move(upload_resource.resource);
 					request.upload_resource.resource->Map(0, nullptr, nullptr);
 					request.upload_resource.max_size = resource_size;
 				}
@@ -330,9 +330,9 @@ namespace Dumpling::Dx12
 		return false;
 	}
 
-	ComPtr<ID3D12Heap> ResourceStreamer::CreateDefaultHeap(std::size_t heap_size)
+	HeapIndexed ResourceStreamer::CreateDefaultHeap(std::size_t heap_size)
 	{
-		heap_size = Potato::MemLayout::AlignTo(heap_size, 64);
+		heap_size = Potato::MemLayout::AlignTo(heap_size, heap_align);
 		ComPtr<ID3D12Heap> heap;
 		D3D12_HEAP_DESC heap_desc;
 		heap_desc.Alignment = 0;
@@ -351,12 +351,12 @@ namespace Dumpling::Dx12
 
 		if (SUCCEEDED(re))
 		{
-			return heap;
+			return { heap, {0, heap_size} };
 		}
 		return {};
 	}
 
-	std::tuple<ComPtr<ID3D12Resource>, std::size_t> ResourceStreamer::CreateBufferResource(ID3D12Heap& heap, std::size_t buffer_size)
+	ResourceIndexed ResourceStreamer::CreateBufferResource(ID3D12Heap& heap, std::size_t buffer_size)
 	{
 		buffer_size = Potato::MemLayout::AlignTo(buffer_size, heap_align);
 		D3D12_RESOURCE_DESC resource_desc;
