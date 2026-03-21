@@ -21,15 +21,14 @@ export namespace Dumpling::Dx12
 	struct HeapIndexed
 	{
 		ComPtr<ID3D12Heap> heap;
-		Potato::Misc::IndexSpan<> index_span;
+		std::size_t size;
 		operator bool() const { return heap; }
 	};
 
 	struct ResourceIndexed
 	{
 		ComPtr<ID3D12Resource> resource;
-		Potato::Misc::IndexSpan<> index_span;
-		Potato::Misc::IndexSpan<> heap_span;
+		std::size_t size;
 		operator bool() const { return resource; }
 	};
 

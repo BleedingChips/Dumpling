@@ -21,7 +21,7 @@ namespace Dumpling::Dx12
 		heap_desc.Properties.Type = type;
 		auto re = device.CreateHeap(&heap_desc, __uuidof(decltype(heap)::Type), heap.GetPointerVoidAdress());
 		assert(SUCCEEDED(re));
-		return { std::move(heap), {0, require_heap_size} };
+		return { std::move(heap), require_heap_size };
 	}
 
 	ResourceIndexed CreatedBufferResourceIndexed(ID3D12Device& device, HeapIndexed heap, std::size_t require_buffer_size, HeapIndexed* out_heap = nullptr)
@@ -30,14 +30,7 @@ namespace Dumpling::Dx12
 			return {};
 		require_buffer_size = Potato::MemLayout::AlignTo(require_buffer_size, heap_align);
 
-		heap.index_span = {
-			Potato::MemLayout::AlignTo(heap.index_span.Begin(), heap_align),
-			heap.index_span.End()
-		};
-
-		if (!heap.index_span)
-			return {};
-		if (heap.index_span.Size() < require_buffer_size)
+		if (heap.size < require_buffer_size)
 			return {};
 
 		D3D12_RESOURCE_DESC resource_desc;
@@ -72,7 +65,7 @@ namespace Dumpling::Dx12
 		if (resource)
 		{
 			assert(SUCCEEDED(re));
-			return { resource, {0, require_buffer_size} };
+			return { resource, require_buffer_size };
 		}
 		return {};
 	}

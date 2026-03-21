@@ -73,11 +73,13 @@ export namespace Dumpling::Dx12
 		operator bool() const { return device && fence && command_queue; }
 		std::uint64_t Flush();
 		bool TryFlushTo(std::uint64_t target_fence_value) { return Flush() >= target_fence_value; }
-		HeapIndexed CreateDefaultHeap(std::size_t heap_size)
+		HeapIndexed CreateDefaultHeap(std::size_t heap_size);
+			/*
 		{
 			return Dx12::CreatedResourceHeapIndexed(*device, D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_DEFAULT, heap_size);
 		}
-		ResourceIndexed CreateBufferResource(HeapIndexed& heap);
+		*/
+		ResourceIndexed CreateBufferResource(ID3D12Heap& heap, std::size_t buffer_size);
 
 	protected:
 

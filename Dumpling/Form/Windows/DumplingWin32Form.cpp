@@ -68,7 +68,7 @@ namespace Dumpling::Win32
 
 		std::array<wchar_t, 1024> title;
 
-		auto info = Potato::Encode::StrEncoder<char8_t, wchar_t>{}.Encode(
+		auto info = Potato::Encode::UnicodeEncoder<char8_t, wchar_t>::EncodeTo(
 			fig.title,
 			std::span(title)
 		);

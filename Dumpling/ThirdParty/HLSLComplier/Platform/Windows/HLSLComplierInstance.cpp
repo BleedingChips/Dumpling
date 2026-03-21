@@ -119,12 +119,12 @@ namespace Dumpling::HLSLCompiler
 			std::array<wchar_t, 1024> file_path_w;
 
 			{
-				auto Info = Potato::Encode::StrEncoder<char8_t, wchar_t>{}.Encode(entry_point, std::span(entry_point_w));
+				auto Info = Potato::Encode::UnicodeEncoder<char8_t, wchar_t>::EncodeTo(entry_point, std::span(entry_point_w));
 				entry_point_w[std::min(Info.target_space, entry_point_w.size() - 1)] = L'\0';
 			}
 
 			{
-				auto Info = Potato::Encode::StrEncoder<char8_t, wchar_t>{}.Encode(file_path, std::span(file_path_w));
+				auto Info = Potato::Encode::UnicodeEncoder<char8_t, wchar_t>::EncodeTo(file_path, std::span(file_path_w));
 				file_path_w[std::min(Info.target_space, entry_point_w.size() - 1)] = L'\0';
 			}
 

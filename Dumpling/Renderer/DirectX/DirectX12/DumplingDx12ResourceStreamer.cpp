@@ -305,7 +305,7 @@ namespace Dumpling::Dx12
 					assert(upload_resource);
 					request.upload_resource.resource = std::move(upload_resource.resource);
 					request.upload_resource.resource->Map(0, nullptr, nullptr);
-					request.upload_resource.max_size = resource_size;
+					request.upload_resource.max_size = upload_resource.size;
 				}
 			}
 
@@ -351,7 +351,7 @@ namespace Dumpling::Dx12
 
 		if (SUCCEEDED(re))
 		{
-			return { heap, {0, heap_size} };
+			return { heap, heap_size };
 		}
 		return {};
 	}

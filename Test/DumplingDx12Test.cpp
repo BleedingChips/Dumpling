@@ -148,7 +148,7 @@ int main()
 
 	auto heap = streamer.CreateDefaultHeap(Dx12::heap_align);
 
-	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap, Dx12::heap_align);
+	auto [vertex_buffer, vertex_buffer_size] = streamer.CreateBufferResource(*heap.heap, Dx12::heap_align);
 
 	auto description_heap = CreateDescriptorHeap(device, shared_shader_resource);
 	description_heap->CreateConstBufferView(device, shared_shader_resource, *index, *vertex_buffer, { cb_offset, cb->GetBuffer().size() + cb_offset });
