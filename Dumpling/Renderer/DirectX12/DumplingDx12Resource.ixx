@@ -38,16 +38,33 @@ export namespace Dumpling::Dx12
 		std::optional<D3D12_RESOURCE_STATES> target = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
 	};
 
-	HeapIndexed CreatedResourceHeapIndexed(ID3D12Device& device, D3D12_HEAP_TYPE type, std::size_t require_heap_size);
+	ComPtr<ID3D12Heap> CreatedResourceHeapIndexed(ID3D12Device& device, D3D12_HEAP_TYPE type, std::size_t min_heap_size);
+
 	ResourceIndexed CreatedBufferResourceIndexed(ID3D12Device& device, HeapIndexed& heap, std::size_t require_buffer_size, HeapIndexed* out_heap = nullptr);
 
-	struct ResourceInterface
+	struct ResourceSpanAllocator
 	{
+		struct ResourceSpan
+		{
+			ComPtr<ID3D12Resource> resource;
+			Potato::Misc::IndexSpan<> sub_span;
+			std::size_t identity;
+		};
 
+		struct Wrapper
+		{
+			void AddRef(ResourceSpanAllocator const* ptr) { ptr->AddResourceSpanAllocatorRef(); }
+			void SubRef(ResourceSpanAllocator const* ptr) { ptr->AddResourceSpanAllocatorRef(); }
+		};
+
+		using Ptr = Potato::Pointer::IntrusivePtr<ResourceSpanAllocator>;
+
+		virtual ResourceSpan AllocateBuffer(std::size_t buffer_size) = 0;
+		virtual void DeallocateBuffer(std::size_t identity) = 0;
+	protected:
+		virtual void AddResourceSpanAllocatorRef() const = 0;
+		virtual void SubResourceSpanAllocatorRef() const = 0;
 	};
 
-	struct ResourceManager
-	{
 
-	};
 }

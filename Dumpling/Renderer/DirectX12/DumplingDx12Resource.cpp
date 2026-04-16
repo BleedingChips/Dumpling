@@ -9,6 +9,7 @@ module DumplingDx12Resource;
 
 namespace Dumpling::Dx12
 {
+	/*
 	HeapIndexed CreatedResourceHeapIndexed(ID3D12Device& device, D3D12_HEAP_TYPE type, std::size_t require_heap_size)
 	{
 		require_heap_size = Potato::MemLayout::AlignTo(require_heap_size, heap_align);
@@ -69,5 +70,5 @@ namespace Dumpling::Dx12
 		}
 		return {};
 	}
-
+	*/
 }

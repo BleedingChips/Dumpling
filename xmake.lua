@@ -1,4 +1,4 @@
-add_rules("mode.debug", "mode.release")
+add_rules("mode.debug", "mode.release", "mode.releasedbg", "mode.profile")
 set_languages("cxxlatest")
 
 if os.scriptdir() == os.projectdir() then 
@@ -37,9 +37,9 @@ target("Dumpling")
         add_files("Dumpling/Form/Windows/*.ixx", {public=true})
         add_files("Dumpling/Form/Windows/*.cpp")
         add_files("Dumpling/Renderer/DirectX/*.ixx", {public=true})
-        add_files("Dumpling/Renderer/DirectX/*.cpp", {public=true})
-        add_files("Dumpling/Renderer/DirectX/DirectX12/*.ixx", {public=true})
-        add_files("Dumpling/Renderer/DirectX/DirectX12/*.cpp")
+        add_files("Dumpling/Renderer/DirectX/*.cpp")
+        add_files("Dumpling/Renderer/DirectX12/*.ixx", {public=true})
+        add_files("Dumpling/Renderer/DirectX12/*.cpp")
         add_links("user32.lib")
         add_links("d3d12.lib")
         add_links("dxgi.lib")
